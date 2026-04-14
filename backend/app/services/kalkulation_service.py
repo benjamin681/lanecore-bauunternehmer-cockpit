@@ -373,10 +373,87 @@ async def erstelle_kalkulation(
             "herkunft": pos.herkunft[:200],  # Kürzen für Übersichtlichkeit
         })
 
+    # 5. Bestellliste: nach Lieferant gruppiert
+    bestellliste: dict[str, list[dict]] = {}
+    for pos in result_positionen:
+        anbieter = pos.get("anbieter") or "Kein Anbieter"
+        if anbieter not in bestellliste:
+            bestellliste[anbieter] = []
+        bestellliste[anbieter].append({
+            "bezeichnung": pos["bezeichnung"],
+            "kategorie": pos["kategorie"],
+            "menge": pos["menge"],
+            "einheit": pos["einheit"],
+            "einzelpreis": pos["einzelpreis"],
+            "gesamtpreis": pos["gesamtpreis"],
+        })
+
+    bestellliste_result = []
+    for anbieter, items in bestellliste.items():
+        summe = sum(i["gesamtpreis"] or 0 for i in items)
+        bestellliste_result.append({
+            "anbieter": anbieter,
+            "positionen": items,
+            "anzahl_positionen": len(items),
+            "summe_netto": round(summe, 2),
+        })
+    bestellliste_result.sort(key=lambda b: b["summe_netto"], reverse=True)
+
+    # 6. Kundenangebot: Einkaufspreis + Aufschlag
+    # Default-Aufschläge (können vom Nutzer später angepasst werden)
+    DEFAULT_AUFSCHLAG_MATERIAL = 0.15  # 15% auf Material
+    DEFAULT_AUFSCHLAG_LOHN = 45.0  # 45 EUR/Stunde Monteurstunde
+    # Richtwert: ca. 0.5h pro m² Deckenfläche, 0.8h pro m² Wandfläche
+    STUNDEN_PRO_M2_DECKE = 0.5
+    STUNDEN_PRO_M2_WAND = 0.8
+
+    # Gesamt-Flächen berechnen
+    gesamt_deckenflaeche = sum(
+        (d.get("flaeche_m2") or 0)
+        for d in analyse_result.get("decken", [])
+        if not d.get("entfaellt")
+    )
+    gesamt_wandflaeche = sum(
+        (w.get("flaeche_m2") or (w.get("laenge_m", 0) * w.get("hoehe_m", 0)))
+        for w in analyse_result.get("waende", [])
+    )
+
+    lohnstunden = round(
+        gesamt_deckenflaeche * STUNDEN_PRO_M2_DECKE +
+        gesamt_wandflaeche * STUNDEN_PRO_M2_WAND, 1
+    )
+    lohnkosten = round(lohnstunden * DEFAULT_AUFSCHLAG_LOHN, 2)
+
+    material_einkauf = round(gesamt_netto, 2)
+    material_aufschlag = round(gesamt_netto * DEFAULT_AUFSCHLAG_MATERIAL, 2)
+    material_verkauf = round(material_einkauf + material_aufschlag, 2)
+
+    angebot_netto = round(material_verkauf + lohnkosten, 2)
+    mwst = round(angebot_netto * 0.19, 2)
+    angebot_brutto = round(angebot_netto + mwst, 2)
+
+    kundenangebot = {
+        "material_einkauf": material_einkauf,
+        "material_aufschlag_prozent": DEFAULT_AUFSCHLAG_MATERIAL * 100,
+        "material_aufschlag_eur": material_aufschlag,
+        "material_verkauf": material_verkauf,
+        "lohnstunden": lohnstunden,
+        "stundensatz": DEFAULT_AUFSCHLAG_LOHN,
+        "lohnkosten": lohnkosten,
+        "angebot_netto": angebot_netto,
+        "mwst_prozent": 19,
+        "mwst_eur": mwst,
+        "angebot_brutto": angebot_brutto,
+        "deckenflaeche_m2": round(gesamt_deckenflaeche, 1),
+        "wandflaeche_m2": round(gesamt_wandflaeche, 1),
+    }
+
     return {
         "positionen": result_positionen,
         "gesamt_netto": round(gesamt_netto, 2),
         "positionen_mit_preis": mit_preisen,
         "positionen_ohne_preis": ohne_preise,
         "positionen_gesamt": len(result_positionen),
+        "bestellliste": bestellliste_result,
+        "kundenangebot": kundenangebot,
     }

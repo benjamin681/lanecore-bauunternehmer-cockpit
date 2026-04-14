@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "lanecore",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/benundsasifeichtenbeiner/Bauunternehmer-Cockpit/frontend && exec npx next dev --port $PORT"],
+      "port": 4000
+    }
+  ]
+}

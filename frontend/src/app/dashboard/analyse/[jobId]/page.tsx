@@ -94,12 +94,46 @@ interface KalkulationPosition {
   herkunft: string;
 }
 
+interface BestellPosition {
+  bezeichnung: string;
+  kategorie: string;
+  menge: number;
+  einheit: string;
+  einzelpreis?: number | null;
+  gesamtpreis?: number | null;
+}
+
+interface BestellGruppe {
+  anbieter: string;
+  positionen: BestellPosition[];
+  anzahl_positionen: number;
+  summe_netto: number;
+}
+
+interface Kundenangebot {
+  material_einkauf: number;
+  material_aufschlag_prozent: number;
+  material_aufschlag_eur: number;
+  material_verkauf: number;
+  lohnstunden: number;
+  stundensatz: number;
+  lohnkosten: number;
+  angebot_netto: number;
+  mwst_prozent: number;
+  mwst_eur: number;
+  angebot_brutto: number;
+  deckenflaeche_m2: number;
+  wandflaeche_m2: number;
+}
+
 interface KalkulationData {
   positionen: KalkulationPosition[];
   gesamt_netto: number;
   positionen_mit_preis: number;
   positionen_ohne_preis: number;
   positionen_gesamt: number;
+  bestellliste: BestellGruppe[];
+  kundenangebot: Kundenangebot;
   filename?: string;
   plantyp?: string;
   geschoss?: string;
@@ -118,6 +152,14 @@ function fmt(val: number | null | undefined, decimals = 2): string {
   return val.toFixed(decimals);
 }
 
+/** EUR formatter */
+function eur(val: number | null | undefined): string {
+  if (val == null || isNaN(val)) return "—";
+  return val.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " EUR";
+}
+
+type KalkSubTab = "material" | "bestellung" | "angebot";
+
 export default function AnalyseJobPage() {
   const { jobId } = useParams<{ jobId: string }>();
   const [status, setStatus] = useState<StatusData | null>(null);
@@ -125,6 +167,7 @@ export default function AnalyseJobPage() {
   const [activeTab, setActiveTab] = useState<"kalkulation" | "raeume" | "decken" | "waende" | "details">("kalkulation");
   const [kalkulation, setKalkulation] = useState<KalkulationData | null>(null);
   const [kalkulationLoading, setKalkulationLoading] = useState(false);
+  const [kalkSubTab, setKalkSubTab] = useState<KalkSubTab>("material");
 
   // Poll status
   useEffect(() => {
@@ -358,30 +401,25 @@ export default function AnalyseJobPage() {
               <div className="p-8 text-center text-gray-500">Kalkulation konnte nicht geladen werden.</div>
             ) : (
               <>
-                {/* Summary Bar */}
-                <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-4">
-                  <div className="flex gap-6 text-sm">
-                    <div>
-                      <span className="text-gray-500">Positionen:</span>{" "}
-                      <strong>{kalkulation.positionen_gesamt}</strong>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Mit Preis:</span>{" "}
-                      <strong className="text-green-700">{kalkulation.positionen_mit_preis}</strong>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Ohne Preis:</span>{" "}
-                      <strong className={kalkulation.positionen_ohne_preis > 0 ? "text-orange-600" : "text-gray-400"}>
-                        {kalkulation.positionen_ohne_preis}
-                      </strong>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-gray-500 text-sm">Gesamt (netto):</span>
-                    <span className="text-2xl font-bold text-gray-900 ml-2">
-                      {kalkulation.gesamt_netto > 0 ? `${kalkulation.gesamt_netto.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR` : "—"}
-                    </span>
-                  </div>
+                {/* Sub-Tabs */}
+                <div className="flex border-b border-gray-200 bg-gray-50">
+                  {([
+                    { key: "material" as KalkSubTab, label: "Materialkosten (Einkauf)" },
+                    { key: "bestellung" as KalkSubTab, label: "Bestellliste" },
+                    { key: "angebot" as KalkSubTab, label: "Kundenangebot" },
+                  ]).map((st) => (
+                    <button
+                      key={st.key}
+                      onClick={() => setKalkSubTab(st.key)}
+                      className={`px-5 py-2.5 text-sm font-medium transition-colors ${
+                        kalkSubTab === st.key
+                          ? "text-primary-700 border-b-2 border-primary-600 bg-white"
+                          : "text-gray-500 hover:text-gray-700"
+                      }`}
+                    >
+                      {st.label}
+                    </button>
+                  ))}
                 </div>
 
                 {kalkulation.positionen_ohne_preis > 0 && kalkulation.positionen_mit_preis === 0 && (
@@ -390,55 +428,182 @@ export default function AnalyseJobPage() {
                   </div>
                 )}
 
-                <table className="w-full text-sm">
-                  <thead className="text-left text-gray-500 bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-2">Material</th>
-                      <th className="px-4 py-2">Kategorie</th>
-                      <th className="px-4 py-2 text-right">Menge</th>
-                      <th className="px-4 py-2">Einheit</th>
-                      <th className="px-4 py-2 text-right">Einzelpreis</th>
-                      <th className="px-4 py-2 text-right">Gesamtpreis</th>
-                      <th className="px-4 py-2">Guenstigster Anbieter</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {kalkulation.positionen.map((pos, i) => (
-                      <tr key={i} className="border-t border-gray-100 hover:bg-gray-50">
-                        <td className="px-4 py-3 font-medium">{pos.bezeichnung}</td>
-                        <td className="px-4 py-3">
-                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{pos.kategorie}</span>
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono">{pos.menge.toLocaleString("de-DE", { minimumFractionDigits: 1 })}</td>
-                        <td className="px-4 py-3">{pos.einheit}</td>
-                        <td className="px-4 py-3 text-right">
-                          {pos.einzelpreis != null ? `${pos.einzelpreis.toFixed(2)} EUR` : <span className="text-orange-500">—</span>}
-                        </td>
-                        <td className="px-4 py-3 text-right font-medium">
-                          {pos.gesamtpreis != null ? `${pos.gesamtpreis.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR` : <span className="text-orange-500">kein Preis</span>}
-                        </td>
-                        <td className="px-4 py-3">
-                          {pos.anbieter ? (
-                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">{pos.anbieter}</span>
-                          ) : (
-                            <span className="text-xs text-gray-400">keine Preisliste</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot className="bg-gray-50 font-semibold">
-                    <tr className="border-t-2 border-gray-300">
-                      <td className="px-4 py-3" colSpan={5}>Gesamtsumme (netto)</td>
-                      <td className="px-4 py-3 text-right text-lg">
-                        {kalkulation.gesamt_netto > 0
-                          ? `${kalkulation.gesamt_netto.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR`
-                          : "—"}
-                      </td>
-                      <td></td>
-                    </tr>
-                  </tfoot>
-                </table>
+                {/* ═══ SUB-TAB: Materialkosten (Einkauf) ═══ */}
+                {kalkSubTab === "material" && (
+                  <>
+                    <div className="px-6 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                      <span className="text-sm text-gray-500">{kalkulation.positionen_gesamt} Positionen &mdash; {kalkulation.positionen_mit_preis} mit Preis</span>
+                      <span className="text-lg font-bold">Einkauf: {eur(kalkulation.gesamt_netto)}</span>
+                    </div>
+                    <table className="w-full text-sm">
+                      <thead className="text-left text-gray-500 bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2">Material</th>
+                          <th className="px-4 py-2">Kategorie</th>
+                          <th className="px-4 py-2 text-right">Menge</th>
+                          <th className="px-4 py-2">Einheit</th>
+                          <th className="px-4 py-2 text-right">Einzelpreis</th>
+                          <th className="px-4 py-2 text-right">Gesamt</th>
+                          <th className="px-4 py-2">Anbieter</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {kalkulation.positionen.map((pos, i) => (
+                          <tr key={i} className="border-t border-gray-100 hover:bg-gray-50">
+                            <td className="px-4 py-3 font-medium">{pos.bezeichnung}</td>
+                            <td className="px-4 py-3"><span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{pos.kategorie}</span></td>
+                            <td className="px-4 py-3 text-right font-mono">{pos.menge.toLocaleString("de-DE", { minimumFractionDigits: 1 })}</td>
+                            <td className="px-4 py-3">{pos.einheit}</td>
+                            <td className="px-4 py-3 text-right">{pos.einzelpreis != null ? eur(pos.einzelpreis) : <span className="text-orange-500">&mdash;</span>}</td>
+                            <td className="px-4 py-3 text-right font-medium">{pos.gesamtpreis != null ? eur(pos.gesamtpreis) : <span className="text-orange-500">kein Preis</span>}</td>
+                            <td className="px-4 py-3">{pos.anbieter ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">{pos.anbieter}</span> : <span className="text-xs text-gray-400">—</span>}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot className="bg-gray-50 font-semibold">
+                        <tr className="border-t-2 border-gray-300">
+                          <td className="px-4 py-3" colSpan={5}>Einkaufspreis gesamt (netto)</td>
+                          <td className="px-4 py-3 text-right text-lg">{eur(kalkulation.gesamt_netto)}</td>
+                          <td></td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </>
+                )}
+
+                {/* ═══ SUB-TAB: Bestellliste ═══ */}
+                {kalkSubTab === "bestellung" && (
+                  <div className="divide-y divide-gray-200">
+                    {kalkulation.bestellliste.length === 0 ? (
+                      <div className="p-8 text-center text-gray-500">Keine Bestellungen &mdash; erst Preislisten hochladen.</div>
+                    ) : (
+                      kalkulation.bestellliste.map((gruppe, gi) => (
+                        <div key={gi}>
+                          <div className="px-6 py-4 bg-gray-50 flex items-center justify-between">
+                            <div>
+                              <span className="font-semibold text-gray-900">{gruppe.anbieter}</span>
+                              <span className="text-sm text-gray-500 ml-3">{gruppe.anzahl_positionen} Positionen</span>
+                            </div>
+                            <span className="text-lg font-bold text-gray-900">{eur(gruppe.summe_netto)}</span>
+                          </div>
+                          <table className="w-full text-sm">
+                            <thead className="text-left text-gray-400 text-xs">
+                              <tr>
+                                <th className="px-6 py-1">Material</th>
+                                <th className="px-4 py-1 text-right">Menge</th>
+                                <th className="px-4 py-1">Einheit</th>
+                                <th className="px-4 py-1 text-right">Einzelpreis</th>
+                                <th className="px-4 py-1 text-right">Gesamt</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {gruppe.positionen.map((pos, pi) => (
+                                <tr key={pi} className="border-t border-gray-50 hover:bg-gray-50">
+                                  <td className="px-6 py-2">{pos.bezeichnung}</td>
+                                  <td className="px-4 py-2 text-right font-mono">{pos.menge.toLocaleString("de-DE", { minimumFractionDigits: 1 })}</td>
+                                  <td className="px-4 py-2">{pos.einheit}</td>
+                                  <td className="px-4 py-2 text-right">{eur(pos.einzelpreis)}</td>
+                                  <td className="px-4 py-2 text-right font-medium">{eur(pos.gesamtpreis)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ))
+                    )}
+                    {kalkulation.bestellliste.length > 0 && (
+                      <div className="px-6 py-4 bg-gray-100 flex items-center justify-between font-semibold">
+                        <span>Gesamtsumme alle Lieferanten</span>
+                        <span className="text-xl">{eur(kalkulation.gesamt_netto)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ═══ SUB-TAB: Kundenangebot ═══ */}
+                {kalkSubTab === "angebot" && (
+                  <div className="p-6 space-y-6">
+                    <div className="grid grid-cols-2 gap-6">
+                      {/* Linke Spalte: Kalkulation */}
+                      <div className="space-y-4">
+                        <h4 className="font-semibold text-gray-900 text-lg">Angebotskalkulation</h4>
+                        <table className="w-full text-sm">
+                          <tbody>
+                            <tr className="border-b border-gray-100">
+                              <td className="py-3 text-gray-600">Material (Einkauf netto)</td>
+                              <td className="py-3 text-right font-mono">{eur(kalkulation.kundenangebot.material_einkauf)}</td>
+                            </tr>
+                            <tr className="border-b border-gray-100">
+                              <td className="py-3 text-gray-600">+ Aufschlag Material ({kalkulation.kundenangebot.material_aufschlag_prozent}%)</td>
+                              <td className="py-3 text-right font-mono">{eur(kalkulation.kundenangebot.material_aufschlag_eur)}</td>
+                            </tr>
+                            <tr className="border-b border-gray-200 font-medium">
+                              <td className="py-3">= Material (Verkauf)</td>
+                              <td className="py-3 text-right font-mono">{eur(kalkulation.kundenangebot.material_verkauf)}</td>
+                            </tr>
+                            <tr className="border-b border-gray-100">
+                              <td className="py-3 text-gray-600">
+                                Lohnkosten ({kalkulation.kundenangebot.lohnstunden}h x {kalkulation.kundenangebot.stundensatz} EUR/h)
+                              </td>
+                              <td className="py-3 text-right font-mono">{eur(kalkulation.kundenangebot.lohnkosten)}</td>
+                            </tr>
+                            <tr className="border-b border-gray-300 font-semibold text-lg">
+                              <td className="py-4">Angebot netto</td>
+                              <td className="py-4 text-right font-mono">{eur(kalkulation.kundenangebot.angebot_netto)}</td>
+                            </tr>
+                            <tr className="border-b border-gray-100">
+                              <td className="py-3 text-gray-600">+ MwSt. ({kalkulation.kundenangebot.mwst_prozent}%)</td>
+                              <td className="py-3 text-right font-mono">{eur(kalkulation.kundenangebot.mwst_eur)}</td>
+                            </tr>
+                            <tr className="font-bold text-xl">
+                              <td className="py-4 text-primary-700">Angebotspreis brutto</td>
+                              <td className="py-4 text-right font-mono text-primary-700">{eur(kalkulation.kundenangebot.angebot_brutto)}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Rechte Spalte: Kennzahlen */}
+                      <div className="space-y-4">
+                        <h4 className="font-semibold text-gray-900 text-lg">Kennzahlen</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="bg-blue-50 rounded-lg p-4">
+                            <p className="text-xs text-blue-600">Deckenflaeche</p>
+                            <p className="text-2xl font-bold text-blue-900">{kalkulation.kundenangebot.deckenflaeche_m2} m2</p>
+                          </div>
+                          <div className="bg-blue-50 rounded-lg p-4">
+                            <p className="text-xs text-blue-600">Wandflaeche</p>
+                            <p className="text-2xl font-bold text-blue-900">{kalkulation.kundenangebot.wandflaeche_m2} m2</p>
+                          </div>
+                          <div className="bg-green-50 rounded-lg p-4">
+                            <p className="text-xs text-green-600">Montage-Stunden</p>
+                            <p className="text-2xl font-bold text-green-900">{kalkulation.kundenangebot.lohnstunden}h</p>
+                          </div>
+                          <div className="bg-green-50 rounded-lg p-4">
+                            <p className="text-xs text-green-600">Stundensatz</p>
+                            <p className="text-2xl font-bold text-green-900">{kalkulation.kundenangebot.stundensatz} EUR</p>
+                          </div>
+                          <div className="bg-purple-50 rounded-lg p-4">
+                            <p className="text-xs text-purple-600">Material-Marge</p>
+                            <p className="text-2xl font-bold text-purple-900">{kalkulation.kundenangebot.material_aufschlag_prozent}%</p>
+                          </div>
+                          <div className="bg-purple-50 rounded-lg p-4">
+                            <p className="text-xs text-purple-600">Preis / m2 Decke</p>
+                            <p className="text-2xl font-bold text-purple-900">
+                              {kalkulation.kundenangebot.deckenflaeche_m2 > 0
+                                ? fmt(kalkulation.kundenangebot.angebot_netto / kalkulation.kundenangebot.deckenflaeche_m2, 2)
+                                : "—"} EUR
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-4">
+                          Aufschlaege und Stundensatz koennen in den Einstellungen angepasst werden.
+                          Die Werte dienen als Kalkulationsgrundlage.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
