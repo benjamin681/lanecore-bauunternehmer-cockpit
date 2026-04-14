@@ -495,6 +495,53 @@ export default function AnalyseJobPage() {
     konfidenzPct >= 90 ? "text-green-700 bg-green-100" :
     konfidenzPct >= 70 ? "text-yellow-700 bg-yellow-100" :
     "text-red-700 bg-red-100";
+  const konfidenzBarColor =
+    konfidenzPct >= 80 ? "bg-green-500" :
+    konfidenzPct >= 60 ? "bg-yellow-500" :
+    "bg-red-500";
+  const planqualitaet =
+    konfidenzPct >= 80 ? { label: "Gut", color: "text-green-700" } :
+    konfidenzPct >= 60 ? { label: "Mittel", color: "text-yellow-700" } :
+    { label: "Schlecht", color: "text-red-700" };
+
+  // Classify warnings by severity
+  const classifyWarning = (w: string) => {
+    const upper = w.toUpperCase();
+    if (upper.includes("NOTWENDIG") || upper.includes("DRINGEND")) return "kritisch";
+    return "warnung";
+  };
+  const kritischeWarnungen = result.warnungen.filter((w) => classifyWarning(w) === "kritisch");
+  const normaleWarnungen = result.warnungen.filter((w) => classifyWarning(w) === "warnung");
+
+  // Extract room number references from warnings for click-to-scroll
+  const roomRefPattern = /\b(\d+\.\d+\.\d+)\b/;
+  const scrollToRoom = (roomNr: string) => {
+    setActiveTab("raeume");
+    // Allow tab to render, then scroll
+    setTimeout(() => {
+      const el = document.getElementById(`raum-${roomNr}`);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 100);
+  };
+
+  const renderWarningText = (w: string) => {
+    const match = w.match(roomRefPattern);
+    if (!match) return <>{w}</>;
+    const roomNr = match[1];
+    const parts = w.split(roomNr);
+    return (
+      <>
+        {parts[0]}
+        <button
+          onClick={() => scrollToRoom(roomNr)}
+          className="underline font-medium hover:text-primary-600 cursor-pointer"
+        >
+          {roomNr}
+        </button>
+        {parts.slice(1).join(roomNr)}
+      </>
+    );
+  };
 
   const tabs = [
     { key: "kalkulation" as const, label: `Kalkulation${kalkulation ? ` (${kalkulation.positionen_gesamt})` : ""}`, show: true },
@@ -553,17 +600,86 @@ export default function AnalyseJobPage() {
         </div>
       )}
 
-      {/* Warnings */}
+      {/* Qualitaets-Report */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <h3 className="font-semibold text-gray-900 mb-4">Qualitaets-Report</h3>
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* Konfidenz-Bar */}
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Konfidenz</p>
+            <div className="w-full bg-gray-200 rounded-full h-3 mb-1">
+              <div
+                className={`h-3 rounded-full transition-all duration-500 ${konfidenzBarColor}`}
+                style={{ width: `${konfidenzPct}%` }}
+              />
+            </div>
+            <p className={`text-sm font-bold ${konfidenzPct >= 80 ? "text-green-700" : konfidenzPct >= 60 ? "text-yellow-700" : "text-red-700"}`}>
+              {konfidenzPct}%
+            </p>
+          </div>
+
+          {/* Planqualitaet */}
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Planqualitaet</p>
+            <p className={`text-lg font-bold ${planqualitaet.color}`}>{planqualitaet.label}</p>
+          </div>
+
+          {/* Erkannte Elemente */}
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Erkannte Elemente</p>
+            <p className="text-sm font-medium text-gray-900">
+              {result.raeume.length} Raeume, {result.decken.length} Decken, {result.waende.length} Waende
+            </p>
+          </div>
+
+          {/* Gestrichene Positionen */}
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Gestrichene Pos.</p>
+            <p className="text-lg font-bold text-gray-900">{result.gestrichene_positionen.length}</p>
+          </div>
+
+          {/* Empfehlung */}
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Empfehlung</p>
+            {konfidenzPct < 70 ? (
+              <p className="text-sm text-red-600 font-medium">Plan in hoeherer Aufloesung hochladen</p>
+            ) : (
+              <p className="text-sm text-green-600 font-medium">Ergebnis plausibel</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Warnings - grouped by severity */}
       {result.warnungen.length > 0 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-5">
-          <p className="font-medium text-yellow-800 mb-2">
-            {result.warnungen.length} Hinweis{result.warnungen.length > 1 ? "e" : ""} &mdash; bitte pruefen
-          </p>
-          <ul className="list-disc list-inside space-y-1 text-sm text-yellow-700">
-            {result.warnungen.map((w, i) => (
-              <li key={i}>{w}</li>
-            ))}
-          </ul>
+        <div className="space-y-3">
+          {/* Kritische Warnungen */}
+          {kritischeWarnungen.length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-5">
+              <p className="font-medium text-red-800 mb-2">
+                {kritischeWarnungen.length} Kritisch{kritischeWarnungen.length > 1 ? "e" : "er"} Hinweis{kritischeWarnungen.length > 1 ? "e" : ""}
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-sm text-red-700">
+                {kritischeWarnungen.map((w, i) => (
+                  <li key={i}>{renderWarningText(w)}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Normale Warnungen */}
+          {normaleWarnungen.length > 0 && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-5">
+              <p className="font-medium text-yellow-800 mb-2">
+                {normaleWarnungen.length} Warnung{normaleWarnungen.length > 1 ? "en" : ""}
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-sm text-yellow-700">
+                {normaleWarnungen.map((w, i) => (
+                  <li key={i}>{renderWarningText(w)}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 
@@ -1063,7 +1179,7 @@ export default function AnalyseJobPage() {
                 const curFlaeche = edits?.flaeche_m2 ?? r.flaeche_m2;
                 const curHoehe = edits?.hoehe_m ?? r.hoehe_m;
                 return (
-                  <tr key={i} className="border-t border-gray-100 hover:bg-gray-50">
+                  <tr key={i} id={r.raum_nr ? `raum-${r.raum_nr}` : undefined} className="border-t border-gray-100 hover:bg-gray-50">
                     <td className="px-6 py-3 font-medium">{r.bezeichnung}</td>
                     <td className="px-6 py-3 text-gray-500">{r.raum_nr ?? "—"}</td>
                     <td className="px-6 py-3 text-gray-500">{r.nutzung ?? "—"}</td>

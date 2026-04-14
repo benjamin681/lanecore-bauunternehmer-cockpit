@@ -15,7 +15,7 @@ class Projekt(Base, UUIDMixin, TimestampMixin):
     adresse: Mapped[str | None] = mapped_column(String(500))
     plan_nr: Mapped[str | None] = mapped_column(String(100))
     status: Mapped[str] = mapped_column(String(50), default="aktiv")
-    # aktiv | abgeschlossen | archiviert
+    # aktiv | angebot_erstellt | beauftragt | abgeschlossen | archiviert
     beschreibung: Mapped[str | None] = mapped_column(Text)
     # Aus dem Plan extrahiert:
     architekt: Mapped[str | None] = mapped_column(String(255))

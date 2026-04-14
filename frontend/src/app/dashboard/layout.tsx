@@ -7,6 +7,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "📊" },
   { href: "/dashboard/analyse", label: "Bauplan-Analyse", icon: "📐" },
   { href: "/dashboard/preislisten", label: "Preislisten", icon: "💰" },
+  { href: "/dashboard/angebote", label: "Angebote", icon: "📋" },
   { href: "/dashboard/projekte", label: "Projekte", icon: "📁" },
 ];
 

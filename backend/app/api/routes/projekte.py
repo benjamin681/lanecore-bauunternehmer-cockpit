@@ -22,6 +22,59 @@ from app.schemas.projekt import (
 router = APIRouter()
 
 
+@router.get("/pipeline")
+async def get_angebote_pipeline(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Projekte gruppiert nach Status fuer Kanban-Pipeline."""
+    result = await db.execute(
+        select(Projekt)
+        .options(selectinload(Projekt.analyse_jobs))
+        .where(Projekt.user_id == user_id)
+        .order_by(Projekt.updated_at.desc())
+    )
+    projekte = result.scalars().all()
+
+    def to_brief(p: Projekt) -> dict:
+        analysen = p.analyse_jobs or []
+        completed = [j for j in analysen if j.status == "completed"]
+        # Check if any angebot PDF was generated (has completed analyses)
+        has_angebot = len(completed) > 0
+        return {
+            "id": str(p.id),
+            "name": p.name,
+            "auftraggeber": p.auftraggeber,
+            "bauherr": p.bauherr,
+            "adresse": p.adresse,
+            "status": p.status,
+            "analyse_count": len(analysen),
+            "has_angebot": has_angebot,
+            "updated_at": p.updated_at.isoformat() if p.updated_at else None,
+        }
+
+    pipeline: dict[str, list] = {
+        "offen": [],
+        "angebot_erstellt": [],
+        "beauftragt": [],
+        "abgeschlossen": [],
+    }
+
+    for p in projekte:
+        brief = to_brief(p)
+        if p.status == "aktiv":
+            pipeline["offen"].append(brief)
+        elif p.status == "angebot_erstellt":
+            pipeline["angebot_erstellt"].append(brief)
+        elif p.status == "beauftragt":
+            pipeline["beauftragt"].append(brief)
+        elif p.status == "abgeschlossen":
+            pipeline["abgeschlossen"].append(brief)
+        # archiviert projects are not shown in pipeline
+
+    return pipeline
+
+
 @router.get("/", response_model=list[ProjektResponse])
 async def list_projekte(
     user_id: str = Depends(get_current_user_id),

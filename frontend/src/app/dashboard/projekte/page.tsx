@@ -94,7 +94,9 @@ export default function ProjektePage() {
   const statusBadge = (status: string) => {
     const colors: Record<string, string> = {
       aktiv: "bg-green-100 text-green-700",
-      abgeschlossen: "bg-blue-100 text-blue-700",
+      angebot_erstellt: "bg-blue-100 text-blue-700",
+      beauftragt: "bg-purple-100 text-purple-700",
+      abgeschlossen: "bg-teal-100 text-teal-700",
       archiviert: "bg-gray-100 text-gray-500",
     };
     return (
@@ -134,6 +136,8 @@ export default function ProjektePage() {
         >
           <option value="">Alle Status</option>
           <option value="aktiv">Aktiv</option>
+          <option value="angebot_erstellt">Angebot erstellt</option>
+          <option value="beauftragt">Beauftragt</option>
           <option value="abgeschlossen">Abgeschlossen</option>
           <option value="archiviert">Archiviert</option>
         </select>
