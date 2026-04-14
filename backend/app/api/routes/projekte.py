@@ -156,6 +156,34 @@ async def get_projekt(
     )
 
 
+@router.get("/{projekt_id}/kalkulation")
+async def get_projekt_kalkulation(
+    projekt_id: UUID,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Aggregierte Kalkulation über alle abgeschlossenen Analysen eines Projekts.
+
+    Merges all completed analyses into one combined kalkulation with
+    materials, price matching, and Kundenangebot.
+    """
+    from app.services.kalkulation_service import erstelle_projekt_kalkulation
+
+    # Verify the project belongs to this user
+    result = await db.execute(
+        select(Projekt).where(Projekt.id == projekt_id, Projekt.user_id == user_id)
+    )
+    projekt = result.scalar_one_or_none()
+    if not projekt:
+        raise JobNotFoundError(str(projekt_id))
+
+    kalkulation = await erstelle_projekt_kalkulation(projekt_id, db)
+    kalkulation["projekt_id"] = str(projekt_id)
+    kalkulation["projekt_name"] = projekt.name
+
+    return kalkulation
+
+
 @router.patch("/{projekt_id}", response_model=ProjektResponse)
 async def update_projekt(
     projekt_id: UUID,

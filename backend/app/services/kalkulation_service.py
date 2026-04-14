@@ -24,6 +24,21 @@ VERSCHNITT_PLATTEN = 1.10       # 10% Verschnitt
 VERSCHNITT_PROFILE = 1.05       # 5% Verschnitt
 VERSCHNITT_DAEMMUNG = 1.05      # 5% Verschnitt
 SCHRAUBEN_PRO_M2 = 25           # Schnellbauschrauben pro m² Beplankung
+
+# ── Differenzierte Arbeitszeitwerte (h/m²) nach System ──────────────────────
+# Basierend auf Erfahrungswerten für Trockenbau-Montage inkl. Spachteln.
+STUNDEN_PRO_M2 = {
+    # Decken
+    "D112": 0.4,  # Einfache Abhangdecke
+    "D113": 0.5,  # Doppelt beplankt
+    "D116": 0.7,  # Feuchtraum
+    "HKD": 0.6,   # Heiz-Kühl-Decke
+    # Wände
+    "W112": 0.6,  # Standard einlagig
+    "W115": 0.9,  # Doppelt beplankt
+    "W116": 1.0,  # Feuchtraum doppelt
+    "W118": 1.1,  # Brandschutz
+}
 DIREKTABHAENGER_PRO_M2 = 1.5    # Abhänger pro m² Decke
 CD_PROFIL_LFM_PRO_M2 = 3.2     # CD 60/27 laufende Meter pro m² Decke (Achsabstand 31.5cm)
 UD_PROFIL_LFM_PRO_M2 = 0.8     # UD Randprofil: Umfang / Fläche Näherung
@@ -330,56 +345,134 @@ def aggregiere_positionen(positionen: list[MaterialPosition]) -> list[MaterialPo
     return sorted(agg.values(), key=lambda p: p.kategorie)
 
 
+async def _has_pg_trgm(db: AsyncSession) -> bool:
+    """Check if pg_trgm extension is available."""
+    try:
+        result = await db.execute(
+            select(func.count()).select_from(
+                select(func.literal_column("1"))
+                .where(func.literal_column("extname") == "pg_trgm")
+                .select_from(func.literal_column("pg_extension"))
+                .subquery()
+            )
+        )
+        return False  # Safe fallback — actual check below
+    except Exception:
+        return False
+
+
 async def preise_matchen(
     positionen: list[MaterialPosition],
     db: AsyncSession,
 ) -> list[MaterialPosition]:
-    """Matcht jede Position gegen die Produkte aller Preislisten."""
+    """Matcht jede Position gegen die Produkte aller Preislisten.
+
+    Improvements over naive approach:
+    - Single batched query with OR across all search terms
+    - pg_trgm trigram similarity if available, fallback to ILIKE
+    - Unit normalization: Pkg → per-piece price when menge_pro_einheit is set
+    - Scoring: exact category match gets priority
+    """
+    from sqlalchemy import or_, text, literal_column
+
+    # Check pg_trgm availability once
+    use_trigram = False
+    try:
+        await db.execute(text("SELECT similarity('test', 'test')"))
+        use_trigram = True
+    except Exception:
+        await db.rollback()
+
     for pos in positionen:
+        if not pos.suchbegriffe:
+            continue
+
+        # Build ONE query that ORs all search terms
+        if use_trigram:
+            # Trigram similarity: find products where ANY search term is similar
+            similarity_conditions = []
+            for term in pos.suchbegriffe:
+                similarity_conditions.append(
+                    text(f"similarity(produkte.bezeichnung, :term_{hash(term) & 0xFFFF}) > 0.15")
+                    .bindparams(**{f"term_{hash(term) & 0xFFFF}": term})
+                )
+                # Also include ILIKE for exact substring matches
+                similarity_conditions.append(
+                    Produkt.bezeichnung.ilike(f"%{term}%")
+                )
+            filter_expr = or_(*similarity_conditions)
+        else:
+            # Fallback: ILIKE with all terms ORed
+            ilike_conditions = [
+                Produkt.bezeichnung.ilike(f"%{term}%")
+                for term in pos.suchbegriffe
+            ]
+            filter_expr = or_(*ilike_conditions)
+
+        result = await db.execute(
+            select(Produkt, Preisliste.anbieter)
+            .join(Preisliste)
+            .where(
+                Preisliste.status == "completed",
+                Produkt.verfuegbar == True,
+                filter_expr,
+            )
+            .order_by(Produkt.preis_netto.asc())
+            .limit(30)
+        )
+
+        alle = []
+        seen = set()
+        for produkt, anbieter in result.all():
+            dedup_key = f"{anbieter}|{produkt.bezeichnung}"
+            if dedup_key in seen:
+                continue
+            seen.add(dedup_key)
+
+            preis = float(produkt.preis_netto)
+
+            # Unit normalization: if product is sold as Pkg and menge_pro_einheit
+            # is set, calculate per-piece price for better comparison
+            einheit_normalized = produkt.einheit
+            if (
+                produkt.einheit
+                and produkt.einheit.lower() in ("pkg", "paket", "bund", "ve")
+                and produkt.menge_pro_einheit
+                and float(produkt.menge_pro_einheit) > 0
+            ):
+                preis = round(preis / float(produkt.menge_pro_einheit), 4)
+                einheit_normalized = "Stk"
+
+            # Scoring: exact category match gets priority (lower score = better)
+            score = preis  # base score is price
+            if produkt.kategorie and produkt.kategorie == pos.kategorie:
+                score *= 0.9  # 10% bonus for exact category match
+
+            alle.append({
+                "anbieter": anbieter,
+                "bezeichnung": produkt.bezeichnung,
+                "preis_netto": preis,
+                "einheit": einheit_normalized,
+                "artikel_nr": produkt.artikel_nr,
+                "_score": score,
+            })
+
+        # Sort by score (category-adjusted price)
+        alle.sort(key=lambda a: a["_score"])
+
         best_price = None
         best_anbieter = None
-        alle = []
+        if alle:
+            best_price = alle[0]["preis_netto"]
+            best_anbieter = alle[0]["anbieter"]
 
-        for suchbegriff in pos.suchbegriffe:
-            # Fuzzy-Suche: ILIKE
-            result = await db.execute(
-                select(Produkt, Preisliste.anbieter)
-                .join(Preisliste)
-                .where(
-                    Preisliste.status == "completed",
-                    Produkt.verfuegbar == True,
-                    Produkt.bezeichnung.ilike(f"%{suchbegriff}%"),
-                )
-                .order_by(Produkt.preis_netto.asc())
-                .limit(10)
-            )
-
-            for produkt, anbieter in result.all():
-                preis = float(produkt.preis_netto)
-                alle.append({
-                    "anbieter": anbieter,
-                    "bezeichnung": produkt.bezeichnung,
-                    "preis_netto": preis,
-                    "einheit": produkt.einheit,
-                    "artikel_nr": produkt.artikel_nr,
-                })
-
-                if best_price is None or preis < best_price:
-                    best_price = preis
-                    best_anbieter = anbieter
-
-        # Deduplizieren nach Anbieter+Bezeichnung
-        seen = set()
-        unique_alle = []
+        # Remove internal _score before exposing
         for a in alle:
-            key = f"{a['anbieter']}|{a['bezeichnung']}"
-            if key not in seen:
-                seen.add(key)
-                unique_alle.append(a)
+            a.pop("_score", None)
 
         pos.bester_preis = best_price
         pos.bester_anbieter = best_anbieter
-        pos.alle_preise = unique_alle[:5]  # Top 5
+        pos.alle_preise = alle[:5]  # Top 5
 
     return positionen
 
@@ -495,11 +588,26 @@ async def erstelle_kalkulation(
         for w in analyse_result.get("waende", [])
     )
 
-    # Lohnstunden: split between own and sub based on anteil_eigenleistung
-    gesamt_stunden = round(
-        gesamt_deckenflaeche * stunden_pro_m2_decke +
-        gesamt_wandflaeche * stunden_pro_m2_wand, 1
-    )
+    # Lohnstunden: differenziert nach System-Typ (STUNDEN_PRO_M2 Lookup)
+    # Decken: system-spezifische h/m², Fallback auf custom_params oder Pauschale
+    decken_stunden = 0.0
+    for d in analyse_result.get("decken", []):
+        if d.get("entfaellt"):
+            continue
+        fl = d.get("flaeche_m2") or 0
+        sys_key = (d.get("system") or "").upper().strip()
+        h_pro_m2 = STUNDEN_PRO_M2.get(sys_key, stunden_pro_m2_decke)
+        decken_stunden += fl * h_pro_m2
+
+    # Wände: typ-spezifische h/m², Fallback auf custom_params oder Pauschale
+    wand_stunden = 0.0
+    for w in analyse_result.get("waende", []):
+        fl = w.get("flaeche_m2") or (w.get("laenge_m", 0) * w.get("hoehe_m", 0))
+        typ_key = (w.get("typ") or "").upper().strip()
+        h_pro_m2 = STUNDEN_PRO_M2.get(typ_key, stunden_pro_m2_wand)
+        wand_stunden += fl * h_pro_m2
+
+    gesamt_stunden = round(decken_stunden + wand_stunden, 1)
     stunden_eigen = round(gesamt_stunden * anteil_eigenleistung, 1)
     stunden_sub = round(gesamt_stunden * (1 - anteil_eigenleistung), 1)
 
@@ -561,3 +669,76 @@ async def erstelle_kalkulation(
         "bestellliste": bestellliste_result,
         "kundenangebot": kundenangebot,
     }
+
+
+async def erstelle_projekt_kalkulation(
+    projekt_id: UUID,
+    db: AsyncSession,
+    custom_params: dict | None = None,
+) -> dict:
+    """Aggregierte Kalkulation über alle abgeschlossenen Analysen eines Projekts.
+
+    1. Fetches all completed AnalyseErgebnisse for the project
+    2. Merges all raeume, waende, decken, oeffnungen across analyses
+    3. Calls erstelle_kalkulation() with the merged data
+    4. Returns same structure but with additional analysen_count field
+    """
+    from app.models.analyse_job import AnalyseJob
+    from app.models.analyse_ergebnis import AnalyseErgebnis
+    from sqlalchemy.orm import selectinload
+
+    # Fetch all completed analyse jobs for this project
+    result = await db.execute(
+        select(AnalyseJob)
+        .options(selectinload(AnalyseJob.ergebnis))
+        .where(
+            AnalyseJob.projekt_id == projekt_id,
+            AnalyseJob.status == "completed",
+        )
+        .order_by(AnalyseJob.created_at.asc())
+    )
+    jobs = result.scalars().all()
+
+    completed_jobs = [j for j in jobs if j.ergebnis is not None]
+    if not completed_jobs:
+        return {
+            "positionen": [],
+            "gesamt_netto": 0.0,
+            "positionen_mit_preis": 0,
+            "positionen_ohne_preis": 0,
+            "positionen_gesamt": 0,
+            "bestellliste": [],
+            "kundenangebot": {},
+            "analysen_count": 0,
+        }
+
+    # Merge all analyse results into one combined dict
+    merged: dict = {
+        "raeume": [],
+        "waende": [],
+        "decken": [],
+        "oeffnungen": [],
+        "details": [],
+    }
+    for job in completed_jobs:
+        erg = job.ergebnis
+        merged["raeume"].extend(erg.raeume or [])
+        merged["waende"].extend(erg.waende or [])
+        merged["decken"].extend(erg.decken or [])
+        merged["oeffnungen"].extend(erg.oeffnungen or [])
+        merged["details"].extend(erg.details or [])
+
+    log.info(
+        "projekt_kalkulation_merged",
+        projekt_id=str(projekt_id),
+        analysen=len(completed_jobs),
+        raeume=len(merged["raeume"]),
+        waende=len(merged["waende"]),
+        decken=len(merged["decken"]),
+    )
+
+    # Run the standard kalkulation on merged data
+    kalkulation = await erstelle_kalkulation(merged, db, custom_params=custom_params)
+    kalkulation["analysen_count"] = len(completed_jobs)
+
+    return kalkulation

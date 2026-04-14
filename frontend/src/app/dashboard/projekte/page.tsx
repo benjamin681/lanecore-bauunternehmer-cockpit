@@ -218,7 +218,18 @@ export default function ProjektePage() {
             </div>
             {p.analysen.length > 0 && (
               <div className="space-y-2 mt-4">
-                <p className="text-xs font-semibold text-gray-500">Analysen:</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-gray-500">Analysen:</p>
+                  {p.analysen.some((a) => a.status === "completed") && (
+                    <a
+                      href={`/dashboard/projekte/${p.id}/kalkulation`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors"
+                    >
+                      Gesamtkalkulation
+                    </a>
+                  )}
+                </div>
                 {p.analysen.map((a) => (
                   <a
                     key={a.id}
