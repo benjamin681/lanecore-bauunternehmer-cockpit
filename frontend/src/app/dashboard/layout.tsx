@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "📊" },
   { href: "/dashboard/analyse", label: "Bauplan-Analyse", icon: "📐" },
+  { href: "/dashboard/preislisten", label: "Preislisten", icon: "💰" },
   { href: "/dashboard/projekte", label: "Projekte", icon: "📁" },
 ];
 
@@ -54,7 +55,11 @@ export default function DashboardLayout({
       <main className="flex-1 overflow-auto">
         <header className="h-16 bg-white border-b border-gray-200 flex items-center px-8">
           <h1 className="text-lg font-semibold text-gray-800">
-            {navItems.find((n) => pathname.startsWith(n.href))?.label ?? "Dashboard"}
+            {navItems.find((n) =>
+              n.href === "/dashboard"
+                ? pathname === "/dashboard"
+                : pathname.startsWith(n.href)
+            )?.label ?? "Dashboard"}
           </h1>
         </header>
         <div className="p-8">{children}</div>

@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.exceptions import LaneCoreError, lanecore_exception_handler
-from app.api.routes import health, bauplan, projekte, stats
+from app.api.routes import health, bauplan, projekte, stats, preisliste
 
 
 @asynccontextmanager
@@ -42,3 +42,4 @@ app.include_router(health.router, prefix="/api/v1", tags=["health"])
 app.include_router(bauplan.router, prefix="/api/v1/bauplan", tags=["bauplan-analyse"])
 app.include_router(projekte.router, prefix="/api/v1/projekte", tags=["projekte"])
 app.include_router(stats.router, prefix="/api/v1/stats", tags=["statistics"])
+app.include_router(preisliste.router, prefix="/api/v1/preislisten", tags=["preislisten"])
