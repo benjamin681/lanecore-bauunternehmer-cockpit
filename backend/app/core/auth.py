@@ -8,8 +8,11 @@ import structlog
 
 from app.core.config import settings
 
+# Dev mode: skip auth when no Clerk keys configured
+_DEV_MODE = not settings.clerk_secret_key
+
 log = structlog.get_logger()
-security = HTTPBearer()
+security = HTTPBearer(auto_error=not _DEV_MODE)
 
 # Clerk JWKS (cached in production)
 _jwks_cache: dict | None = None
@@ -22,8 +25,7 @@ async def _get_clerk_jwks() -> dict:
         return _jwks_cache
 
     async with httpx.AsyncClient() as client:
-        # Clerk JWKS endpoint
-        resp = await client.get(f"https://api.clerk.com/v1/jwks", headers={
+        resp = await client.get("https://api.clerk.com/v1/jwks", headers={
             "Authorization": f"Bearer {settings.clerk_secret_key}",
         })
         resp.raise_for_status()
@@ -32,25 +34,25 @@ async def _get_clerk_jwks() -> dict:
 
 
 async def get_current_user_id(
-    credentials: HTTPAuthorizationCredentials = Security(security),
+    credentials: HTTPAuthorizationCredentials | None = Security(security),
 ) -> str:
     """
     FastAPI dependency: validates Clerk JWT and returns user ID.
-
-    Usage:
-        @router.get("/protected")
-        async def protected(user_id: str = Depends(get_current_user_id)):
-            ...
+    In dev mode (no CLERK_SECRET_KEY), returns a dev user ID.
     """
+    if _DEV_MODE:
+        return "dev-user"
+
+    if credentials is None:
+        raise HTTPException(status_code=401, detail="Nicht authentifiziert.")
+
     token = credentials.credentials
 
     try:
         jwks = await _get_clerk_jwks()
-        # Decode without verification first to get the key ID
         unverified_header = jwt.get_unverified_header(token)
         kid = unverified_header.get("kid")
 
-        # Find the matching key
         rsa_key = None
         for key in jwks.get("keys", []):
             if key["kid"] == kid:

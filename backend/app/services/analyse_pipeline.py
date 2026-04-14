@@ -8,6 +8,9 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from pathlib import Path
+
+from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.storage import storage
 from app.models.analyse_job import AnalyseJob
@@ -42,8 +45,16 @@ async def run_analyse_pipeline(job_id: uuid.UUID, pdf_bytes: bytes, filename: st
             pdf_info = validate_pdf(pdf_bytes)
             await _update_job_status(db, job_id, "processing", progress=10)
 
-            # 2. Upload to S3
-            s3_key = await storage.upload_pdf(pdf_bytes, str(job_id), filename)
+            # 2. Upload to S3 (skip if no credentials configured)
+            if settings.aws_access_key_id:
+                s3_key = await storage.upload_pdf(pdf_bytes, str(job_id), filename)
+            else:
+                # Dev mode: save locally
+                local_dir = Path(f"/tmp/lanecore-uploads/{job_id}")
+                local_dir.mkdir(parents=True, exist_ok=True)
+                (local_dir / filename).write_bytes(pdf_bytes)
+                s3_key = f"local://{local_dir / filename}"
+                log.info("pdf_saved_locally", path=str(local_dir / filename))
             await _update_s3_key(db, job_id, s3_key)
             await _update_job_status(db, job_id, "processing", progress=15)
 
