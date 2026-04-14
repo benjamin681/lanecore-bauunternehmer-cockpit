@@ -35,6 +35,32 @@ export default function ProjektePage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const archiveProjekt = async (id: string) => {
+    try {
+      const res = await fetch(`/api/v1/projekte/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "archiviert" }),
+      });
+      if (res.ok) {
+        await loadProjekte();
+        setExpandedId(null);
+      }
+    } catch { /* ignore */ }
+  };
+
+  const deleteProjekt = async (id: string) => {
+    try {
+      const res = await fetch(`/api/v1/projekte/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setConfirmDeleteId(null);
+        setExpandedId(null);
+        await loadProjekte();
+      }
+    } catch { /* ignore */ }
+  };
 
   const loadProjekte = async () => {
     const params = new URLSearchParams();
@@ -206,7 +232,41 @@ export default function ProjektePage() {
           <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-gray-900">{p.name}</h3>
-              <button onClick={() => setExpandedId(null)} className="text-gray-400 hover:text-gray-600 text-sm">Schliessen</button>
+              <div className="flex items-center gap-2">
+                {p.status !== "archiviert" && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); archiveProjekt(p.id); }}
+                    className="px-3 py-1.5 bg-orange-100 text-orange-700 rounded-lg text-sm font-medium hover:bg-orange-200 transition-colors"
+                  >
+                    Archivieren
+                  </button>
+                )}
+                {confirmDeleteId === p.id ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-red-600 font-medium">Wirklich loeschen?</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); deleteProjekt(p.id); }}
+                      className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                    >
+                      Ja, loeschen
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
+                      className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                    >
+                      Abbrechen
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(p.id); }}
+                    className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors"
+                  >
+                    Loeschen
+                  </button>
+                )}
+                <button onClick={() => setExpandedId(null)} className="text-gray-400 hover:text-gray-600 text-sm ml-2">Schliessen</button>
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div><span className="text-gray-500">Auftraggeber:</span> <strong>{p.auftraggeber || "—"}</strong></div>

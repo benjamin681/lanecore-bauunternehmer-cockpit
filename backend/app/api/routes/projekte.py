@@ -184,6 +184,27 @@ async def get_projekt_kalkulation(
     return kalkulation
 
 
+@router.delete("/{projekt_id}", status_code=204)
+async def delete_projekt(
+    projekt_id: UUID,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Projekt und alle zugehoerigen Analysen loeschen."""
+    result = await db.execute(
+        select(Projekt)
+        .options(selectinload(Projekt.analyse_jobs))
+        .where(Projekt.id == projekt_id, Projekt.user_id == user_id)
+    )
+    projekt = result.scalar_one_or_none()
+    if not projekt:
+        raise JobNotFoundError(str(projekt_id))
+
+    await db.delete(projekt)
+    await db.commit()
+    return None
+
+
 @router.patch("/{projekt_id}", response_model=ProjektResponse)
 async def update_projekt(
     projekt_id: UUID,

@@ -47,9 +47,38 @@ UW_PROFIL_LFM_PRO_M2_WAND = 0.7  # UW Boden+Decke pro m² Wand
 SPACHTEL_KG_PRO_M2 = 0.3       # Fugenspachtel kg pro m²
 FUGENBAND_LFM_PRO_M2 = 1.5     # Bewehrungsstreifen lfm pro m²
 
+# ── Anfahrtskosten-Pauschalen (ab Firmensitz Ulm) ───────────────────────────
+ANFAHRT_PAUSCHAL: dict[str, float] = {
+    "Ulm": 0,
+    "Neu-Ulm": 0,
+    "Dornstadt": 25,
+    "Blaustein": 20,
+    "Ehingen": 50,
+    "Göppingen": 75,
+    "Augsburg": 100,
+    "Stuttgart": 120,
+    "München": 180,
+}
+ANFAHRT_DEFAULT = 80  # EUR wenn Stadt nicht bekannt
+
 # Plattengrößen (Standard)
 GKB_M2_PRO_PLATTE = 3.0  # 1250 x 2000 mm = 2.5 m² (aber 1250x2500 = 3.125)
 AQUAPANEL_M2_PRO_PLATTE = 1.5  # 900 x 1200 = 1.08 (aber größer verfügbar)
+
+
+def _anfahrtskosten_fuer_adresse(adresse: str | None) -> float | None:
+    """Bestimmt Anfahrtskosten-Pauschale anhand der Projekt-Adresse.
+
+    Durchsucht die Adresse nach bekannten Stadtnamen.
+    Returns None wenn keine Adresse gesetzt.
+    """
+    if not adresse:
+        return None
+    adresse_lower = adresse.lower()
+    for stadt, kosten in ANFAHRT_PAUSCHAL.items():
+        if stadt.lower() in adresse_lower:
+            return kosten
+    return ANFAHRT_DEFAULT
 
 
 @dataclass
@@ -481,6 +510,7 @@ async def erstelle_kalkulation(
     analyse_result: dict,
     db: AsyncSession,
     custom_params: dict | None = None,
+    projekt_adresse: str | None = None,
 ) -> dict:
     """Kompletter Flow: Analyse -> Materialliste -> Preisvergleich -> Kalkulation.
 
@@ -493,6 +523,8 @@ async def erstelle_kalkulation(
       - anteil_eigenleistung (float, 0.0-1.0)
       - zusatzkosten (list[dict] with bezeichnung + betrag)
       - mengen_overrides (dict[str, float] key=bezeichnung, value=new menge)
+
+    projekt_adresse: optional project address for automatic Anfahrtskosten
     """
     params = custom_params or {}
 
@@ -577,6 +609,20 @@ async def erstelle_kalkulation(
     anteil_eigenleistung = params.get("anteil_eigenleistung", 0.3) or 0.3
     zusatzkosten = params.get("zusatzkosten", []) or []
 
+    # Automatische Anfahrtskosten hinzufuegen wenn Adresse bekannt
+    # und nicht bereits manuell in zusatzkosten enthalten
+    has_anfahrt = any(
+        "anfahrt" in (z.get("bezeichnung") or "").lower()
+        for z in zusatzkosten
+    )
+    if not has_anfahrt and projekt_adresse:
+        anfahrt_betrag = _anfahrtskosten_fuer_adresse(projekt_adresse)
+        if anfahrt_betrag is not None and anfahrt_betrag > 0:
+            zusatzkosten = [
+                {"bezeichnung": "Anfahrtskosten", "betrag": anfahrt_betrag},
+                *zusatzkosten,
+            ]
+
     # Gesamt-Flaechen berechnen
     gesamt_deckenflaeche = sum(
         (d.get("flaeche_m2") or 0)
@@ -633,6 +679,12 @@ async def erstelle_kalkulation(
     mwst = round(angebot_netto * 0.19, 2)
     angebot_brutto = round(angebot_netto + mwst, 2)
 
+    # Anfahrtskosten separat ausweisen
+    anfahrtskosten_betrag = 0.0
+    for z in zusatzkosten:
+        if "anfahrt" in (z.get("bezeichnung") or "").lower():
+            anfahrtskosten_betrag += z.get("betrag", 0)
+
     kundenangebot = {
         "material_einkauf": material_einkauf,
         "material_aufschlag_prozent": round(aufschlag_material * 100, 1),
@@ -658,6 +710,7 @@ async def erstelle_kalkulation(
         "angebot_brutto": angebot_brutto,
         "deckenflaeche_m2": round(gesamt_deckenflaeche, 1),
         "wandflaeche_m2": round(gesamt_wandflaeche, 1),
+        "anfahrtskosten": round(anfahrtskosten_betrag, 2),
     }
 
     return {
@@ -685,7 +738,15 @@ async def erstelle_projekt_kalkulation(
     """
     from app.models.analyse_job import AnalyseJob
     from app.models.analyse_ergebnis import AnalyseErgebnis
+    from app.models.projekt import Projekt
     from sqlalchemy.orm import selectinload
+
+    # Fetch project address for Anfahrtskosten
+    projekt_result = await db.execute(
+        select(Projekt).where(Projekt.id == projekt_id)
+    )
+    projekt = projekt_result.scalar_one_or_none()
+    projekt_adresse = projekt.adresse if projekt else None
 
     # Fetch all completed analyse jobs for this project
     result = await db.execute(
@@ -738,7 +799,9 @@ async def erstelle_projekt_kalkulation(
     )
 
     # Run the standard kalkulation on merged data
-    kalkulation = await erstelle_kalkulation(merged, db, custom_params=custom_params)
+    kalkulation = await erstelle_kalkulation(
+        merged, db, custom_params=custom_params, projekt_adresse=projekt_adresse,
+    )
     kalkulation["analysen_count"] = len(completed_jobs)
 
     return kalkulation

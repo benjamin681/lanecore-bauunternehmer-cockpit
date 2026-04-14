@@ -651,8 +651,17 @@ export default function AnalyseJobPage() {
                 </div>
 
                 {kalkulation.positionen_ohne_preis > 0 && kalkulation.positionen_mit_preis === 0 && (
-                  <div className="px-6 py-3 bg-orange-50 border-b border-orange-200 text-sm text-orange-800">
-                    Noch keine Preislisten hochgeladen. <a href="/dashboard/preislisten" className="underline font-medium">Preislisten hochladen</a>, um automatisch die guenstigsten Preise zu erhalten.
+                  <div className="mx-6 mt-4 p-4 bg-orange-50 border border-orange-300 rounded-lg">
+                    <p className="font-semibold text-orange-800 mb-1">Noch keine Preislisten hochgeladen</p>
+                    <p className="text-sm text-orange-700">
+                      Laden Sie Preislisten Ihrer Lieferanten hoch um automatisch die guenstigsten Preise zu sehen.
+                    </p>
+                    <a
+                      href="/dashboard/preislisten"
+                      className="inline-block mt-2 px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors"
+                    >
+                      Preislisten hochladen
+                    </a>
                   </div>
                 )}
 
@@ -701,8 +710,8 @@ export default function AnalyseJobPage() {
                                 />
                               </td>
                               <td className="px-4 py-3">{pos.einheit}</td>
-                              <td className="px-4 py-3 text-right">{pos.einzelpreis != null ? eur(pos.einzelpreis) : <span className="text-orange-500">&mdash;</span>}</td>
-                              <td className="px-4 py-3 text-right font-medium">{localGesamt != null ? eur(localGesamt) : <span className="text-orange-500">kein Preis</span>}</td>
+                              <td className="px-4 py-3 text-right">{pos.einzelpreis != null && pos.einzelpreis > 0 ? eur(pos.einzelpreis) : <span className="text-orange-500 font-medium">kein Preis</span>}</td>
+                              <td className="px-4 py-3 text-right font-medium">{localGesamt != null && localGesamt > 0 ? eur(localGesamt) : <span className="text-orange-500">kein Preis</span>}</td>
                               <td className="px-4 py-3">{pos.anbieter ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">{pos.anbieter}</span> : <span className="text-xs text-gray-400">—</span>}</td>
                             </tr>
                           );
@@ -771,6 +780,16 @@ export default function AnalyseJobPage() {
                 {/* ═══ SUB-TAB: Kundenangebot (editable) ═══ */}
                 {kalkSubTab === "angebot" && kalkParams && (
                   <div className="p-6 space-y-6">
+                    {kalkulation.kundenangebot.material_einkauf === 0 && (
+                      <div className="p-4 bg-orange-50 border border-orange-300 rounded-lg">
+                        <p className="font-semibold text-orange-800">Material-Einkaufspreise fehlen</p>
+                        <p className="text-sm text-orange-700 mt-1">
+                          Bitte laden Sie zuerst{" "}
+                          <a href="/dashboard/preislisten" className="underline font-medium hover:text-orange-900">Preislisten</a>{" "}
+                          hoch, damit die Materialkalkulation korrekt berechnet werden kann.
+                        </p>
+                      </div>
+                    )}
                     {recalculating && (
                       <div className="text-sm text-primary-600 animate-pulse">Kalkulation wird aktualisiert...</div>
                     )}

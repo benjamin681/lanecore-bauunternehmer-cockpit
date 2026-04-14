@@ -326,7 +326,7 @@ async def get_kalkulation(
 
     result = await db.execute(
         select(AnalyseJob)
-        .options(selectinload(AnalyseJob.ergebnis))
+        .options(selectinload(AnalyseJob.ergebnis), selectinload(AnalyseJob.projekt))
         .where(AnalyseJob.id == job_id)
     )
     job = result.scalar_one_or_none()
@@ -348,8 +348,9 @@ async def get_kalkulation(
     _filename = job.filename
     _plantyp = erg.plantyp
     _geschoss = erg.geschoss
+    _adresse = job.projekt.adresse if job.projekt else None
 
-    kalkulation = await erstelle_kalkulation(analyse_data, db)
+    kalkulation = await erstelle_kalkulation(analyse_data, db, projekt_adresse=_adresse)
     kalkulation["job_id"] = str(job_id)
     kalkulation["filename"] = _filename
     kalkulation["plantyp"] = _plantyp
@@ -385,7 +386,7 @@ async def get_angebot_pdf(
 
     result = await db.execute(
         select(AnalyseJob)
-        .options(selectinload(AnalyseJob.ergebnis))
+        .options(selectinload(AnalyseJob.ergebnis), selectinload(AnalyseJob.projekt))
         .where(AnalyseJob.id == job_id)
     )
     job = result.scalar_one_or_none()
@@ -399,6 +400,7 @@ async def get_angebot_pdf(
     _filename = job.filename
     _plantyp = erg.plantyp
     _geschoss = erg.geschoss
+    _adresse = job.projekt.adresse if job.projekt else None
 
     analyse_data = {
         "raeume": erg.raeume or [],
@@ -424,7 +426,8 @@ async def get_angebot_pdf(
         custom_params["anteil_eigenleistung"] = anteil_eigenleistung
 
     kalkulation = await erstelle_kalkulation(
-        analyse_data, db, custom_params=custom_params if custom_params else None
+        analyse_data, db, custom_params=custom_params if custom_params else None,
+        projekt_adresse=_adresse,
     )
     kalkulation["job_id"] = str(job_id)
     kalkulation["filename"] = _filename
@@ -458,7 +461,7 @@ async def post_kalkulation(
 
     result = await db.execute(
         select(AnalyseJob)
-        .options(selectinload(AnalyseJob.ergebnis))
+        .options(selectinload(AnalyseJob.ergebnis), selectinload(AnalyseJob.projekt))
         .where(AnalyseJob.id == job_id)
     )
     job = result.scalar_one_or_none()
@@ -472,6 +475,7 @@ async def post_kalkulation(
     _filename = job.filename
     _plantyp = erg.plantyp
     _geschoss = erg.geschoss
+    _adresse = job.projekt.adresse if job.projekt else None
 
     analyse_data = {
         "raeume": erg.raeume or [],
@@ -490,7 +494,9 @@ async def post_kalkulation(
             for z in params.zusatzkosten
         ]
 
-    kalkulation = await erstelle_kalkulation(analyse_data, db, custom_params=custom_params)
+    kalkulation = await erstelle_kalkulation(
+        analyse_data, db, custom_params=custom_params, projekt_adresse=_adresse,
+    )
     kalkulation["job_id"] = str(job_id)
     kalkulation["filename"] = _filename
     kalkulation["plantyp"] = _plantyp
