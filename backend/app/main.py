@@ -6,15 +6,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.api.routes import health, bauplan
+from app.core.exceptions import LaneCoreError, lanecore_exception_handler
+from app.api.routes import health, bauplan, projekte
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application startup/shutdown lifecycle."""
-    # Startup
+    # Startup: DB connection pool, etc.
     yield
-    # Shutdown
+    # Shutdown: cleanup
 
 
 app = FastAPI(
@@ -24,6 +25,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Exception handlers
+app.add_exception_handler(LaneCoreError, lanecore_exception_handler)  # type: ignore[arg-type]
+
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -32,5 +37,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Routes
 app.include_router(health.router, prefix="/api/v1", tags=["health"])
 app.include_router(bauplan.router, prefix="/api/v1/bauplan", tags=["bauplan-analyse"])
+app.include_router(projekte.router, prefix="/api/v1/projekte", tags=["projekte"])

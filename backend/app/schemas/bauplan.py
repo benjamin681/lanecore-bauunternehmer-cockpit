@@ -1,0 +1,130 @@
+"""Pydantic schemas for Bauplan-Analyse API."""
+
+from datetime import datetime
+from uuid import UUID
+
+from pydantic import BaseModel, Field
+
+
+class RaumSchema(BaseModel):
+    bezeichnung: str
+    raum_nr: str | None = None
+    flaeche_m2: float
+    breite_m: float | None = None
+    tiefe_m: float | None = None
+    hoehe_m: float | None = None
+    nutzung: str | None = None
+    deckentyp: str | None = None
+
+
+class WandSchema(BaseModel):
+    id: str
+    typ: str  # W112 | W115 | W118 | ...
+    laenge_m: float
+    hoehe_m: float
+    flaeche_m2: float | None = None
+    von_raum: str | None = None
+    zu_raum: str | None = None
+    unsicher: bool = False
+    notizen: str | None = None
+
+
+class DeckeSchema(BaseModel):
+    raum: str
+    raum_nr: str | None = None
+    typ: str  # GKb-Abhangdecke glatt | Aquapanel | ...
+    system: str | None = None  # D112 | D113 | HKD | ...
+    flaeche_m2: float
+    abhaengehoehe_m: float | None = None
+    beplankung: str | None = None
+    profil: str | None = None
+    entfaellt: bool = False
+
+
+class OeffnungSchema(BaseModel):
+    typ: str  # Tuer | Fenster
+    breite_m: float
+    hoehe_m: float
+    wand_id: str | None = None
+
+
+class DetailSchema(BaseModel):
+    detail_nr: str | None = None
+    bezeichnung: str
+    massstab: str | None = None
+    beschreibung: str | None = None
+
+
+class GestrichenePositionSchema(BaseModel):
+    bezeichnung: str
+    grund: str
+    original_position: str | None = None
+
+
+class ProjektInfoSchema(BaseModel):
+    name: str | None = None
+    adresse: str | None = None
+    plan_nr: str | None = None
+    datum: str | None = None
+    revision: str | None = None
+
+
+class WandSummary(BaseModel):
+    """Zusammenfassung Wandflächen nach Typ."""
+    W112: float = 0.0
+    W115: float = 0.0
+    W116: float = 0.0
+    W118: float = 0.0
+    Unbekannt: float = 0.0
+
+
+class DeckenSummary(BaseModel):
+    """Zusammenfassung Deckenflächen nach System."""
+    D112: float = 0.0
+    D113: float = 0.0
+    HKD: float = 0.0
+    Unbekannt: float = 0.0
+
+
+class AnalyseSummary(BaseModel):
+    gesamt_wandflaeche: WandSummary = WandSummary()
+    gesamt_deckenflaeche: DeckenSummary = DeckenSummary()
+    gesamt_raumflaeche: float = 0.0
+    anzahl_raeume: int = 0
+
+
+# --- API Response Models ---
+
+
+class AnalyseStatusResponse(BaseModel):
+    job_id: UUID
+    status: str  # pending | processing | completed | failed
+    progress: int = Field(ge=0, le=100)
+    filename: str | None = None
+    error_message: str | None = None
+    created_at: datetime | None = None
+
+
+class AnalyseResultResponse(BaseModel):
+    job_id: UUID
+    status: str
+    plantyp: str | None = None
+    massstab: str | None = None
+    geschoss: str | None = None
+    projekt: ProjektInfoSchema | None = None
+    raeume: list[RaumSchema] = []
+    waende: list[WandSchema] = []
+    decken: list[DeckeSchema] = []
+    oeffnungen: list[OeffnungSchema] = []
+    details: list[DetailSchema] = []
+    gestrichene_positionen: list[GestrichenePositionSchema] = []
+    konfidenz: float = 0.0
+    warnungen: list[str] = []
+    nicht_lesbar: list[str] = []
+    summary: AnalyseSummary = AnalyseSummary()
+
+    # Audit
+    model_used: str | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    cost_usd: float | None = None
