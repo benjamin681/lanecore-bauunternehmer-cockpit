@@ -15,6 +15,7 @@ from app.core.database import AsyncSessionLocal
 from app.core.storage import storage
 from app.models.analyse_job import AnalyseJob
 from app.models.analyse_ergebnis import AnalyseErgebnis
+from app.models.projekt import Projekt
 from app.services.pdf_service import validate_pdf, pdf_to_images
 from app.services.bauplan_service import BauplanAnalyseService
 
@@ -118,6 +119,16 @@ async def run_analyse_pipeline(job_id: uuid.UUID, pdf_bytes: bytes, filename: st
                 job.cost_usd = Decimal(str(round(total_cost, 6)))
                 job.completed_at = datetime.now(timezone.utc)
 
+            # 8. Auto-create or assign Projekt from plan metadata
+            if job and not job.projekt_id:
+                projekt = await _auto_create_projekt(db, merged, job)
+                if projekt:
+                    job.projekt_id = projekt.id
+                    log.info("projekt_auto_created",
+                             projekt_id=str(projekt.id),
+                             name=projekt.name,
+                             auftraggeber=projekt.auftraggeber)
+
             await _update_job_status(db, job_id, "completed", progress=100)
 
             log.info(
@@ -139,6 +150,7 @@ def _merge_page_results(page_results: list[dict]) -> dict:
         "plantyp": None,
         "massstab": None,
         "geschoss": None,
+        "projekt": None,
         "konfidenz": 1.0,
         "raeume": [],
         "waende": [],
@@ -163,6 +175,8 @@ def _merge_page_results(page_results: list[dict]) -> dict:
             merged["massstab"] = result["massstab"]
         if merged["geschoss"] is None and result.get("geschoss"):
             merged["geschoss"] = result["geschoss"]
+        if merged["projekt"] is None and result.get("projekt"):
+            merged["projekt"] = result["projekt"]
 
         # Konfidenz: take minimum (most conservative)
         page_conf = result.get("konfidenz", 1.0)
@@ -208,6 +222,62 @@ async def _update_job_status(
         if error_message:
             job.error_message = error_message
         await db.commit()
+
+
+async def _auto_create_projekt(
+    db: AsyncSession, merged: dict, job: AnalyseJob
+) -> Projekt | None:
+    """Auto-create or find a Projekt based on plan metadata.
+
+    If a Projekt with the same name already exists for this user, reuse it.
+    Otherwise create a new one.
+    """
+    projekt_info = merged.get("projekt") or {}
+    # Name: aus Plan, oder aus Dateiname einen lesbaren Namen machen
+    name = projekt_info.get("name")
+    if not name:
+        # "deckenspiegel_eg_kopfbau_himmelweiler.pdf" → "Himmelweiler - EG Kopfbau"
+        raw = job.filename.replace(".pdf", "").replace("_", " ").strip()
+        # Capitalize words
+        name = " ".join(w.capitalize() for w in raw.split())
+        # Wenn Adresse vorhanden, als Name verwenden
+        if projekt_info.get("adresse"):
+            addr = projekt_info["adresse"]
+            # Extrahiere Ort aus Adresse (z.B. "Franz-Mack-Str., 89160 Dornstadt" → "Dornstadt")
+            parts = addr.split()
+            if len(parts) >= 2:
+                name = parts[-1]  # Letztes Wort = Ortsname
+
+    if not name:
+        return None
+
+    user_id = "dev-user"  # TODO: get from job context when auth is implemented
+
+    # Check if Projekt with same name exists
+    result = await db.execute(
+        select(Projekt).where(Projekt.name == name, Projekt.user_id == user_id)
+    )
+    existing = result.scalar_one_or_none()
+
+    if existing:
+        log.info("projekt_reused", projekt_id=str(existing.id), name=name)
+        return existing
+
+    # Create new Projekt from plan metadata
+    projekt = Projekt(
+        user_id=user_id,
+        name=name,
+        auftraggeber=projekt_info.get("auftraggeber") or projekt_info.get("bauherr"),
+        bauherr=projekt_info.get("bauherr"),
+        architekt=projekt_info.get("architekt"),
+        adresse=projekt_info.get("adresse"),
+        plan_nr=projekt_info.get("plan_nr"),
+        status="aktiv",
+        beschreibung=f"Auto-erstellt aus Plan: {job.filename}",
+    )
+    db.add(projekt)
+    await db.flush()
+    return projekt
 
 
 async def _update_s3_key(db: AsyncSession, job_id: uuid.UUID, s3_key: str) -> None:

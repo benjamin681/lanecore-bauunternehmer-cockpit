@@ -48,7 +48,10 @@ Antworte IMMER im folgenden JSON-Format:
     "adresse": "Franz-Mack-Str. 2, 89160 Dornstadt",
     "plan_nr": "221.1_DA03_100_1_b",
     "datum": "17.12.2025",
-    "revision": "b"
+    "revision": "b",
+    "auftraggeber": "Müller Bau GmbH",
+    "bauherr": "Stadtwerke Dornstadt",
+    "architekt": "Schmid Architekten, Ulm"
   },
   "raeume": [
     {
