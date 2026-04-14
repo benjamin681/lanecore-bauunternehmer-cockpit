@@ -134,3 +134,21 @@ class AnalyseResultResponse(BaseModel):
     input_tokens: int | None = None
     output_tokens: int | None = None
     cost_usd: float | None = None
+
+
+class ZusatzkostenPosition(BaseModel):
+    bezeichnung: str
+    betrag: float = Field(ge=0)
+
+
+class KalkulationParams(BaseModel):
+    """Custom kalkulation parameters for editable Kundenangebot."""
+    material_aufschlag_prozent: float | None = None  # e.g. 15 for 15%
+    stundensatz_eigen: float | None = None  # EUR/h own employees
+    stundensatz_sub: float | None = None  # EUR/h subcontractors
+    stunden_pro_m2_decke: float | None = None
+    stunden_pro_m2_wand: float | None = None
+    anteil_eigenleistung: float | None = None  # 0.0 - 1.0
+    zusatzkosten: list[ZusatzkostenPosition] = []
+    # Optional: override individual material quantities
+    mengen_overrides: dict[str, float] | None = None  # key=bezeichnung, value=new menge

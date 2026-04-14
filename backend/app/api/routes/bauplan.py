@@ -22,6 +22,7 @@ from app.schemas.bauplan import (
     DeckenSummary,
     DetailSchema,
     GestrichenePositionSchema,
+    KalkulationParams,
     OeffnungSchema,
     ProjektInfoSchema,
     RaumSchema,
@@ -270,6 +271,56 @@ async def get_kalkulation(
     }
 
     kalkulation = await erstelle_kalkulation(analyse_data, db)
+    kalkulation["job_id"] = str(job_id)
+    kalkulation["filename"] = job.filename
+    kalkulation["plantyp"] = erg.plantyp
+    kalkulation["geschoss"] = erg.geschoss
+
+    return kalkulation
+
+
+@router.post("/{job_id}/kalkulation")
+async def post_kalkulation(
+    job_id: UUID,
+    params: KalkulationParams,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Kalkulation mit benutzerdefinierten Parametern neu berechnen.
+
+    Akzeptiert optionale Overrides fuer Material-Aufschlag, Stundensaetze,
+    Stunden/m2, Anteil Eigenleistung, Zusatzkosten und Mengen-Overrides.
+    """
+    from app.services.kalkulation_service import erstelle_kalkulation
+
+    result = await db.execute(
+        select(AnalyseJob)
+        .options(selectinload(AnalyseJob.ergebnis))
+        .where(AnalyseJob.id == job_id)
+    )
+    job = result.scalar_one_or_none()
+
+    if not job or job.status != "completed" or not job.ergebnis:
+        raise JobNotFoundError(str(job_id))
+
+    erg = job.ergebnis
+
+    analyse_data = {
+        "raeume": erg.raeume or [],
+        "waende": erg.waende or [],
+        "decken": erg.decken or [],
+        "details": erg.details or [],
+    }
+
+    # Convert params to dict, excluding None values
+    custom_params = params.model_dump(exclude_none=True)
+    # Convert zusatzkosten list of models to list of dicts
+    if "zusatzkosten" in custom_params:
+        custom_params["zusatzkosten"] = [
+            {"bezeichnung": z.bezeichnung, "betrag": z.betrag}
+            for z in params.zusatzkosten
+        ]
+
+    kalkulation = await erstelle_kalkulation(analyse_data, db, custom_params=custom_params)
     kalkulation["job_id"] = str(job_id)
     kalkulation["filename"] = job.filename
     kalkulation["plantyp"] = erg.plantyp

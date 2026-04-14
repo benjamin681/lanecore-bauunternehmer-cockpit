@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 
 type JobStatus = "pending" | "processing" | "completed" | "failed";
@@ -110,6 +110,11 @@ interface BestellGruppe {
   summe_netto: number;
 }
 
+interface ZusatzkostenPosition {
+  bezeichnung: string;
+  betrag: number;
+}
+
 interface Kundenangebot {
   material_einkauf: number;
   material_aufschlag_prozent: number;
@@ -117,13 +122,35 @@ interface Kundenangebot {
   material_verkauf: number;
   lohnstunden: number;
   stundensatz: number;
+  stundensatz_eigen: number;
+  stundensatz_sub: number;
+  stunden_eigen: number;
+  stunden_sub: number;
+  lohnkosten_eigen: number;
+  lohnkosten_sub: number;
   lohnkosten: number;
+  anteil_eigenleistung: number;
+  stunden_pro_m2_decke: number;
+  stunden_pro_m2_wand: number;
+  zusatzkosten: ZusatzkostenPosition[];
+  zusatzkosten_summe: number;
   angebot_netto: number;
   mwst_prozent: number;
   mwst_eur: number;
   angebot_brutto: number;
   deckenflaeche_m2: number;
   wandflaeche_m2: number;
+}
+
+/** Editable kalkulation parameters (sent via POST) */
+interface KalkParams {
+  material_aufschlag_prozent: number;
+  stundensatz_eigen: number;
+  stundensatz_sub: number;
+  stunden_pro_m2_decke: number;
+  stunden_pro_m2_wand: number;
+  anteil_eigenleistung: number;
+  zusatzkosten: ZusatzkostenPosition[];
 }
 
 interface KalkulationData {
@@ -160,6 +187,56 @@ function eur(val: number | null | undefined): string {
 
 type KalkSubTab = "material" | "bestellung" | "angebot";
 
+/** Default kalkulation params — extracted from first server response */
+function defaultKalkParams(angebot?: Kundenangebot): KalkParams {
+  return {
+    material_aufschlag_prozent: angebot?.material_aufschlag_prozent ?? 15,
+    stundensatz_eigen: angebot?.stundensatz_eigen ?? 45,
+    stundensatz_sub: angebot?.stundensatz_sub ?? 35,
+    stunden_pro_m2_decke: angebot?.stunden_pro_m2_decke ?? 0.5,
+    stunden_pro_m2_wand: angebot?.stunden_pro_m2_wand ?? 0.8,
+    anteil_eigenleistung: angebot?.anteil_eigenleistung ?? 0.3,
+    zusatzkosten: angebot?.zusatzkosten ?? [],
+  };
+}
+
+/** Inline editable number input with German formatting */
+function EditNum({
+  value,
+  onChange,
+  step = 1,
+  min,
+  max,
+  suffix,
+  className = "",
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  step?: number;
+  min?: number;
+  max?: number;
+  suffix?: string;
+  className?: string;
+}) {
+  return (
+    <span className={`inline-flex items-center gap-1 ${className}`}>
+      <input
+        type="number"
+        value={value}
+        step={step}
+        min={min}
+        max={max}
+        onChange={(e) => {
+          const v = parseFloat(e.target.value);
+          if (!isNaN(v)) onChange(v);
+        }}
+        className="w-20 px-2 py-1 border border-gray-300 rounded text-right font-mono text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+      />
+      {suffix && <span className="text-xs text-gray-500">{suffix}</span>}
+    </span>
+  );
+}
+
 export default function AnalyseJobPage() {
   const { jobId } = useParams<{ jobId: string }>();
   const [status, setStatus] = useState<StatusData | null>(null);
@@ -168,6 +245,67 @@ export default function AnalyseJobPage() {
   const [kalkulation, setKalkulation] = useState<KalkulationData | null>(null);
   const [kalkulationLoading, setKalkulationLoading] = useState(false);
   const [kalkSubTab, setKalkSubTab] = useState<KalkSubTab>("material");
+
+  // --- Editable kalkulation state ---
+  const [kalkParams, setKalkParams] = useState<KalkParams | null>(null);
+  const [mengenOverrides, setMengenOverrides] = useState<Record<string, number>>({});
+  const [recalculating, setRecalculating] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** POST custom params to recalculate kalkulation */
+  const recalculate = useCallback(
+    (params: KalkParams, mengen: Record<string, number>) => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(async () => {
+        setRecalculating(true);
+        try {
+          const body: Record<string, unknown> = { ...params };
+          if (Object.keys(mengen).length > 0) {
+            body.mengen_overrides = mengen;
+          }
+          const res = await fetch(`/api/v1/bauplan/${jobId}/kalkulation`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (res.ok) {
+            const data: KalkulationData = await res.json();
+            setKalkulation(data);
+          }
+        } catch {
+          // silently ignore recalc errors
+        } finally {
+          setRecalculating(false);
+        }
+      }, 400); // 400ms debounce for "instant" feel
+    },
+    [jobId],
+  );
+
+  /** Update a single kalkulation param and trigger recalc */
+  const updateParam = useCallback(
+    <K extends keyof KalkParams>(key: K, value: KalkParams[K]) => {
+      setKalkParams((prev) => {
+        if (!prev) return prev;
+        const next = { ...prev, [key]: value };
+        recalculate(next, mengenOverrides);
+        return next;
+      });
+    },
+    [recalculate, mengenOverrides],
+  );
+
+  /** Update a material menge override and trigger recalc */
+  const updateMenge = useCallback(
+    (bezeichnung: string, menge: number) => {
+      setMengenOverrides((prev) => {
+        const next = { ...prev, [bezeichnung]: menge };
+        if (kalkParams) recalculate(kalkParams, next);
+        return next;
+      });
+    },
+    [recalculate, kalkParams],
+  );
 
   // Poll status
   useEffect(() => {
@@ -225,6 +363,13 @@ export default function AnalyseJobPage() {
         .finally(() => setKalkulationLoading(false));
     }
   }, [result, kalkulation, kalkulationLoading, jobId]);
+
+  // Initialize editable kalkParams from first kalkulation load
+  useEffect(() => {
+    if (kalkulation && !kalkParams) {
+      setKalkParams(defaultKalkParams(kalkulation.kundenangebot));
+    }
+  }, [kalkulation, kalkParams]);
 
   if (!status) {
     return (
@@ -432,7 +577,10 @@ export default function AnalyseJobPage() {
                 {kalkSubTab === "material" && (
                   <>
                     <div className="px-6 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-                      <span className="text-sm text-gray-500">{kalkulation.positionen_gesamt} Positionen &mdash; {kalkulation.positionen_mit_preis} mit Preis</span>
+                      <span className="text-sm text-gray-500">
+                        {kalkulation.positionen_gesamt} Positionen &mdash; {kalkulation.positionen_mit_preis} mit Preis
+                        {recalculating && <span className="ml-2 text-primary-600 animate-pulse">Berechne...</span>}
+                      </span>
                       <span className="text-lg font-bold">Einkauf: {eur(kalkulation.gesamt_netto)}</span>
                     </div>
                     <table className="w-full text-sm">
@@ -448,17 +596,34 @@ export default function AnalyseJobPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {kalkulation.positionen.map((pos, i) => (
-                          <tr key={i} className="border-t border-gray-100 hover:bg-gray-50">
-                            <td className="px-4 py-3 font-medium">{pos.bezeichnung}</td>
-                            <td className="px-4 py-3"><span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{pos.kategorie}</span></td>
-                            <td className="px-4 py-3 text-right font-mono">{pos.menge.toLocaleString("de-DE", { minimumFractionDigits: 1 })}</td>
-                            <td className="px-4 py-3">{pos.einheit}</td>
-                            <td className="px-4 py-3 text-right">{pos.einzelpreis != null ? eur(pos.einzelpreis) : <span className="text-orange-500">&mdash;</span>}</td>
-                            <td className="px-4 py-3 text-right font-medium">{pos.gesamtpreis != null ? eur(pos.gesamtpreis) : <span className="text-orange-500">kein Preis</span>}</td>
-                            <td className="px-4 py-3">{pos.anbieter ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">{pos.anbieter}</span> : <span className="text-xs text-gray-400">—</span>}</td>
-                          </tr>
-                        ))}
+                        {kalkulation.positionen.map((pos, i) => {
+                          const editedMenge = mengenOverrides[pos.bezeichnung] ?? pos.menge;
+                          const localGesamt = pos.einzelpreis != null ? editedMenge * pos.einzelpreis : null;
+                          const isEdited = pos.bezeichnung in mengenOverrides;
+                          return (
+                            <tr key={i} className={`border-t border-gray-100 hover:bg-gray-50 ${isEdited ? "bg-yellow-50" : ""}`}>
+                              <td className="px-4 py-3 font-medium">{pos.bezeichnung}</td>
+                              <td className="px-4 py-3"><span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{pos.kategorie}</span></td>
+                              <td className="px-4 py-2 text-right">
+                                <input
+                                  type="number"
+                                  value={editedMenge}
+                                  step={0.1}
+                                  min={0}
+                                  onChange={(e) => {
+                                    const v = parseFloat(e.target.value);
+                                    if (!isNaN(v) && v >= 0) updateMenge(pos.bezeichnung, v);
+                                  }}
+                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-right font-mono text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                                />
+                              </td>
+                              <td className="px-4 py-3">{pos.einheit}</td>
+                              <td className="px-4 py-3 text-right">{pos.einzelpreis != null ? eur(pos.einzelpreis) : <span className="text-orange-500">&mdash;</span>}</td>
+                              <td className="px-4 py-3 text-right font-medium">{localGesamt != null ? eur(localGesamt) : <span className="text-orange-500">kein Preis</span>}</td>
+                              <td className="px-4 py-3">{pos.anbieter ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">{pos.anbieter}</span> : <span className="text-xs text-gray-400">—</span>}</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                       <tfoot className="bg-gray-50 font-semibold">
                         <tr className="border-t-2 border-gray-300">
@@ -520,11 +685,152 @@ export default function AnalyseJobPage() {
                   </div>
                 )}
 
-                {/* ═══ SUB-TAB: Kundenangebot ═══ */}
-                {kalkSubTab === "angebot" && (
+                {/* ═══ SUB-TAB: Kundenangebot (editable) ═══ */}
+                {kalkSubTab === "angebot" && kalkParams && (
                   <div className="p-6 space-y-6">
-                    <div className="grid grid-cols-2 gap-6">
-                      {/* Linke Spalte: Kalkulation */}
+                    {recalculating && (
+                      <div className="text-sm text-primary-600 animate-pulse">Kalkulation wird aktualisiert...</div>
+                    )}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      {/* ── Linke Spalte: Editable Parameter ── */}
+                      <div className="space-y-5">
+                        <h4 className="font-semibold text-gray-900 text-lg">Parameter anpassen</h4>
+
+                        {/* Material-Aufschlag */}
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Material-Aufschlag</label>
+                          <EditNum
+                            value={kalkParams.material_aufschlag_prozent}
+                            onChange={(v) => updateParam("material_aufschlag_prozent", v)}
+                            step={1}
+                            min={0}
+                            max={100}
+                            suffix="%"
+                          />
+                        </div>
+
+                        {/* Stundensatz eigene MA */}
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Stundensatz eigene MA</label>
+                          <EditNum
+                            value={kalkParams.stundensatz_eigen}
+                            onChange={(v) => updateParam("stundensatz_eigen", v)}
+                            step={0.5}
+                            min={0}
+                            suffix="EUR/h"
+                          />
+                        </div>
+
+                        {/* Stundensatz Subunternehmer */}
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Stundensatz Subunternehmer</label>
+                          <EditNum
+                            value={kalkParams.stundensatz_sub}
+                            onChange={(v) => updateParam("stundensatz_sub", v)}
+                            step={0.5}
+                            min={0}
+                            suffix="EUR/h"
+                          />
+                        </div>
+
+                        {/* Stunden/m2 Decke */}
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Stunden / m2 Decke</label>
+                          <EditNum
+                            value={kalkParams.stunden_pro_m2_decke}
+                            onChange={(v) => updateParam("stunden_pro_m2_decke", v)}
+                            step={0.1}
+                            min={0}
+                            suffix="h/m2"
+                          />
+                        </div>
+
+                        {/* Stunden/m2 Wand */}
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Stunden / m2 Wand</label>
+                          <EditNum
+                            value={kalkParams.stunden_pro_m2_wand}
+                            onChange={(v) => updateParam("stunden_pro_m2_wand", v)}
+                            step={0.1}
+                            min={0}
+                            suffix="h/m2"
+                          />
+                        </div>
+
+                        {/* Anteil Eigenleistung */}
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">
+                            Anteil Eigenleistung: {Math.round(kalkParams.anteil_eigenleistung * 100)}%
+                          </label>
+                          <input
+                            type="range"
+                            min={0}
+                            max={1}
+                            step={0.05}
+                            value={kalkParams.anteil_eigenleistung}
+                            onChange={(e) => updateParam("anteil_eigenleistung", parseFloat(e.target.value))}
+                            className="w-full accent-primary-600"
+                          />
+                          <div className="flex justify-between text-xs text-gray-400 mt-1">
+                            <span>0% (nur Sub)</span>
+                            <span>100% (nur eigene MA)</span>
+                          </div>
+                        </div>
+
+                        {/* Zusatzkosten */}
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-2">Zusatzkosten</label>
+                          {kalkParams.zusatzkosten.map((z, idx) => (
+                            <div key={idx} className="flex gap-2 mb-2 items-center">
+                              <input
+                                type="text"
+                                value={z.bezeichnung}
+                                placeholder="Bezeichnung"
+                                onChange={(e) => {
+                                  const next = [...kalkParams.zusatzkosten];
+                                  next[idx] = { ...next[idx], bezeichnung: e.target.value };
+                                  updateParam("zusatzkosten", next);
+                                }}
+                                className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-primary-500"
+                              />
+                              <input
+                                type="number"
+                                value={z.betrag}
+                                step={100}
+                                min={0}
+                                onChange={(e) => {
+                                  const next = [...kalkParams.zusatzkosten];
+                                  next[idx] = { ...next[idx], betrag: parseFloat(e.target.value) || 0 };
+                                  updateParam("zusatzkosten", next);
+                                }}
+                                className="w-24 px-2 py-1 border border-gray-300 rounded text-right font-mono text-sm focus:ring-2 focus:ring-primary-500"
+                              />
+                              <span className="text-xs text-gray-500">EUR</span>
+                              <button
+                                onClick={() => {
+                                  const next = kalkParams.zusatzkosten.filter((_, j) => j !== idx);
+                                  updateParam("zusatzkosten", next);
+                                }}
+                                className="text-red-500 hover:text-red-700 text-lg leading-none px-1"
+                                title="Entfernen"
+                              >&times;</button>
+                            </div>
+                          ))}
+                          <button
+                            onClick={() => {
+                              updateParam("zusatzkosten", [
+                                ...kalkParams.zusatzkosten,
+                                { bezeichnung: "", betrag: 0 },
+                              ]);
+                            }}
+                            className="text-sm text-primary-600 hover:text-primary-800 font-medium"
+                          >
+                            + Zusatzkosten hinzufuegen
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* ── Mittlere Spalte: Angebotskalkulation ── */}
                       <div className="space-y-4">
                         <h4 className="font-semibold text-gray-900 text-lg">Angebotskalkulation</h4>
                         <table className="w-full text-sm">
@@ -543,10 +849,26 @@ export default function AnalyseJobPage() {
                             </tr>
                             <tr className="border-b border-gray-100">
                               <td className="py-3 text-gray-600">
-                                Lohnkosten ({kalkulation.kundenangebot.lohnstunden}h x {kalkulation.kundenangebot.stundensatz} EUR/h)
+                                Lohn eigene MA ({kalkulation.kundenangebot.stunden_eigen}h x {kalkulation.kundenangebot.stundensatz_eigen} EUR/h)
                               </td>
-                              <td className="py-3 text-right font-mono">{eur(kalkulation.kundenangebot.lohnkosten)}</td>
+                              <td className="py-3 text-right font-mono">{eur(kalkulation.kundenangebot.lohnkosten_eigen)}</td>
                             </tr>
+                            <tr className="border-b border-gray-100">
+                              <td className="py-3 text-gray-600">
+                                Lohn Sub ({kalkulation.kundenangebot.stunden_sub}h x {kalkulation.kundenangebot.stundensatz_sub} EUR/h)
+                              </td>
+                              <td className="py-3 text-right font-mono">{eur(kalkulation.kundenangebot.lohnkosten_sub)}</td>
+                            </tr>
+                            {kalkulation.kundenangebot.zusatzkosten_summe > 0 && (
+                              <>
+                                {kalkulation.kundenangebot.zusatzkosten.map((z, zi) => (
+                                  <tr key={zi} className="border-b border-gray-100">
+                                    <td className="py-3 text-gray-600">+ {z.bezeichnung || "Zusatzkosten"}</td>
+                                    <td className="py-3 text-right font-mono">{eur(z.betrag)}</td>
+                                  </tr>
+                                ))}
+                              </>
+                            )}
                             <tr className="border-b border-gray-300 font-semibold text-lg">
                               <td className="py-4">Angebot netto</td>
                               <td className="py-4 text-right font-mono">{eur(kalkulation.kundenangebot.angebot_netto)}</td>
@@ -563,10 +885,10 @@ export default function AnalyseJobPage() {
                         </table>
                       </div>
 
-                      {/* Rechte Spalte: Kennzahlen */}
+                      {/* ── Rechte Spalte: Kennzahlen ── */}
                       <div className="space-y-4">
                         <h4 className="font-semibold text-gray-900 text-lg">Kennzahlen</h4>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-3">
                           <div className="bg-blue-50 rounded-lg p-4">
                             <p className="text-xs text-blue-600">Deckenflaeche</p>
                             <p className="text-2xl font-bold text-blue-900">{kalkulation.kundenangebot.deckenflaeche_m2} m2</p>
@@ -576,12 +898,12 @@ export default function AnalyseJobPage() {
                             <p className="text-2xl font-bold text-blue-900">{kalkulation.kundenangebot.wandflaeche_m2} m2</p>
                           </div>
                           <div className="bg-green-50 rounded-lg p-4">
-                            <p className="text-xs text-green-600">Montage-Stunden</p>
+                            <p className="text-xs text-green-600">Montage-Stunden gesamt</p>
                             <p className="text-2xl font-bold text-green-900">{kalkulation.kundenangebot.lohnstunden}h</p>
                           </div>
                           <div className="bg-green-50 rounded-lg p-4">
-                            <p className="text-xs text-green-600">Stundensatz</p>
-                            <p className="text-2xl font-bold text-green-900">{kalkulation.kundenangebot.stundensatz} EUR</p>
+                            <p className="text-xs text-green-600">Mischkalkulation /h</p>
+                            <p className="text-2xl font-bold text-green-900">{fmt(kalkulation.kundenangebot.stundensatz, 2)} EUR</p>
                           </div>
                           <div className="bg-purple-50 rounded-lg p-4">
                             <p className="text-xs text-purple-600">Material-Marge</p>
@@ -595,10 +917,19 @@ export default function AnalyseJobPage() {
                                 : "—"} EUR
                             </p>
                           </div>
+                          <div className="bg-orange-50 rounded-lg p-4">
+                            <p className="text-xs text-orange-600">Eigenleistung</p>
+                            <p className="text-2xl font-bold text-orange-900">{Math.round(kalkulation.kundenangebot.anteil_eigenleistung * 100)}%</p>
+                          </div>
+                          {kalkulation.kundenangebot.zusatzkosten_summe > 0 && (
+                            <div className="bg-orange-50 rounded-lg p-4">
+                              <p className="text-xs text-orange-600">Zusatzkosten</p>
+                              <p className="text-2xl font-bold text-orange-900">{eur(kalkulation.kundenangebot.zusatzkosten_summe)}</p>
+                            </div>
+                          )}
                         </div>
                         <p className="text-xs text-gray-400 mt-4">
-                          Aufschlaege und Stundensatz koennen in den Einstellungen angepasst werden.
-                          Die Werte dienen als Kalkulationsgrundlage.
+                          Alle Parameter links anpassen &mdash; die Kalkulation aktualisiert sich automatisch.
                         </p>
                       </div>
                     </div>

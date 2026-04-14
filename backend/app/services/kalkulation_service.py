@@ -333,8 +333,22 @@ async def preise_matchen(
 async def erstelle_kalkulation(
     analyse_result: dict,
     db: AsyncSession,
+    custom_params: dict | None = None,
 ) -> dict:
-    """Kompletter Flow: Analyse → Materialliste → Preisvergleich → Kalkulation."""
+    """Kompletter Flow: Analyse -> Materialliste -> Preisvergleich -> Kalkulation.
+
+    custom_params can override:
+      - material_aufschlag_prozent (float, e.g. 15 for 15%)
+      - stundensatz_eigen (float, EUR/h)
+      - stundensatz_sub (float, EUR/h)
+      - stunden_pro_m2_decke (float)
+      - stunden_pro_m2_wand (float)
+      - anteil_eigenleistung (float, 0.0-1.0)
+      - zusatzkosten (list[dict] with bezeichnung + betrag)
+      - mengen_overrides (dict[str, float] key=bezeichnung, value=new menge)
+    """
+    params = custom_params or {}
+
     # 1. Materialien ableiten
     positionen = materialliste_aus_analyse(analyse_result)
     log.info("materialliste_generiert", einzelpositionen=len(positionen))
@@ -342,6 +356,13 @@ async def erstelle_kalkulation(
     # 2. Aggregieren (gleiche Materialien zusammenfassen)
     aggregiert = aggregiere_positionen(positionen)
     log.info("materialliste_aggregiert", positionen=len(aggregiert))
+
+    # 2b. Apply mengen_overrides if provided
+    mengen_overrides = params.get("mengen_overrides")
+    if mengen_overrides:
+        for pos in aggregiert:
+            if pos.bezeichnung in mengen_overrides:
+                pos.menge = round(mengen_overrides[pos.bezeichnung], 1)
 
     # 3. Preise matchen
     aggregiert = await preise_matchen(aggregiert, db)
@@ -370,7 +391,7 @@ async def erstelle_kalkulation(
             "gesamtpreis": gesamtpreis,
             "anbieter": pos.bester_anbieter,
             "alternativen": pos.alle_preise or [],
-            "herkunft": pos.herkunft[:200],  # Kürzen für Übersichtlichkeit
+            "herkunft": pos.herkunft[:200],
         })
 
     # 5. Bestellliste: nach Lieferant gruppiert
@@ -400,14 +421,16 @@ async def erstelle_kalkulation(
     bestellliste_result.sort(key=lambda b: b["summe_netto"], reverse=True)
 
     # 6. Kundenangebot: Einkaufspreis + Aufschlag
-    # Default-Aufschläge (können vom Nutzer später angepasst werden)
-    DEFAULT_AUFSCHLAG_MATERIAL = 0.15  # 15% auf Material
-    DEFAULT_AUFSCHLAG_LOHN = 45.0  # 45 EUR/Stunde Monteurstunde
-    # Richtwert: ca. 0.5h pro m² Deckenfläche, 0.8h pro m² Wandfläche
-    STUNDEN_PRO_M2_DECKE = 0.5
-    STUNDEN_PRO_M2_WAND = 0.8
+    # Use custom params or defaults
+    aufschlag_material = (params.get("material_aufschlag_prozent", 15) or 15) / 100
+    stundensatz_eigen = params.get("stundensatz_eigen", 45.0) or 45.0
+    stundensatz_sub = params.get("stundensatz_sub", 35.0) or 35.0
+    stunden_pro_m2_decke = params.get("stunden_pro_m2_decke", 0.5) or 0.5
+    stunden_pro_m2_wand = params.get("stunden_pro_m2_wand", 0.8) or 0.8
+    anteil_eigenleistung = params.get("anteil_eigenleistung", 0.3) or 0.3
+    zusatzkosten = params.get("zusatzkosten", []) or []
 
-    # Gesamt-Flächen berechnen
+    # Gesamt-Flaechen berechnen
     gesamt_deckenflaeche = sum(
         (d.get("flaeche_m2") or 0)
         for d in analyse_result.get("decken", [])
@@ -418,28 +441,55 @@ async def erstelle_kalkulation(
         for w in analyse_result.get("waende", [])
     )
 
-    lohnstunden = round(
-        gesamt_deckenflaeche * STUNDEN_PRO_M2_DECKE +
-        gesamt_wandflaeche * STUNDEN_PRO_M2_WAND, 1
+    # Lohnstunden: split between own and sub based on anteil_eigenleistung
+    gesamt_stunden = round(
+        gesamt_deckenflaeche * stunden_pro_m2_decke +
+        gesamt_wandflaeche * stunden_pro_m2_wand, 1
     )
-    lohnkosten = round(lohnstunden * DEFAULT_AUFSCHLAG_LOHN, 2)
+    stunden_eigen = round(gesamt_stunden * anteil_eigenleistung, 1)
+    stunden_sub = round(gesamt_stunden * (1 - anteil_eigenleistung), 1)
+
+    lohnkosten_eigen = round(stunden_eigen * stundensatz_eigen, 2)
+    lohnkosten_sub = round(stunden_sub * stundensatz_sub, 2)
+    lohnkosten = round(lohnkosten_eigen + lohnkosten_sub, 2)
+
+    # Blended hourly rate for display
+    stundensatz_blended = round(
+        (stundensatz_eigen * anteil_eigenleistung +
+         stundensatz_sub * (1 - anteil_eigenleistung)),
+        2,
+    )
 
     material_einkauf = round(gesamt_netto, 2)
-    material_aufschlag = round(gesamt_netto * DEFAULT_AUFSCHLAG_MATERIAL, 2)
+    material_aufschlag = round(gesamt_netto * aufschlag_material, 2)
     material_verkauf = round(material_einkauf + material_aufschlag, 2)
 
-    angebot_netto = round(material_verkauf + lohnkosten, 2)
+    # Zusatzkosten summieren
+    zusatzkosten_summe = round(sum(z.get("betrag", 0) for z in zusatzkosten), 2)
+
+    angebot_netto = round(material_verkauf + lohnkosten + zusatzkosten_summe, 2)
     mwst = round(angebot_netto * 0.19, 2)
     angebot_brutto = round(angebot_netto + mwst, 2)
 
     kundenangebot = {
         "material_einkauf": material_einkauf,
-        "material_aufschlag_prozent": DEFAULT_AUFSCHLAG_MATERIAL * 100,
+        "material_aufschlag_prozent": round(aufschlag_material * 100, 1),
         "material_aufschlag_eur": material_aufschlag,
         "material_verkauf": material_verkauf,
-        "lohnstunden": lohnstunden,
-        "stundensatz": DEFAULT_AUFSCHLAG_LOHN,
+        "lohnstunden": gesamt_stunden,
+        "stundensatz": stundensatz_blended,
+        "stundensatz_eigen": stundensatz_eigen,
+        "stundensatz_sub": stundensatz_sub,
+        "stunden_eigen": stunden_eigen,
+        "stunden_sub": stunden_sub,
+        "lohnkosten_eigen": lohnkosten_eigen,
+        "lohnkosten_sub": lohnkosten_sub,
         "lohnkosten": lohnkosten,
+        "anteil_eigenleistung": anteil_eigenleistung,
+        "stunden_pro_m2_decke": stunden_pro_m2_decke,
+        "stunden_pro_m2_wand": stunden_pro_m2_wand,
+        "zusatzkosten": zusatzkosten,
+        "zusatzkosten_summe": zusatzkosten_summe,
         "angebot_netto": angebot_netto,
         "mwst_prozent": 19,
         "mwst_eur": mwst,
