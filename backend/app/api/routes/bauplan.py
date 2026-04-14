@@ -3,6 +3,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, UploadFile
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -184,4 +185,55 @@ async def get_analyse_result(
         input_tokens=job.input_tokens,
         output_tokens=job.output_tokens,
         cost_usd=float(job.cost_usd) if job.cost_usd else None,
+    )
+
+
+@router.get("/{job_id}/export")
+async def export_analyse_excel(
+    job_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> StreamingResponse:
+    """Analyse-Ergebnis als Excel (.xlsx) herunterladen."""
+    from app.services.excel_export import generate_excel
+    import io
+
+    result = await db.execute(
+        select(AnalyseJob)
+        .options(selectinload(AnalyseJob.ergebnis))
+        .where(AnalyseJob.id == job_id)
+    )
+    job = result.scalar_one_or_none()
+
+    if not job or job.status != "completed" or not job.ergebnis:
+        raise JobNotFoundError(str(job_id))
+
+    erg = job.ergebnis
+
+    # Build result dict for excel export
+    export_data = {
+        "plantyp": erg.plantyp,
+        "massstab": erg.massstab,
+        "geschoss": erg.geschoss,
+        "konfidenz": float(erg.konfidenz) if erg.konfidenz else 0.0,
+        "raeume": erg.raeume or [],
+        "waende": erg.waende or [],
+        "decken": erg.decken or [],
+        "warnungen": erg.warnungen or [],
+        "summary": {
+            "anzahl_raeume": len(erg.raeume or []),
+            "gesamt_raumflaeche": sum(
+                (r.get("flaeche_m2") or 0) for r in (erg.raeume or [])
+            ),
+        },
+    }
+
+    xlsx_bytes = generate_excel(export_data, filename=job.filename)
+
+    safe_name = job.filename.replace(".pdf", "").replace(" ", "_")
+    return StreamingResponse(
+        io.BytesIO(xlsx_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f'attachment; filename="Massenermittlung_{safe_name}.xlsx"'
+        },
     )

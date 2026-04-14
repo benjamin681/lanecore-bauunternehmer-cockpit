@@ -85,7 +85,7 @@ Analyse von 10 realen Grundrissen mit <5% Abweichung zur manuellen Ermittlung.
 - [x] Fortschrittsanzeige (Polling-basiert, Phasen-Anzeige)
 - [x] Ergebnis-Anzeige (Räume, Wände, Decken in Tabellen + Konfidenz-Badge)
 - [x] Warnungen sichtbar und erklärend (gelbe Alert-Box)
-- [ ] Export: Excel-Download
+- [x] Export: Excel-Download (4 Sheets: Übersicht, Räume, Decken, Warnungen)
 - [ ] Clerk Auth Integration (aktuell Dev-Mode)
 
 ### MVP-Definition (26.05.)

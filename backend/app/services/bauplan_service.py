@@ -10,6 +10,7 @@ from typing import Literal
 
 import anthropic
 import structlog
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from app.core.config import settings
 
@@ -45,8 +46,21 @@ class BauplanAnalyseService:
     """
 
     def __init__(self) -> None:
-        self.client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+        self.client = anthropic.AsyncAnthropic(
+            api_key=settings.anthropic_api_key,
+            timeout=120.0,  # 2 Minuten Timeout für große Pläne
+        )
         self._prompt_cache: dict[str, str] = {}
+
+    @retry(
+        retry=retry_if_exception_type((anthropic.RateLimitError, anthropic.APITimeoutError)),
+        wait=wait_exponential(multiplier=2, min=4, max=60),
+        stop=stop_after_attempt(3),
+        before_sleep=lambda rs: log.warning("claude_api_retry", attempt=rs.attempt_number),
+    )
+    async def _call_claude(self, **kwargs) -> anthropic.types.Message:
+        """Claude API call with automatic retry on rate limit / timeout."""
+        return await self._call_claude(**kwargs)
 
     async def analyse_page(self, image_base64: str, page_num: int) -> dict:
         """Analysiert eine einzelne Planseite. Returns structured dict + stats."""
@@ -89,7 +103,7 @@ class BauplanAnalyseService:
     async def _classify_plantyp(self, image_base64: str) -> tuple[PlanTyp, AnalyseCallStats]:
         """Klassifiziert den Plantyp (günstig mit Sonnet)."""
         model = settings.claude_model_simple
-        response = await self.client.messages.create(
+        response = await self._call_claude(
             model=model,
             max_tokens=50,
             messages=[{
@@ -159,7 +173,7 @@ class BauplanAnalyseService:
             f"Antworte im JSON-Format gemäß dem System-Prompt."
         )
 
-        response = await self.client.messages.create(
+        response = await self._call_claude(
             model=model,
             max_tokens=8192,
             system=system_prompt,
