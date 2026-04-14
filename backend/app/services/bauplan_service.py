@@ -60,7 +60,7 @@ class BauplanAnalyseService:
     )
     async def _call_claude(self, **kwargs) -> anthropic.types.Message:
         """Claude API call with automatic retry on rate limit / timeout."""
-        return await self._call_claude(**kwargs)
+        return await self.client.messages.create(**kwargs)
 
     async def analyse_page(self, image_base64: str, page_num: int) -> dict:
         """Analysiert eine einzelne Planseite. Returns structured dict + stats."""
