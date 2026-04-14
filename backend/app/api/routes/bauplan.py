@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.auth import get_current_user_id
 from app.core.config import settings
-from app.core.database import get_db
+from app.core.database import AsyncSessionLocal, get_db
 from app.core.exceptions import JobNotFoundError, PDFValidationError
 from app.models.analyse_job import AnalyseJob
 from app.models.analyse_ergebnis import AnalyseErgebnis
@@ -109,6 +109,40 @@ async def get_analyse_status(
         filename=job.filename,
         error_message=job.error_message,
         created_at=job.created_at,
+    )
+
+
+@router.get("/{job_id}/stream")
+async def stream_analyse_status(job_id: UUID, db: AsyncSession = Depends(get_db)):
+    """SSE endpoint for live analysis progress."""
+    import asyncio
+    import json
+
+    async def event_generator():
+        last_status = None
+        while True:
+            # Fresh session for each poll
+            async with AsyncSessionLocal() as session:
+                result = await session.execute(select(AnalyseJob).where(AnalyseJob.id == job_id))
+                job = result.scalar_one_or_none()
+                if not job:
+                    yield f"data: {json.dumps({'error': 'not_found'})}\n\n"
+                    return
+
+                current = f"{job.status}:{job.progress}"
+                if current != last_status:
+                    last_status = current
+                    yield f"data: {json.dumps({'status': job.status, 'progress': job.progress, 'error_message': job.error_message})}\n\n"
+
+                if job.status in ("completed", "failed"):
+                    return
+
+            await asyncio.sleep(1)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 

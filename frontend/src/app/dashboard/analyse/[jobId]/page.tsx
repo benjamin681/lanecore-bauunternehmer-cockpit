@@ -367,28 +367,28 @@ export default function AnalyseJobPage() {
     [recalculate, kalkParams],
   );
 
-  // Poll status
+  // SSE live progress
   useEffect(() => {
     if (status?.status === "completed" || status?.status === "failed") return;
 
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/v1/bauplan/${jobId}/status`);
-        if (res.ok) {
-          const data: StatusData = await res.json();
-          setStatus(data);
+    const es = new EventSource(`/api/v1/bauplan/${jobId}/stream`);
+    es.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      setStatus((prev) => ({ ...prev, ...data, job_id: jobId }));
 
-          if (data.status === "completed") {
-            const resultRes = await fetch(`/api/v1/bauplan/${jobId}/result`);
-            if (resultRes.ok) setResult(await resultRes.json());
-          }
-        }
-      } catch {
-        // Ignore poll errors
+      if (data.status === "completed") {
+        es.close();
+        // Load result + kalkulation
+        fetch(`/api/v1/bauplan/${jobId}/result`).then((r) => r.ok ? r.json() : null).then((d) => { if (d) setResult(d); });
+        fetch(`/api/v1/bauplan/${jobId}/kalkulation`).then((r) => r.ok ? r.json() : null).then((d) => { if (d) setKalkulation(d); });
       }
-    }, 2000);
+      if (data.status === "failed") {
+        es.close();
+      }
+    };
+    es.onerror = () => { es.close(); };
 
-    return () => clearInterval(interval);
+    return () => es.close();
   }, [jobId, status?.status]);
 
   // Initial fetch
