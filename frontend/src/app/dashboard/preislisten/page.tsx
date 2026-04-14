@@ -160,6 +160,7 @@ export default function PreislistenPage() {
               type="file"
               accept=".pdf"
               className="hidden"
+              onClick={(e) => { (e.target as HTMLInputElement).value = ""; }}
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) handleUpload(file);

@@ -90,7 +90,7 @@ class PreislisteService:
                 # Convert PDF to images
                 pdf_info = validate_pdf(pdf_bytes)
                 page_images = pdf_to_images(pdf_bytes)
-                images = [pi.base64 for pi in page_images[:20]]
+                images = [pi.image_base64 for pi in page_images[:20]]
 
                 all_produkte = []
 
