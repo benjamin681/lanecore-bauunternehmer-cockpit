@@ -77,6 +77,34 @@ interface AnalyseResult {
   cost_usd?: number | null;
 }
 
+interface KalkulationPosition {
+  bezeichnung: string;
+  kategorie: string;
+  menge: number;
+  einheit: string;
+  einzelpreis?: number | null;
+  gesamtpreis?: number | null;
+  anbieter?: string | null;
+  alternativen: Array<{
+    anbieter: string;
+    bezeichnung: string;
+    preis_netto: number;
+    einheit: string;
+  }>;
+  herkunft: string;
+}
+
+interface KalkulationData {
+  positionen: KalkulationPosition[];
+  gesamt_netto: number;
+  positionen_mit_preis: number;
+  positionen_ohne_preis: number;
+  positionen_gesamt: number;
+  filename?: string;
+  plantyp?: string;
+  geschoss?: string;
+}
+
 const phaseLabels: Record<string, string> = {
   pending: "PDF wird vorbereitet",
   processing: "KI analysiert den Bauplan",
@@ -94,7 +122,9 @@ export default function AnalyseJobPage() {
   const { jobId } = useParams<{ jobId: string }>();
   const [status, setStatus] = useState<StatusData | null>(null);
   const [result, setResult] = useState<AnalyseResult | null>(null);
-  const [activeTab, setActiveTab] = useState<"raeume" | "decken" | "waende" | "details">("raeume");
+  const [activeTab, setActiveTab] = useState<"kalkulation" | "raeume" | "decken" | "waende" | "details">("kalkulation");
+  const [kalkulation, setKalkulation] = useState<KalkulationData | null>(null);
+  const [kalkulationLoading, setKalkulationLoading] = useState(false);
 
   // Poll status
   useEffect(() => {
@@ -131,10 +161,27 @@ export default function AnalyseJobPage() {
         if (data.status === "completed") {
           const resultRes = await fetch(`/api/v1/bauplan/${jobId}/result`);
           if (resultRes.ok) setResult(await resultRes.json());
+          // Auto-load Kalkulation
+          setKalkulationLoading(true);
+          const kalkRes = await fetch(`/api/v1/bauplan/${jobId}/kalkulation`);
+          if (kalkRes.ok) setKalkulation(await kalkRes.json());
+          setKalkulationLoading(false);
         }
       } catch { /* ignore */ }
     })();
   }, [jobId]);
+
+  // Also load kalkulation when result first becomes available via polling
+  useEffect(() => {
+    if (result && !kalkulation && !kalkulationLoading) {
+      setKalkulationLoading(true);
+      fetch(`/api/v1/bauplan/${jobId}/kalkulation`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((d) => { if (d) setKalkulation(d); })
+        .catch(() => {})
+        .finally(() => setKalkulationLoading(false));
+    }
+  }, [result, kalkulation, kalkulationLoading, jobId]);
 
   if (!status) {
     return (
@@ -202,6 +249,7 @@ export default function AnalyseJobPage() {
     "text-red-700 bg-red-100";
 
   const tabs = [
+    { key: "kalkulation" as const, label: `Kalkulation${kalkulation ? ` (${kalkulation.positionen_gesamt})` : ""}`, show: true },
     { key: "raeume" as const, label: `Raume (${result.raeume.length})`, show: result.raeume.length > 0 },
     { key: "decken" as const, label: `Decken (${result.decken.length})`, show: result.decken.length > 0 },
     { key: "waende" as const, label: `Wande (${result.waende.length})`, show: result.waende.length > 0 },
@@ -297,6 +345,104 @@ export default function AnalyseJobPage() {
             </button>
           ))}
         </div>
+
+        {/* Kalkulation Tab */}
+        {currentTab === "kalkulation" && (
+          <div>
+            {kalkulationLoading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin h-8 w-8 border-4 border-primary-600 border-t-transparent rounded-full mx-auto" />
+                <p className="text-gray-500 mt-3">Materialliste wird berechnet und Preise abgeglichen...</p>
+              </div>
+            ) : !kalkulation ? (
+              <div className="p-8 text-center text-gray-500">Kalkulation konnte nicht geladen werden.</div>
+            ) : (
+              <>
+                {/* Summary Bar */}
+                <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-4">
+                  <div className="flex gap-6 text-sm">
+                    <div>
+                      <span className="text-gray-500">Positionen:</span>{" "}
+                      <strong>{kalkulation.positionen_gesamt}</strong>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Mit Preis:</span>{" "}
+                      <strong className="text-green-700">{kalkulation.positionen_mit_preis}</strong>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Ohne Preis:</span>{" "}
+                      <strong className={kalkulation.positionen_ohne_preis > 0 ? "text-orange-600" : "text-gray-400"}>
+                        {kalkulation.positionen_ohne_preis}
+                      </strong>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-gray-500 text-sm">Gesamt (netto):</span>
+                    <span className="text-2xl font-bold text-gray-900 ml-2">
+                      {kalkulation.gesamt_netto > 0 ? `${kalkulation.gesamt_netto.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR` : "—"}
+                    </span>
+                  </div>
+                </div>
+
+                {kalkulation.positionen_ohne_preis > 0 && kalkulation.positionen_mit_preis === 0 && (
+                  <div className="px-6 py-3 bg-orange-50 border-b border-orange-200 text-sm text-orange-800">
+                    Noch keine Preislisten hochgeladen. <a href="/dashboard/preislisten" className="underline font-medium">Preislisten hochladen</a>, um automatisch die guenstigsten Preise zu erhalten.
+                  </div>
+                )}
+
+                <table className="w-full text-sm">
+                  <thead className="text-left text-gray-500 bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2">Material</th>
+                      <th className="px-4 py-2">Kategorie</th>
+                      <th className="px-4 py-2 text-right">Menge</th>
+                      <th className="px-4 py-2">Einheit</th>
+                      <th className="px-4 py-2 text-right">Einzelpreis</th>
+                      <th className="px-4 py-2 text-right">Gesamtpreis</th>
+                      <th className="px-4 py-2">Guenstigster Anbieter</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {kalkulation.positionen.map((pos, i) => (
+                      <tr key={i} className="border-t border-gray-100 hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium">{pos.bezeichnung}</td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{pos.kategorie}</span>
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono">{pos.menge.toLocaleString("de-DE", { minimumFractionDigits: 1 })}</td>
+                        <td className="px-4 py-3">{pos.einheit}</td>
+                        <td className="px-4 py-3 text-right">
+                          {pos.einzelpreis != null ? `${pos.einzelpreis.toFixed(2)} EUR` : <span className="text-orange-500">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium">
+                          {pos.gesamtpreis != null ? `${pos.gesamtpreis.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR` : <span className="text-orange-500">kein Preis</span>}
+                        </td>
+                        <td className="px-4 py-3">
+                          {pos.anbieter ? (
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">{pos.anbieter}</span>
+                          ) : (
+                            <span className="text-xs text-gray-400">keine Preisliste</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-gray-50 font-semibold">
+                    <tr className="border-t-2 border-gray-300">
+                      <td className="px-4 py-3" colSpan={5}>Gesamtsumme (netto)</td>
+                      <td className="px-4 py-3 text-right text-lg">
+                        {kalkulation.gesamt_netto > 0
+                          ? `${kalkulation.gesamt_netto.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR`
+                          : "—"}
+                      </td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Raeume Tab */}
         {currentTab === "raeume" && (

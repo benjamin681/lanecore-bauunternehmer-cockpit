@@ -237,3 +237,42 @@ async def export_analyse_excel(
             "Content-Disposition": f'attachment; filename="Massenermittlung_{safe_name}.xlsx"'
         },
     )
+
+
+@router.get("/{job_id}/kalkulation")
+async def get_kalkulation(
+    job_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Automatische Kalkulation: Materialliste + günstigste Preise aus allen Preislisten.
+
+    Flow: Analyse-Ergebnis → Materialien ableiten → gegen alle Preislisten matchen.
+    """
+    from app.services.kalkulation_service import erstelle_kalkulation
+
+    result = await db.execute(
+        select(AnalyseJob)
+        .options(selectinload(AnalyseJob.ergebnis))
+        .where(AnalyseJob.id == job_id)
+    )
+    job = result.scalar_one_or_none()
+
+    if not job or job.status != "completed" or not job.ergebnis:
+        raise JobNotFoundError(str(job_id))
+
+    erg = job.ergebnis
+
+    analyse_data = {
+        "raeume": erg.raeume or [],
+        "waende": erg.waende or [],
+        "decken": erg.decken or [],
+        "details": erg.details or [],
+    }
+
+    kalkulation = await erstelle_kalkulation(analyse_data, db)
+    kalkulation["job_id"] = str(job_id)
+    kalkulation["filename"] = job.filename
+    kalkulation["plantyp"] = erg.plantyp
+    kalkulation["geschoss"] = erg.geschoss
+
+    return kalkulation
