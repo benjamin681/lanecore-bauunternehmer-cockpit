@@ -1,13 +1,24 @@
 """Pytest configuration and shared fixtures."""
 
-import pytest
+import asyncio
 from pathlib import Path
+
+import pytest
+import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
+def event_loop():
+    """Create a single event loop for the entire test session."""
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest_asyncio.fixture
 async def client():
     """Async HTTP test client for FastAPI."""
     async with AsyncClient(
@@ -19,7 +30,6 @@ async def client():
 @pytest.fixture
 def sample_pdf_bytes() -> bytes:
     """Minimal valid PDF for upload tests."""
-    # Minimal valid PDF (1 page, blank)
     return (
         b"%PDF-1.4\n"
         b"1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
@@ -38,7 +48,6 @@ def sample_pdf_bytes() -> bytes:
 @pytest.fixture
 def large_pdf_bytes() -> bytes:
     """PDF exceeding size limit (>50MB)."""
-    # Fake a large file (just enough to fail validation)
     return b"x" * (51 * 1024 * 1024)
 
 

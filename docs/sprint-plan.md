@@ -10,8 +10,8 @@
 
 | Sprint | KW | Zeitraum | Ziel | Status |
 |--------|-----|----------|------|--------|
-| 0 | 16 | 14.–18.04. | Setup, Termin Ulm, Spec | In Arbeit |
-| 1 | 17–18 | 21.04.–02.05. | Backend + Claude-Integration | Offen |
+| 0 | 16 | 14.–18.04. | Setup, Termin Ulm, Spec | ✅ Erledigt |
+| 1 | 17–18 | 21.04.–02.05. | Backend + Claude-Integration | ✅ Vorgezogen |
 | 2 | 19–20 | 05.–16.05. | Analyse-Engine, Tests | Offen |
 | 3 | 21–22 | 19.–26.05. | **MVP: Frontend, E2E, Pilot** | Offen |
 | 4 | 23–24 | 27.05.–07.06. | Feedback-Iteration | Offen |
@@ -25,13 +25,13 @@
 
 ### Aufgaben
 - [x] Projektordner und Architektur anlegen
-- [ ] Termin 17.04. vorbereiten → `docs/meeting-17-04-prep.md`
-- [ ] Lastenheft-Template für Ulm-Gespräch → `docs/lastenheft-template.md`
-- [ ] Claude API Key beschaffen und testen
-- [ ] Beispiel-Bauplan beschaffen (idealerweise von Harun's Vater)
-- [ ] Ersten Prompt-Test: Bauplan-Analyse manuell in Claude.ai testen
-- [ ] Tech-Stack final bestätigen (Auth: Clerk vs. Supabase)
-- [ ] Git-Repo erstellen (lokal ✓, GitHub → nach Review)
+- [x] Termin 17.04. vorbereiten → `docs/meeting-17-04-prep.md`
+- [x] Lastenheft-Template für Ulm-Gespräch → `docs/lastenheft-template.md`
+- [x] Claude API Key beschaffen und testen
+- [x] Beispiel-Bauplan beschaffen — Deckenspiegel EG Kopfbau Himmelweiler III
+- [x] Ersten Prompt-Test: E2E-Pipeline mit echtem Plan erfolgreich (72% Konfidenz, 11 Räume)
+- [x] Tech-Stack final bestätigen → Clerk + BackgroundTasks + R2
+- [x] Git-Repo erstellen (lokal ✓, GitHub → nach Review)
 
 ---
 
@@ -40,15 +40,15 @@
 **Ziel:** Funktionierender PDF-Upload → Claude-Analyse-Pipeline → JSON-Ergebnis
 
 ### Backend
-- [ ] FastAPI-App produktionsreif aufsetzen (Docker, Environment)
-- [ ] PostgreSQL aufsetzen (lokal + Railway)
-- [ ] S3-Bucket konfigurieren (Cloudflare R2 für günstigen Speicher)
-- [ ] PDF-Upload-Endpoint implementiert und getestet
-- [ ] PDF → Bilder Pipeline (pdf2image)
-- [ ] Claude Vision API Call (mit Prompt aus `prompts/bauplan-analyse.md`)
-- [ ] JSON-Extraktion und Validierung aus Claude-Antwort
-- [ ] Job-Status in DB speichern
-- [ ] Basis-Tests (Unit + Integration)
+- [x] FastAPI-App produktionsreif aufsetzen (Docker, Environment)
+- [x] PostgreSQL aufsetzen (lokal via Homebrew, Alembic Migrations)
+- [ ] S3-Bucket konfigurieren (Cloudflare R2 — lokal: /tmp Fallback funktioniert)
+- [x] PDF-Upload-Endpoint implementiert und getestet
+- [x] PDF → Bilder Pipeline (pdf2image, 200 DPI, Kontrast-Enhancement)
+- [x] Claude Vision API Call (Sonnet Klassifikation → Opus Detail-Analyse)
+- [x] JSON-Extraktion und Validierung aus Claude-Antwort
+- [x] Job-Status in DB speichern (pending → processing → completed/failed)
+- [x] Basis-Tests (37 Tests, alle grün)
 
 ### Deliverable: Sprint 1
 Ein Curl-Command `POST /api/v1/bauplan/upload` mit einem echten Bauplan-PDF gibt nach ~2min ein valides JSON-Ergebnis mit Räumen, Wandlängen und Konfidenz zurück.
@@ -79,13 +79,14 @@ Analyse von 10 realen Grundrissen mit <5% Abweichung zur manuellen Ermittlung.
 **Ziel:** Nutzbare Web-App für Pilot-Kunde
 
 ### Frontend
-- [ ] Next.js-Projekt aufsetzen (Clerk Auth, shadcn/ui)
-- [ ] Dashboard-Layout (Sidebar, Header)
-- [ ] Upload-Page mit Drag & Drop
-- [ ] Fortschrittsanzeige (Polling-basiert)
-- [ ] Ergebnis-Anzeige (Räume, Wände, Decken in Tabellen)
-- [ ] Warnungen sichtbar und erklärend
+- [x] Next.js-Projekt aufsetzen (Tailwind, Typescript, Build verifiziert)
+- [x] Dashboard-Layout (Sidebar, Header, 3 KPI-Cards)
+- [x] Upload-Page mit Drag & Drop + Validierung
+- [x] Fortschrittsanzeige (Polling-basiert, Phasen-Anzeige)
+- [x] Ergebnis-Anzeige (Räume, Wände, Decken in Tabellen + Konfidenz-Badge)
+- [x] Warnungen sichtbar und erklärend (gelbe Alert-Box)
 - [ ] Export: Excel-Download
+- [ ] Clerk Auth Integration (aktuell Dev-Mode)
 
 ### MVP-Definition (26.05.)
 - Harun's Vater kann PDF-Bauplan hochladen

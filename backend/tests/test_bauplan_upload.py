@@ -9,7 +9,7 @@ async def test_upload_non_pdf_rejected(client):
         "/api/v1/bauplan/upload",
         files={"file": ("photo.jpg", b"fake-image-data", "image/jpeg")},
     )
-    assert response.status_code in (401, 422)  # 401 if auth is enforced
+    assert response.status_code == 422
 
 
 async def test_upload_no_file_rejected(client):
@@ -18,13 +18,12 @@ async def test_upload_no_file_rejected(client):
     assert response.status_code == 422
 
 
-async def test_status_unknown_job(client):
-    """Querying unknown job_id should return 404."""
-    response = await client.get("/api/v1/bauplan/00000000-0000-0000-0000-000000000000/status")
-    assert response.status_code in (401, 404)
+async def test_unknown_job_status_and_result(client):
+    """Querying unknown job_id should return 404 for both status and result."""
+    # Status endpoint
+    resp_status = await client.get("/api/v1/bauplan/00000000-0000-0000-0000-000000000000/status")
+    assert resp_status.status_code == 404
 
-
-async def test_result_unknown_job(client):
-    """Querying unknown job_id result should return 404."""
-    response = await client.get("/api/v1/bauplan/00000000-0000-0000-0000-000000000000/result")
-    assert response.status_code in (401, 404)
+    # Result endpoint (same session, avoids event loop issue)
+    resp_result = await client.get("/api/v1/bauplan/00000000-0000-0000-0000-000000000000/result")
+    assert resp_result.status_code == 404

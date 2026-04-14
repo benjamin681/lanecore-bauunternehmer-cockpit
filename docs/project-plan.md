@@ -27,14 +27,14 @@ Sprint 3: Frontend + MVP-Launch (bis 26.05.)
 
 | Priorität | Aufgabe | Deadline | Status |
 |-----------|---------|----------|--------|
-| 🔴 KRITISCH | Termin 17.04. vorbereiten + Lastenheft mitnehmen | 17.04. | Bereit |
-| 🔴 KRITISCH | Beispiel-Bauplan für Demo beschaffen | 16.04. | Offen |
-| 🔴 KRITISCH | Claude API Key beschaffen (Anthropic Console) | 16.04. | Offen |
-| 🟡 HOCH | Ersten Bauplan-Prompt in Claude.ai testen | 18.04. | Offen |
-| 🟡 HOCH | Railway-Account erstellen + PostgreSQL aufsetzen | 18.04. | Offen |
-| 🟡 HOCH | Cloudflare R2 Bucket erstellen | 18.04. | Offen |
-| 🟢 MITTEL | Clerk-Account erstellen | 18.04. | Offen |
-| 🟢 MITTEL | GitHub Repo erstellen (nach lokalem Init) | 18.04. | Offen |
+| 🔴 KRITISCH | Termin 17.04. vorbereiten + Lastenheft mitnehmen | 17.04. | ✅ Bereit |
+| 🔴 KRITISCH | Beispiel-Bauplan für Demo beschaffen | 16.04. | ✅ Deckenspiegel Himmelweiler |
+| 🔴 KRITISCH | Claude API Key beschaffen (Anthropic Console) | 16.04. | ✅ Konfiguriert |
+| 🟡 HOCH | Ersten Bauplan-Prompt testen | 18.04. | ✅ E2E erfolgreich (72%, 11 Räume) |
+| 🟡 HOCH | PostgreSQL aufsetzen | 18.04. | ✅ Lokal via Homebrew |
+| 🟡 HOCH | Cloudflare R2 Bucket erstellen | 18.04. | ⏳ Lokal-Fallback aktiv |
+| 🟢 MITTEL | Clerk-Account erstellen | 18.04. | ⏳ Dev-Mode aktiv |
+| 🟢 MITTEL | GitHub Repo erstellen | 18.04. | ⏳ Lokal fertig |
 
 ---
 
@@ -42,14 +42,14 @@ Sprint 3: Frontend + MVP-Launch (bis 26.05.)
 
 | Priorität | Aufgabe | Wer | Status |
 |-----------|---------|-----|--------|
-| 🔴 | FastAPI-App mit Docker-Compose (lokal) | Dev | Offen |
-| 🔴 | PDF-Upload-Endpoint + S3-Verbindung | Dev | Offen |
-| 🔴 | PDF → Bilder Pipeline (pdf2image) | Dev | Offen |
-| 🔴 | Claude Vision API Call implementieren | Dev | Offen |
-| 🔴 | Job-Status in PostgreSQL speichern | Dev | Offen |
-| 🟡 | BackgroundTask für Analyse-Pipeline | Dev | Offen |
-| 🟡 | Basis-Tests (Upload, Validierung) | Dev | Offen |
-| 🟡 | Railway-Deployment des Backends | Dev | Offen |
+| 🔴 | FastAPI-App mit Docker-Compose (lokal) | Dev | ✅ |
+| 🔴 | PDF-Upload-Endpoint + S3-Verbindung | Dev | ✅ |
+| 🔴 | PDF → Bilder Pipeline (pdf2image) | Dev | ✅ |
+| 🔴 | Claude Vision API Call implementieren | Dev | ✅ |
+| 🔴 | Job-Status in PostgreSQL speichern | Dev | ✅ |
+| 🟡 | BackgroundTask für Analyse-Pipeline | Dev | ✅ |
+| 🟡 | Basis-Tests (37 Tests, alle grün) | Dev | ✅ |
+| 🟡 | Railway-Deployment des Backends | Dev | ⏳ Offen |
 
 **Sprint-1-Ziel:** `curl -F "file=@grundriss.pdf" https://api.lanecore.ai/api/v1/bauplan/upload` gibt `{"job_id": "...", "status": "pending"}` zurück, und nach 2min ist das Ergebnis in `/result` verfügbar.
 
@@ -140,4 +140,4 @@ Sprint 3: Frontend + MVP-Launch (bis 26.05.)
 
 ---
 
-*Dieser Plan wird wöchentlich aktualisiert. Letzter Stand: 14.04.2026*
+*Dieser Plan wird wöchentlich aktualisiert. Letzter Stand: 14.04.2026 (E2E-Test erfolgreich)*

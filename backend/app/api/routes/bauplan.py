@@ -36,27 +36,39 @@ router = APIRouter()
 async def upload_bauplan(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
+    projekt_id: UUID | None = None,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ) -> AnalyseStatusResponse:
-    """PDF-Bauplan hochladen und Analyse starten."""
-    # Validate file type
+    """PDF-Bauplan hochladen und Analyse starten.
+
+    Optional: projekt_id als Query-Parameter um den Upload einem Projekt zuzuordnen.
+    """
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise PDFValidationError("Nur PDF-Dateien werden akzeptiert.")
 
-    # Read file content
     pdf_bytes = await file.read()
 
-    # Validate size (quick check before expensive operations)
     size_mb = len(pdf_bytes) / (1024 * 1024)
     if size_mb > settings.max_pdf_size_mb:
         raise PDFValidationError(f"Datei zu groß: {size_mb:.1f}MB (Max: {settings.max_pdf_size_mb}MB)")
 
-    # Create job record in DB
+    # Verify projekt exists if provided
+    if projekt_id:
+        result = await db.execute(
+            select(AnalyseJob).where(False)  # Just check the table works
+        )
+        from app.models.projekt import Projekt
+        proj_result = await db.execute(
+            select(Projekt).where(Projekt.id == projekt_id, Projekt.user_id == user_id)
+        )
+        if not proj_result.scalar_one_or_none():
+            raise JobNotFoundError(str(projekt_id))
+
     job = AnalyseJob(
-        projekt_id=None,  # TODO: verknüpfe mit Projekt wenn angegeben
+        projekt_id=projekt_id,
         filename=file.filename,
-        s3_key="pending",  # wird in Pipeline gesetzt
+        s3_key="pending",
         status="pending",
         progress=0,
     )

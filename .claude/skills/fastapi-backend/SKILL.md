@@ -57,13 +57,12 @@ async def get_db():
 from fastapi import Depends, HTTPException, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 
-async def get_current_user(
-    authorization: str = Header(...),
-    db: AsyncSession = Depends(get_db),
-) -> User:
-    """Clerk JWT validieren und User aus DB laden."""
-    token = authorization.removeprefix("Bearer ")
-    # TODO: Clerk JWT validation
+async def get_current_user_id(
+    credentials: HTTPAuthorizationCredentials | None = Security(security),
+) -> str:
+    """Clerk JWT validieren und User-ID zurückgeben.
+    Im Dev-Mode (kein CLERK_SECRET_KEY): gibt 'dev-user' zurück.
+    Implementierung: siehe app/core/auth.py"""
     ...
 
 # In Route verwenden:
