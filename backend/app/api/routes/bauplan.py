@@ -344,11 +344,16 @@ async def get_kalkulation(
         "details": erg.details or [],
     }
 
+    # Cache before kalkulation (session may expire during price matching)
+    _filename = job.filename
+    _plantyp = erg.plantyp
+    _geschoss = erg.geschoss
+
     kalkulation = await erstelle_kalkulation(analyse_data, db)
     kalkulation["job_id"] = str(job_id)
-    kalkulation["filename"] = job.filename
-    kalkulation["plantyp"] = erg.plantyp
-    kalkulation["geschoss"] = erg.geschoss
+    kalkulation["filename"] = _filename
+    kalkulation["plantyp"] = _plantyp
+    kalkulation["geschoss"] = _geschoss
 
     return kalkulation
 
@@ -390,6 +395,11 @@ async def get_angebot_pdf(
 
     erg = job.ergebnis
 
+    # Cache before kalkulation (session may expire during price matching)
+    _filename = job.filename
+    _plantyp = erg.plantyp
+    _geschoss = erg.geschoss
+
     analyse_data = {
         "raeume": erg.raeume or [],
         "waende": erg.waende or [],
@@ -417,13 +427,13 @@ async def get_angebot_pdf(
         analyse_data, db, custom_params=custom_params if custom_params else None
     )
     kalkulation["job_id"] = str(job_id)
-    kalkulation["filename"] = job.filename
-    kalkulation["plantyp"] = erg.plantyp
-    kalkulation["geschoss"] = erg.geschoss
+    kalkulation["filename"] = _filename
+    kalkulation["plantyp"] = _plantyp
+    kalkulation["geschoss"] = _geschoss
 
-    pdf_bytes = generate_angebot_pdf(kalkulation, filename=job.filename)
+    pdf_bytes = generate_angebot_pdf(kalkulation, filename=_filename)
 
-    safe_name = job.filename.replace(".pdf", "").replace(" ", "_")
+    safe_name = _filename.replace(".pdf", "").replace(" ", "_")
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",
@@ -458,6 +468,11 @@ async def post_kalkulation(
 
     erg = job.ergebnis
 
+    # Cache before kalkulation (session may expire during price matching)
+    _filename = job.filename
+    _plantyp = erg.plantyp
+    _geschoss = erg.geschoss
+
     analyse_data = {
         "raeume": erg.raeume or [],
         "waende": erg.waende or [],
@@ -477,8 +492,8 @@ async def post_kalkulation(
 
     kalkulation = await erstelle_kalkulation(analyse_data, db, custom_params=custom_params)
     kalkulation["job_id"] = str(job_id)
-    kalkulation["filename"] = job.filename
-    kalkulation["plantyp"] = erg.plantyp
-    kalkulation["geschoss"] = erg.geschoss
+    kalkulation["filename"] = _filename
+    kalkulation["plantyp"] = _plantyp
+    kalkulation["geschoss"] = _geschoss
 
     return kalkulation

@@ -166,7 +166,7 @@ class PreislisteService:
         async with async_session_factory() as db:
             from sqlalchemy import select
 
-            query = select(Produkt).join(Preisliste).where(
+            query = select(Produkt, Preisliste.anbieter).join(Preisliste).where(
                 Preisliste.status == "completed",
                 Produkt.verfuegbar == True,
             )
@@ -182,18 +182,18 @@ class PreislisteService:
             query = query.order_by(Produkt.preis_netto.asc())
 
             result = await db.execute(query)
-            produkte = result.scalars().all()
+            rows = result.all()
 
             results = []
             guenstigster_preis = None
 
-            for p in produkte:
+            for p, anbieter_name in rows:
                 preis = float(p.preis_netto)
                 if guenstigster_preis is None:
                     guenstigster_preis = preis
 
                 results.append({
-                    "anbieter": p.preisliste.anbieter if p.preisliste else "Unbekannt",
+                    "anbieter": anbieter_name or "Unbekannt",
                     "produkt": {
                         "id": str(p.id),
                         "artikel_nr": p.artikel_nr,
