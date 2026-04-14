@@ -279,6 +279,85 @@ async def get_kalkulation(
     return kalkulation
 
 
+@router.get("/{job_id}/angebot-pdf")
+async def get_angebot_pdf(
+    job_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    # Optional kalkulation overrides as query params
+    material_aufschlag_prozent: float | None = None,
+    stundensatz_eigen: float | None = None,
+    stundensatz_sub: float | None = None,
+    stunden_pro_m2_decke: float | None = None,
+    stunden_pro_m2_wand: float | None = None,
+    anteil_eigenleistung: float | None = None,
+) -> StreamingResponse:
+    """Kundenangebot als professionelles PDF herunterladen.
+
+    Generiert ein 2-seitiges PDF:
+      - Seite 1: Kundenangebot mit LV-Positionen und Bruttosumme
+      - Seite 2: Bestellliste (intern, nach Lieferant gruppiert)
+
+    Akzeptiert optionale Query-Parameter für benutzerdefinierte Kalkulation.
+    """
+    import io
+
+    from app.services.kalkulation_service import erstelle_kalkulation
+    from app.services.pdf_angebot import generate_angebot_pdf
+
+    result = await db.execute(
+        select(AnalyseJob)
+        .options(selectinload(AnalyseJob.ergebnis))
+        .where(AnalyseJob.id == job_id)
+    )
+    job = result.scalar_one_or_none()
+
+    if not job or job.status != "completed" or not job.ergebnis:
+        raise JobNotFoundError(str(job_id))
+
+    erg = job.ergebnis
+
+    analyse_data = {
+        "raeume": erg.raeume or [],
+        "waende": erg.waende or [],
+        "decken": erg.decken or [],
+        "details": erg.details or [],
+    }
+
+    # Build custom params from query parameters
+    custom_params: dict = {}
+    if material_aufschlag_prozent is not None:
+        custom_params["material_aufschlag_prozent"] = material_aufschlag_prozent
+    if stundensatz_eigen is not None:
+        custom_params["stundensatz_eigen"] = stundensatz_eigen
+    if stundensatz_sub is not None:
+        custom_params["stundensatz_sub"] = stundensatz_sub
+    if stunden_pro_m2_decke is not None:
+        custom_params["stunden_pro_m2_decke"] = stunden_pro_m2_decke
+    if stunden_pro_m2_wand is not None:
+        custom_params["stunden_pro_m2_wand"] = stunden_pro_m2_wand
+    if anteil_eigenleistung is not None:
+        custom_params["anteil_eigenleistung"] = anteil_eigenleistung
+
+    kalkulation = await erstelle_kalkulation(
+        analyse_data, db, custom_params=custom_params if custom_params else None
+    )
+    kalkulation["job_id"] = str(job_id)
+    kalkulation["filename"] = job.filename
+    kalkulation["plantyp"] = erg.plantyp
+    kalkulation["geschoss"] = erg.geschoss
+
+    pdf_bytes = generate_angebot_pdf(kalkulation, filename=job.filename)
+
+    safe_name = job.filename.replace(".pdf", "").replace(" ", "_")
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="Angebot_{safe_name}.pdf"'
+        },
+    )
+
+
 @router.post("/{job_id}/kalkulation")
 async def post_kalkulation(
     job_id: UUID,

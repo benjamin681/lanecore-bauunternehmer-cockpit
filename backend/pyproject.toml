@@ -45,6 +45,9 @@ dependencies = [
     # Excel Export
     "openpyxl>=3.1.0",
 
+    # PDF Export (Angebote)
+    "reportlab>=4.1.0",
+
     # Utilities
     "python-multipart>=0.0.12",  # File uploads
     "structlog>=24.0.0",          # Structured logging
