@@ -136,6 +136,13 @@ class AnalyseResultResponse(BaseModel):
     cost_usd: float | None = None
 
 
+class AnalyseResultUpdate(BaseModel):
+    """Partial update for editable analysis results."""
+    raeume: list[RaumSchema] | None = None
+    decken: list[DeckeSchema] | None = None
+    waende: list[WandSchema] | None = None
+
+
 class ZusatzkostenPosition(BaseModel):
     bezeichnung: str
     betrag: float = Field(ge=0)

@@ -172,6 +172,14 @@ def materialliste_aus_analyse(analyse_result: dict) -> list[MaterialPosition]:
             suchbegriffe=["Bewehrungsstreifen", "Fugenband", "Kurt", "Papierband"],
         ))
 
+    # ── Öffnungen (Türen/Fenster) einlesen und nach Wand-ID gruppieren ──
+    oeffnungen = analyse_result.get("oeffnungen", [])
+    oeffnungen_by_wand: dict[str, list[dict]] = {}
+    for o in oeffnungen:
+        wand_id = o.get("wand_id") or ""
+        if wand_id:
+            oeffnungen_by_wand.setdefault(wand_id, []).append(o)
+
     # ── Wände verarbeiten ──
     waende = analyse_result.get("waende", [])
     for w in waende:
@@ -182,14 +190,44 @@ def materialliste_aus_analyse(analyse_result: dict) -> list[MaterialPosition]:
             continue
 
         typ = w.get("typ", "W112")
+        wand_id = w.get("id", "")
         herkunft = f"Wand {typ} ({laenge:.1f}m x {hoehe:.1f}m)"
+
+        # ── Öffnungsabzüge nach VOB-Regel ──
+        # VOB/C DIN 18340: Öffnungen < 2,5 m² werden bei der Beplankung
+        # NICHT abgezogen (Verschnitt). Bei der Dämmung werden alle
+        # Öffnungen immer abgezogen.
+        wand_oeffnungen = oeffnungen_by_wand.get(wand_id, [])
+        abzug_beplankung = 0.0  # Fläche, die von Beplankung abgezogen wird
+        abzug_daemmung = 0.0    # Fläche, die von Dämmung abgezogen wird
+        hat_tueren = False
+
+        for o in wand_oeffnungen:
+            o_breite = o.get("breite_m") or 0
+            o_hoehe = o.get("hoehe_m") or 0
+            o_flaeche = o_breite * o_hoehe
+            o_typ = (o.get("typ") or "").lower()
+
+            if "tuer" in o_typ or "tür" in o_typ:
+                hat_tueren = True
+
+            # Dämmung: Öffnungen werden IMMER abgezogen
+            abzug_daemmung += o_flaeche
+
+            # Beplankung: Nur Öffnungen >= 2,5 m² abziehen (VOB-Regel)
+            if o_flaeche >= 2.5:
+                abzug_beplankung += o_flaeche
+
+        # Effektive Flächen nach Abzug
+        flaeche_beplankung = max(flaeche - abzug_beplankung, 0)
+        flaeche_daemmung = max(flaeche - abzug_daemmung, 0)
 
         # Anzahl Beplankungslagen
         lagen = 2 if typ in ("W115", "W116", "W118") else 1
         # Beidseitig
         seiten = 2
 
-        # 1. CW-Ständer
+        # 1. CW-Ständer (Profile basieren auf Bruttofläche, nicht abgezogen)
         cw_lfm = math.ceil(flaeche * CW_PROFIL_LFM_PRO_M2_WAND * VERSCHNITT_PROFILE * 10) / 10
         cw_breite = "75" if "112" in typ else "100" if "115" in typ else "100"
         positionen.append(MaterialPosition(
@@ -201,7 +239,7 @@ def materialliste_aus_analyse(analyse_result: dict) -> list[MaterialPosition]:
             suchbegriffe=[f"CW {cw_breite}", f"CW{cw_breite}", "CW-Profil", "Ständerprofil"],
         ))
 
-        # 2. UW Boden/Decke
+        # 2. UW Boden/Decke (Profile basieren auf Bruttofläche)
         uw_lfm = math.ceil(flaeche * UW_PROFIL_LFM_PRO_M2_WAND * VERSCHNITT_PROFILE * 10) / 10
         positionen.append(MaterialPosition(
             bezeichnung=f"UW {cw_breite} Anschlussprofil",
@@ -212,8 +250,8 @@ def materialliste_aus_analyse(analyse_result: dict) -> list[MaterialPosition]:
             suchbegriffe=[f"UW {cw_breite}", f"UW{cw_breite}", "UW-Profil", "Anschlussprofil"],
         ))
 
-        # 3. Beplankung (beidseitig, ggf. mehrlagig)
-        platten_m2 = math.ceil(flaeche * seiten * lagen * VERSCHNITT_PLATTEN * 10) / 10
+        # 3. Beplankung (beidseitig, ggf. mehrlagig — mit Öffnungsabzug)
+        platten_m2 = math.ceil(flaeche_beplankung * seiten * lagen * VERSCHNITT_PLATTEN * 10) / 10
         platte_typ = "GKF" if typ in ("W118",) else "GKB"
         positionen.append(MaterialPosition(
             bezeichnung=f"{platte_typ} 12.5mm Platte",
@@ -224,8 +262,8 @@ def materialliste_aus_analyse(analyse_result: dict) -> list[MaterialPosition]:
             suchbegriffe=[platte_typ, "Gipskarton", "12.5", "Platte"],
         ))
 
-        # 4. Dämmung
-        daemmung_m2 = math.ceil(flaeche * VERSCHNITT_DAEMMUNG * 10) / 10
+        # 4. Dämmung (alle Öffnungen abgezogen)
+        daemmung_m2 = math.ceil(flaeche_daemmung * VERSCHNITT_DAEMMUNG * 10) / 10
         positionen.append(MaterialPosition(
             bezeichnung="Mineralwolle Trennwand",
             kategorie="Daemmung",
@@ -235,8 +273,8 @@ def materialliste_aus_analyse(analyse_result: dict) -> list[MaterialPosition]:
             suchbegriffe=["Mineralwolle", "Steinwolle", "Dämmung", "Trennwand", "Isover", "Rockwool"],
         ))
 
-        # 5. Schrauben
-        schrauben_stk = math.ceil(flaeche * seiten * lagen * SCHRAUBEN_PRO_M2)
+        # 5. Schrauben (basierend auf Beplankungsfläche)
+        schrauben_stk = math.ceil(flaeche_beplankung * seiten * lagen * SCHRAUBEN_PRO_M2)
         positionen.append(MaterialPosition(
             bezeichnung="Schnellbauschrauben TN 3.5x25",
             kategorie="Befestigung",
@@ -245,6 +283,22 @@ def materialliste_aus_analyse(analyse_result: dict) -> list[MaterialPosition]:
             herkunft=herkunft,
             suchbegriffe=["Schnellbauschraube", "TN 3.5", "TN3.5x25"],
         ))
+
+        # 6. Türzargen-Bekleidung (Zusatzposition wenn Türen vorhanden)
+        if hat_tueren:
+            tuer_count = sum(
+                1 for o in wand_oeffnungen
+                if "tuer" in (o.get("typ") or "").lower()
+                or "tür" in (o.get("typ") or "").lower()
+            )
+            positionen.append(MaterialPosition(
+                bezeichnung="Türzargen-Bekleidung",
+                kategorie="Zubehoer",
+                menge=tuer_count,
+                einheit="Stk",
+                herkunft=herkunft,
+                suchbegriffe=["Türzarge", "Zargenbekleidung", "Zarge", "Umfassungszarge"],
+            ))
 
     return positionen
 

@@ -246,6 +246,66 @@ export default function AnalyseJobPage() {
   const [kalkulationLoading, setKalkulationLoading] = useState(false);
   const [kalkSubTab, setKalkSubTab] = useState<KalkSubTab>("material");
 
+  // --- Editable analysis result state ---
+  const [editedRaeume, setEditedRaeume] = useState<Record<string, Partial<Raum>>>({});
+  const [editedDecken, setEditedDecken] = useState<Record<string, Partial<Decke>>>({});
+  const [editedWaende, setEditedWaende] = useState<Record<string, Partial<Wand>>>({});
+  const [analysisSaving, setAnalysisSaving] = useState(false);
+
+  const unsavedCount =
+    Object.keys(editedRaeume).length +
+    Object.keys(editedDecken).length +
+    Object.keys(editedWaende).length;
+
+  /** Save edited analysis values via PATCH, then refresh kalkulation */
+  const saveAnalysisEdits = useCallback(async () => {
+    if (!result || unsavedCount === 0) return;
+    setAnalysisSaving(true);
+    try {
+      const body: Record<string, unknown> = {};
+      if (Object.keys(editedRaeume).length > 0) {
+        body.raeume = result.raeume.map((r, i) => ({
+          ...r,
+          ...editedRaeume[String(i)],
+        }));
+      }
+      if (Object.keys(editedDecken).length > 0) {
+        body.decken = result.decken.map((d, i) => ({
+          ...d,
+          ...editedDecken[String(i)],
+        }));
+      }
+      if (Object.keys(editedWaende).length > 0) {
+        body.waende = result.waende.map((w, i) => ({
+          ...w,
+          ...editedWaende[String(i)],
+        }));
+      }
+      const res = await fetch(`/api/v1/bauplan/${jobId}/result`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        const updated: AnalyseResult = await res.json();
+        setResult(updated);
+        setEditedRaeume({});
+        setEditedDecken({});
+        setEditedWaende({});
+        // Refresh kalkulation with new values
+        setKalkulationLoading(true);
+        const kalkRes = await fetch(`/api/v1/bauplan/${jobId}/kalkulation`);
+        if (kalkRes.ok) {
+          const kalkData: KalkulationData = await kalkRes.json();
+          setKalkulation(kalkData);
+          setKalkParams(defaultKalkParams(kalkData.kundenangebot));
+        }
+        setKalkulationLoading(false);
+      }
+    } catch { /* ignore */ }
+    finally { setAnalysisSaving(false); }
+  }, [result, editedRaeume, editedDecken, editedWaende, jobId, unsavedCount]);
+
   // --- Editable kalkulation state ---
   const [kalkParams, setKalkParams] = useState<KalkParams | null>(null);
   const [mengenOverrides, setMengenOverrides] = useState<Record<string, number>>({});
@@ -520,6 +580,22 @@ export default function AnalyseJobPage() {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* Unsaved analysis edits bar */}
+      {unsavedCount > 0 && (
+        <div className="flex items-center justify-between bg-yellow-50 border border-yellow-200 rounded-xl px-5 py-3">
+          <span className="text-sm text-yellow-800 font-medium">
+            {unsavedCount} Wert{unsavedCount > 1 ? "e" : ""} geaendert
+          </span>
+          <button
+            onClick={saveAnalysisEdits}
+            disabled={analysisSaving}
+            className="px-5 py-2 bg-yellow-600 text-white rounded-lg text-sm font-medium hover:bg-yellow-700 transition-colors disabled:opacity-50"
+          >
+            {analysisSaving ? "Speichern..." : "Speichern"}
+          </button>
         </div>
       )}
 
@@ -947,7 +1023,7 @@ export default function AnalyseJobPage() {
           </div>
         )}
 
-        {/* Raeume Tab */}
+        {/* Raeume Tab (editable: flaeche_m2, hoehe_m) */}
         {currentTab === "raeume" && (
           <table className="w-full text-sm">
             <thead className="text-left text-gray-500 bg-gray-50">
@@ -961,21 +1037,64 @@ export default function AnalyseJobPage() {
               </tr>
             </thead>
             <tbody>
-              {result.raeume.map((r, i) => (
-                <tr key={i} className="border-t border-gray-100 hover:bg-gray-50">
-                  <td className="px-6 py-3 font-medium">{r.bezeichnung}</td>
-                  <td className="px-6 py-3 text-gray-500">{r.raum_nr ?? "—"}</td>
-                  <td className="px-6 py-3 text-gray-500">{r.nutzung ?? "—"}</td>
-                  <td className="px-6 py-3 text-gray-500 text-xs">{r.deckentyp ?? "—"}</td>
-                  <td className="px-6 py-3 text-right">{fmt(r.flaeche_m2)} m2</td>
-                  <td className="px-6 py-3 text-right">{r.hoehe_m ? `${fmt(r.hoehe_m)} m` : "—"}</td>
-                </tr>
-              ))}
+              {result.raeume.map((r, i) => {
+                const edits = editedRaeume[String(i)];
+                const flaecheEdited = edits?.flaeche_m2 !== undefined;
+                const hoeheEdited = edits?.hoehe_m !== undefined;
+                const curFlaeche = edits?.flaeche_m2 ?? r.flaeche_m2;
+                const curHoehe = edits?.hoehe_m ?? r.hoehe_m;
+                return (
+                  <tr key={i} className="border-t border-gray-100 hover:bg-gray-50">
+                    <td className="px-6 py-3 font-medium">{r.bezeichnung}</td>
+                    <td className="px-6 py-3 text-gray-500">{r.raum_nr ?? "—"}</td>
+                    <td className="px-6 py-3 text-gray-500">{r.nutzung ?? "—"}</td>
+                    <td className="px-6 py-3 text-gray-500 text-xs">{r.deckentyp ?? "—"}</td>
+                    <td className={`px-6 py-2 text-right ${flaecheEdited ? "bg-yellow-50" : ""}`}>
+                      <input
+                        type="number"
+                        value={curFlaeche ?? ""}
+                        step={0.01}
+                        min={0}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value);
+                          if (!isNaN(v) && v >= 0) {
+                            setEditedRaeume((prev) => ({
+                              ...prev,
+                              [String(i)]: { ...prev[String(i)], flaeche_m2: v },
+                            }));
+                          }
+                        }}
+                        className="w-20 px-2 py-1 border border-gray-300 rounded text-right font-mono text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      />
+                      <span className="ml-1 text-xs text-gray-400">m2</span>
+                    </td>
+                    <td className={`px-6 py-2 text-right ${hoeheEdited ? "bg-yellow-50" : ""}`}>
+                      <input
+                        type="number"
+                        value={curHoehe ?? ""}
+                        step={0.01}
+                        min={0}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value);
+                          if (!isNaN(v) && v >= 0) {
+                            setEditedRaeume((prev) => ({
+                              ...prev,
+                              [String(i)]: { ...prev[String(i)], hoehe_m: v },
+                            }));
+                          }
+                        }}
+                        className="w-20 px-2 py-1 border border-gray-300 rounded text-right font-mono text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      />
+                      <span className="ml-1 text-xs text-gray-400">m</span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
 
-        {/* Decken Tab */}
+        {/* Decken Tab (editable: flaeche_m2) */}
         {currentTab === "decken" && (
           <table className="w-full text-sm">
             <thead className="text-left text-gray-500 bg-gray-50">
@@ -990,28 +1109,51 @@ export default function AnalyseJobPage() {
               </tr>
             </thead>
             <tbody>
-              {result.decken.map((d, i) => (
-                <tr key={i} className={`border-t border-gray-100 hover:bg-gray-50 ${d.entfaellt ? "opacity-50 line-through" : ""}`}>
-                  <td className="px-6 py-3">{d.raum}</td>
-                  <td className="px-6 py-3 font-medium">{d.typ}</td>
-                  <td className="px-6 py-3">{d.system ?? "—"}</td>
-                  <td className="px-6 py-3 text-xs text-gray-500">{d.beplankung ?? "—"}</td>
-                  <td className="px-6 py-3 text-right">{fmt(d.flaeche_m2)} m2</td>
-                  <td className="px-6 py-3 text-right">{d.abhaengehoehe_m ? `${fmt(d.abhaengehoehe_m)} m` : "—"}</td>
-                  <td className="px-6 py-3 text-center">
-                    {d.entfaellt ? (
-                      <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">entfaellt</span>
-                    ) : (
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">aktiv</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {result.decken.map((d, i) => {
+                const edits = editedDecken[String(i)];
+                const flaecheEdited = edits?.flaeche_m2 !== undefined;
+                const curFlaeche = edits?.flaeche_m2 ?? d.flaeche_m2;
+                return (
+                  <tr key={i} className={`border-t border-gray-100 hover:bg-gray-50 ${d.entfaellt ? "opacity-50 line-through" : ""}`}>
+                    <td className="px-6 py-3">{d.raum}</td>
+                    <td className="px-6 py-3 font-medium">{d.typ}</td>
+                    <td className="px-6 py-3">{d.system ?? "—"}</td>
+                    <td className="px-6 py-3 text-xs text-gray-500">{d.beplankung ?? "—"}</td>
+                    <td className={`px-6 py-2 text-right ${flaecheEdited ? "bg-yellow-50" : ""}`}>
+                      <input
+                        type="number"
+                        value={curFlaeche ?? ""}
+                        step={0.01}
+                        min={0}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value);
+                          if (!isNaN(v) && v >= 0) {
+                            setEditedDecken((prev) => ({
+                              ...prev,
+                              [String(i)]: { ...prev[String(i)], flaeche_m2: v },
+                            }));
+                          }
+                        }}
+                        className="w-20 px-2 py-1 border border-gray-300 rounded text-right font-mono text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      />
+                      <span className="ml-1 text-xs text-gray-400">m2</span>
+                    </td>
+                    <td className="px-6 py-3 text-right">{d.abhaengehoehe_m ? `${fmt(d.abhaengehoehe_m)} m` : "—"}</td>
+                    <td className="px-6 py-3 text-center">
+                      {d.entfaellt ? (
+                        <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">entfaellt</span>
+                      ) : (
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">aktiv</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
 
-        {/* Waende Tab */}
+        {/* Waende Tab (editable: laenge_m, hoehe_m) */}
         {currentTab === "waende" && (
           <table className="w-full text-sm">
             <thead className="text-left text-gray-500 bg-gray-50">
@@ -1025,21 +1167,65 @@ export default function AnalyseJobPage() {
               </tr>
             </thead>
             <tbody>
-              {result.waende.map((w, i) => (
-                <tr key={i} className={`border-t border-gray-100 hover:bg-gray-50 ${w.unsicher ? "bg-yellow-50" : ""}`}>
-                  <td className="px-6 py-3 font-mono text-xs">{w.id}</td>
-                  <td className="px-6 py-3 font-medium">{w.typ}</td>
-                  <td className="px-6 py-3 text-right">{fmt(w.laenge_m)} m</td>
-                  <td className="px-6 py-3 text-right">{fmt(w.hoehe_m)} m</td>
-                  <td className="px-6 py-3 text-right">
-                    {fmt(w.flaeche_m2 ?? ((w.laenge_m ?? 0) * (w.hoehe_m ?? 0)))} m2
-                  </td>
-                  <td className="px-6 py-3 text-xs text-gray-500">
-                    {w.unsicher && <span className="text-yellow-600 mr-1">[unsicher]</span>}
-                    {w.notizen ?? ""}
-                  </td>
-                </tr>
-              ))}
+              {result.waende.map((w, i) => {
+                const edits = editedWaende[String(i)];
+                const laengeEdited = edits?.laenge_m !== undefined;
+                const hoeheEdited = edits?.hoehe_m !== undefined;
+                const curLaenge = edits?.laenge_m ?? w.laenge_m;
+                const curHoehe = edits?.hoehe_m ?? w.hoehe_m;
+                const computedFlaeche = (curLaenge ?? 0) * (curHoehe ?? 0);
+                return (
+                  <tr key={i} className={`border-t border-gray-100 hover:bg-gray-50 ${w.unsicher ? "bg-yellow-50" : ""}`}>
+                    <td className="px-6 py-3 font-mono text-xs">{w.id}</td>
+                    <td className="px-6 py-3 font-medium">{w.typ}</td>
+                    <td className={`px-6 py-2 text-right ${laengeEdited ? "bg-yellow-50" : ""}`}>
+                      <input
+                        type="number"
+                        value={curLaenge ?? ""}
+                        step={0.01}
+                        min={0}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value);
+                          if (!isNaN(v) && v >= 0) {
+                            setEditedWaende((prev) => ({
+                              ...prev,
+                              [String(i)]: { ...prev[String(i)], laenge_m: v },
+                            }));
+                          }
+                        }}
+                        className="w-20 px-2 py-1 border border-gray-300 rounded text-right font-mono text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      />
+                      <span className="ml-1 text-xs text-gray-400">m</span>
+                    </td>
+                    <td className={`px-6 py-2 text-right ${hoeheEdited ? "bg-yellow-50" : ""}`}>
+                      <input
+                        type="number"
+                        value={curHoehe ?? ""}
+                        step={0.01}
+                        min={0}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value);
+                          if (!isNaN(v) && v >= 0) {
+                            setEditedWaende((prev) => ({
+                              ...prev,
+                              [String(i)]: { ...prev[String(i)], hoehe_m: v },
+                            }));
+                          }
+                        }}
+                        className="w-20 px-2 py-1 border border-gray-300 rounded text-right font-mono text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      />
+                      <span className="ml-1 text-xs text-gray-400">m</span>
+                    </td>
+                    <td className="px-6 py-3 text-right">
+                      {fmt(w.flaeche_m2 ?? computedFlaeche)} m2
+                    </td>
+                    <td className="px-6 py-3 text-xs text-gray-500">
+                      {w.unsicher && <span className="text-yellow-600 mr-1">[unsicher]</span>}
+                      {w.notizen ?? ""}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}

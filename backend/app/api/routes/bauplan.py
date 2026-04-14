@@ -16,6 +16,7 @@ from app.models.analyse_job import AnalyseJob
 from app.models.analyse_ergebnis import AnalyseErgebnis
 from app.schemas.bauplan import (
     AnalyseResultResponse,
+    AnalyseResultUpdate,
     AnalyseStatusResponse,
     AnalyseSummary,
     DeckeSchema,
@@ -189,6 +190,44 @@ async def get_analyse_result(
     )
 
 
+@router.patch("/{job_id}/result")
+async def patch_analyse_result(
+    job_id: UUID,
+    update: AnalyseResultUpdate,
+    db: AsyncSession = Depends(get_db),
+) -> AnalyseResultResponse:
+    """Analyse-Ergebnis teilweise aktualisieren (Raeume/Decken/Waende).
+
+    Erlaubt dem Nutzer, von Claude erkannte Werte manuell zu korrigieren.
+    Gibt das aktualisierte Ergebnis zurueck.
+    """
+    result = await db.execute(
+        select(AnalyseJob)
+        .options(selectinload(AnalyseJob.ergebnis))
+        .where(AnalyseJob.id == job_id)
+    )
+    job = result.scalar_one_or_none()
+
+    if not job or job.status != "completed" or not job.ergebnis:
+        raise JobNotFoundError(str(job_id))
+
+    erg = job.ergebnis
+
+    # Apply partial updates to JSONB columns
+    if update.raeume is not None:
+        erg.raeume = [r.model_dump() for r in update.raeume]
+    if update.decken is not None:
+        erg.decken = [d.model_dump() for d in update.decken]
+    if update.waende is not None:
+        erg.waende = [w.model_dump() for w in update.waende]
+
+    await db.commit()
+    await db.refresh(erg)
+
+    # Return updated result (reuse the GET logic)
+    return await get_analyse_result(job_id, db)
+
+
 @router.get("/{job_id}/export")
 async def export_analyse_excel(
     job_id: UUID,
@@ -267,6 +306,7 @@ async def get_kalkulation(
         "raeume": erg.raeume or [],
         "waende": erg.waende or [],
         "decken": erg.decken or [],
+        "oeffnungen": erg.oeffnungen or [],
         "details": erg.details or [],
     }
 
@@ -320,6 +360,7 @@ async def get_angebot_pdf(
         "raeume": erg.raeume or [],
         "waende": erg.waende or [],
         "decken": erg.decken or [],
+        "oeffnungen": erg.oeffnungen or [],
         "details": erg.details or [],
     }
 
@@ -387,6 +428,7 @@ async def post_kalkulation(
         "raeume": erg.raeume or [],
         "waende": erg.waende or [],
         "decken": erg.decken or [],
+        "oeffnungen": erg.oeffnungen or [],
         "details": erg.details or [],
     }
 
