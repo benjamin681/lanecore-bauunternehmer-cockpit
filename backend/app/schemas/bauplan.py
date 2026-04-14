@@ -7,9 +7,10 @@ from pydantic import BaseModel, Field
 
 
 class RaumSchema(BaseModel):
+    model_config = {"extra": "ignore"}
     bezeichnung: str
     raum_nr: str | None = None
-    flaeche_m2: float
+    flaeche_m2: float | None = None
     breite_m: float | None = None
     tiefe_m: float | None = None
     hoehe_m: float | None = None
@@ -18,6 +19,7 @@ class RaumSchema(BaseModel):
 
 
 class WandSchema(BaseModel):
+    model_config = {"extra": "ignore"}
     id: str
     typ: str  # W112 | W115 | W118 | ...
     laenge_m: float
@@ -30,11 +32,12 @@ class WandSchema(BaseModel):
 
 
 class DeckeSchema(BaseModel):
+    model_config = {"extra": "ignore"}
     raum: str
     raum_nr: str | None = None
     typ: str  # GKb-Abhangdecke glatt | Aquapanel | ...
     system: str | None = None  # D112 | D113 | HKD | ...
-    flaeche_m2: float
+    flaeche_m2: float | None = None
     abhaengehoehe_m: float | None = None
     beplankung: str | None = None
     profil: str | None = None
@@ -42,6 +45,7 @@ class DeckeSchema(BaseModel):
 
 
 class OeffnungSchema(BaseModel):
+    model_config = {"extra": "ignore"}
     typ: str  # Tuer | Fenster
     breite_m: float
     hoehe_m: float
@@ -49,6 +53,7 @@ class OeffnungSchema(BaseModel):
 
 
 class DetailSchema(BaseModel):
+    model_config = {"extra": "ignore"}
     detail_nr: str | None = None
     bezeichnung: str
     massstab: str | None = None
@@ -56,6 +61,7 @@ class DetailSchema(BaseModel):
 
 
 class GestrichenePositionSchema(BaseModel):
+    model_config = {"extra": "ignore"}
     bezeichnung: str
     grund: str
     original_position: str | None = None

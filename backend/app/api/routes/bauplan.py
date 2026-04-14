@@ -127,23 +127,24 @@ async def get_analyse_result(
     gestrichene = [GestrichenePositionSchema(**g) for g in (erg.gestrichene_positionen or [])]
     warnungen = erg.warnungen or []
 
-    # Build summary
+    # Build summary (handle None values)
     wand_summary = WandSummary()
     for w in waende:
-        flaeche = w.flaeche_m2 or (w.laenge_m * w.hoehe_m)
-        current = getattr(wand_summary, w.typ, None)
-        if current is not None:
-            setattr(wand_summary, w.typ, current + flaeche)
-        else:
-            wand_summary.Unbekannt += flaeche
+        flaeche = w.flaeche_m2 or ((w.laenge_m or 0) * (w.hoehe_m or 0))
+        if flaeche:
+            current = getattr(wand_summary, w.typ, None)
+            if current is not None:
+                setattr(wand_summary, w.typ, current + flaeche)
+            else:
+                wand_summary.Unbekannt += flaeche
 
     decken_summary = DeckenSummary()
     for d in decken:
-        if not d.entfaellt:
-            sys = d.system or "Unbekannt"
-            current = getattr(decken_summary, sys, None)
+        if not d.entfaellt and d.flaeche_m2:
+            sys_name = d.system or "Unbekannt"
+            current = getattr(decken_summary, sys_name, None)
             if current is not None:
-                setattr(decken_summary, sys, current + d.flaeche_m2)
+                setattr(decken_summary, sys_name, current + d.flaeche_m2)
             else:
                 decken_summary.Unbekannt += d.flaeche_m2
 
@@ -164,7 +165,7 @@ async def get_analyse_result(
         summary=AnalyseSummary(
             gesamt_wandflaeche=wand_summary,
             gesamt_deckenflaeche=decken_summary,
-            gesamt_raumflaeche=sum(r.flaeche_m2 for r in raeume),
+            gesamt_raumflaeche=sum(r.flaeche_m2 or 0 for r in raeume),
             anzahl_raeume=len(raeume),
         ),
         model_used=job.model_used,

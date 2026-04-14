@@ -239,7 +239,13 @@ class BauplanAnalyseService:
         warnungen = list(result.get("warnungen", []))
 
         # Konfidenz-Check
-        konfidenz = result.get("konfidenz", 0.0)
+        konfidenz = result.get("konfidenz") or 0.0
+        if not isinstance(konfidenz, (int, float)):
+            try:
+                konfidenz = float(konfidenz)
+            except (TypeError, ValueError):
+                konfidenz = 0.0
+        result["konfidenz"] = konfidenz
         if konfidenz < 0.6:
             warnungen.append(
                 f"Konfidenz sehr niedrig ({konfidenz:.0%}) — manuelle Prüfung NOTWENDIG"
@@ -302,35 +308,42 @@ class BauplanAnalyseService:
 # --- Validierungsfunktionen (Modul-Level) ---
 
 
+def _safe_float(val: object, default: float = 0.0) -> float:
+    """Safely convert a value to float."""
+    if val is None:
+        return default
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return default
+
+
 def _validate_grundriss(result: dict) -> list[str]:
     """Plausibilitäts-Checks für Grundrisse."""
     warnings: list[str] = []
-    raeume = result.get("raeume", [])
-    waende = result.get("waende", [])
+    raeume = result.get("raeume") or []
+    waende = result.get("waende") or []
 
-    # Raumflächen prüfen
     for raum in raeume:
-        flaeche = raum.get("flaeche_m2", 0)
+        flaeche = _safe_float(raum.get("flaeche_m2"))
         name = raum.get("bezeichnung", "?")
-        if flaeche < 1.0:
+        if 0 < flaeche < 1.0:
             warnings.append(f"Raum '{name}': Fläche unrealistisch klein ({flaeche:.1f} m²)")
         if flaeche > 500:
             warnings.append(f"Raum '{name}': Fläche ungewöhnlich groß ({flaeche:.1f} m²)")
 
-    # Gesamtfläche
-    total_area = sum(r.get("flaeche_m2", 0) for r in raeume)
+    total_area = sum(_safe_float(r.get("flaeche_m2")) for r in raeume)
     if total_area > 0 and len(raeume) > 0:
-        total_wall_length = sum(w.get("laenge_m", 0) for w in waende)
-        ratio = total_wall_length / total_area if total_area > 0 else 0
+        total_wall_length = sum(_safe_float(w.get("laenge_m")) for w in waende)
+        ratio = total_wall_length / total_area
         if ratio > 0 and (ratio < 0.1 or ratio > 1.5):
             warnings.append(
                 f"Wandlängen/Fläche-Verhältnis ungewöhnlich ({ratio:.2f} m/m²). "
                 f"Typisch: 0.3–0.6 m/m²"
             )
 
-    # Wandhöhen prüfen
     for wand in waende:
-        hoehe = wand.get("hoehe_m", 0)
+        hoehe = _safe_float(wand.get("hoehe_m"))
         if hoehe > 0 and (hoehe < 2.0 or hoehe > 6.0):
             warnings.append(f"Wand '{wand.get('id', '?')}': Höhe {hoehe:.2f}m ungewöhnlich")
 
@@ -340,13 +353,13 @@ def _validate_grundriss(result: dict) -> list[str]:
 def _validate_deckenspiegel(result: dict) -> list[str]:
     """Plausibilitäts-Checks für Deckenspiegel."""
     warnings: list[str] = []
-    decken = result.get("decken", [])
+    decken = result.get("decken") or []
 
     for decke in decken:
-        flaeche = decke.get("flaeche_m2", 0)
+        flaeche = _safe_float(decke.get("flaeche_m2"))
         raum = decke.get("raum", "?")
 
-        if flaeche < 1.0:
+        if 0 < flaeche < 1.0:
             warnings.append(f"Decke '{raum}': Fläche unrealistisch klein ({flaeche:.1f} m²)")
         if flaeche > 500:
             warnings.append(f"Decke '{raum}': Fläche ungewöhnlich groß ({flaeche:.1f} m²)")
@@ -374,7 +387,7 @@ def _validate_schnitt(result: dict) -> list[str]:
     raeume = result.get("raeume", [])
 
     for raum in raeume:
-        hoehe = raum.get("hoehe_m", 0)
+        hoehe = _safe_float(raum.get("hoehe_m"))
         name = raum.get("bezeichnung", "?")
         if hoehe > 0 and (hoehe < 2.2 or hoehe > 6.0):
             warnings.append(f"Raum '{name}': Höhe {hoehe:.2f}m ungewöhnlich (typisch: 2.40–4.00m)")
