@@ -1,4 +1,5 @@
-# Render.com Blueprint — deploys Backend + PostgreSQL
+# Render.com Blueprint — deploys Backend only
+# DB is created separately (Free tier allows only 1)
 # Deploy: https://render.com/deploy → connect GitHub repo
 
 services:
@@ -8,20 +9,13 @@ services:
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     plan: free
+    region: frankfurt
     envVars:
       - key: ANTHROPIC_API_KEY
         sync: false  # Set manually in Render dashboard
       - key: DATABASE_URL
-        fromDatabase:
-          name: lanecore-db
-          property: connectionString
+        sync: false  # Set manually — copy Internal Database URL from existing DB
       - key: CORS_ORIGINS
-        value: https://lanecore-bauunternehmer-cockpit.vercel.app,http://localhost:3000
-      - key: DEV_MODE
-        value: "false"
-
-databases:
-  - name: lanecore-db
-    plan: free
-    databaseName: lanecore
-    postgresMajorVersion: "16"
+        value: '["https://frontend-lanecore-ai.vercel.app","http://localhost:3000"]'
+      - key: APP_ENV
+        value: production
