@@ -138,6 +138,49 @@ async def get_preisliste_detail(
     )
 
 
+@router.post("/{preisliste_id}/retry")
+async def retry_preisliste(
+    preisliste_id: UUID,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    """Fehlgeschlagene Preisliste erneut verarbeiten."""
+    result = await db.execute(
+        select(Preisliste).where(Preisliste.id == preisliste_id)
+    )
+    preisliste = result.scalar_one_or_none()
+    if not preisliste:
+        raise JobNotFoundError(str(preisliste_id))
+    if preisliste.status != "failed":
+        return {"error": "Nur fehlgeschlagene Preislisten können erneut verarbeitet werden"}
+
+    # Read PDF from disk
+    import glob
+    pdf_path = None
+    for p in glob.glob(f"/tmp/lanecore-uploads/preislisten/{preisliste_id}/*") + \
+             glob.glob(f"/tmp/lanecore-uploads/*/{preisliste_id}/*"):
+        if p.endswith(".pdf"):
+            pdf_path = p
+            break
+
+    if not pdf_path:
+        return {"error": "PDF-Datei nicht mehr vorhanden. Bitte erneut hochladen."}
+
+    with open(pdf_path, "rb") as f:
+        pdf_bytes = f.read()
+
+    # Reset status
+    preisliste.status = "pending"
+    preisliste.error_message = None
+    preisliste.produkt_count = 0
+    await db.commit()
+
+    service = PreislisteService()
+    background_tasks.add_task(service.process_preisliste_pdf, preisliste.id, pdf_bytes, preisliste.anbieter)
+
+    return {"status": "retry_started", "id": str(preisliste_id)}
+
+
 @router.delete("/{preisliste_id}", status_code=204)
 async def delete_preisliste(
     preisliste_id: UUID,

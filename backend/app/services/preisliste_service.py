@@ -87,6 +87,14 @@ class PreislisteService:
                 preisliste.status = "processing"
                 await db.commit()
 
+                # Save PDF to disk for retry capability
+                import os
+                pdf_dir = f"/tmp/lanecore-uploads/preislisten/{preisliste_id}"
+                os.makedirs(pdf_dir, exist_ok=True)
+                pdf_path = os.path.join(pdf_dir, preisliste.dateiname or "preisliste.pdf")
+                with open(pdf_path, "wb") as f:
+                    f.write(pdf_bytes)
+
                 # Convert PDF to images
                 pdf_info = validate_pdf(pdf_bytes)
                 page_images = pdf_to_images(pdf_bytes)
