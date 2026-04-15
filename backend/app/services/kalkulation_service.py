@@ -528,6 +528,52 @@ async def erstelle_kalkulation(
     """
     params = custom_params or {}
 
+    # --- Enrich: Decken-Flächen aus Raum-Daten ergänzen wenn fehlend ---
+    raeume = analyse_result.get("raeume", [])
+    raum_flaeche_map = {}
+    for r in raeume:
+        key = r.get("raum_nr") or r.get("bezeichnung", "")
+        if key and r.get("flaeche_m2"):
+            raum_flaeche_map[key] = r["flaeche_m2"]
+    for d in analyse_result.get("decken", []):
+        if not d.get("flaeche_m2"):
+            # Try to match by raum_nr or raum name
+            raum_nr = d.get("raum_nr") or ""
+            raum_name = d.get("raum") or ""
+            flaeche = raum_flaeche_map.get(raum_nr) or raum_flaeche_map.get(raum_name)
+            if flaeche:
+                d["flaeche_m2"] = flaeche
+                log.info("decke_flaeche_from_raum", raum=raum_name, raum_nr=raum_nr, flaeche=flaeche)
+
+    # --- Bug fix: early return when no elements exist ---
+    has_decken = any(
+        (d.get("flaeche_m2") or 0) > 0 and not d.get("entfaellt")
+        for d in analyse_result.get("decken", [])
+    )
+    has_waende = any(
+        (w.get("flaeche_m2") or (w.get("laenge_m", 0) * w.get("hoehe_m", 0))) > 0
+        for w in analyse_result.get("waende", [])
+    )
+    # Also check if we have rooms with areas (can derive from those)
+    has_raeume_with_area = any(
+        (r.get("flaeche_m2") or 0) > 0 for r in raeume
+    )
+    if not has_decken and not has_waende and not has_raeume_with_area:
+        return {
+            "positionen": [],
+            "gesamt_netto": 0.0,
+            "positionen_mit_preis": 0,
+            "positionen_ohne_preis": 0,
+            "positionen_gesamt": 0,
+            "bestellliste": [],
+            "kundenangebot": {},
+            "keine_elemente": True,
+            "hinweis": (
+                "Keine kalkulierbaren Bauelemente vorhanden. "
+                "Die Analyse hat keine Wände oder Decken mit gültigen Maßen erkannt."
+            ),
+        }
+
     # 1. Materialien ableiten
     positionen = materialliste_aus_analyse(analyse_result)
     log.info("materialliste_generiert", einzelpositionen=len(positionen))
@@ -771,6 +817,8 @@ async def erstelle_projekt_kalkulation(
             "bestellliste": [],
             "kundenangebot": {},
             "analysen_count": 0,
+            "keine_elemente": True,
+            "hinweis": "Keine abgeschlossenen Analysen mit Bauelementen vorhanden.",
         }
 
     # Merge all analyse results into one combined dict

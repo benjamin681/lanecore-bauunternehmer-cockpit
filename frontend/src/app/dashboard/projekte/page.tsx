@@ -280,11 +280,11 @@ export default function ProjektePage() {
               <div><span className="text-gray-500">Plan-Nr:</span> <strong>{p.plan_nr || "—"}</strong></div>
               <div><span className="text-gray-500">Status:</span> {statusBadge(p.status)}</div>
             </div>
-            {p.analysen.length > 0 && (
+            {(p.analysen ?? []).length > 0 && (
               <div className="space-y-2 mt-4">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold text-gray-500">Analysen:</p>
-                  {p.analysen.some((a) => a.status === "completed") && (
+                  {(p.analysen ?? []).some((a) => a.status === "completed") && (
                     <a
                       href={`/dashboard/projekte/${p.id}/kalkulation`}
                       onClick={(e) => e.stopPropagation()}
@@ -294,7 +294,7 @@ export default function ProjektePage() {
                     </a>
                   )}
                 </div>
-                {p.analysen.map((a) => (
+                {(p.analysen ?? []).map((a) => (
                   <a
                     key={a.id}
                     href={`/dashboard/analyse/${a.id}`}

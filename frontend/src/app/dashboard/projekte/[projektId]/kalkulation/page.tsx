@@ -234,14 +234,14 @@ export default function ProjektKalkulationPage() {
                 </tr>
               </thead>
               <tbody>
-                {kalkulation.positionen.map((pos, i) => (
+                {(kalkulation.positionen ?? []).map((pos, i) => (
                   <tr key={i} className="border-t border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-3 font-medium">{pos.bezeichnung}</td>
                     <td className="px-4 py-3">
                       <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{pos.kategorie}</span>
                     </td>
                     <td className="px-4 py-3 text-right font-mono">
-                      {pos.menge.toLocaleString("de-DE", { minimumFractionDigits: 1 })}
+                      {(pos.menge ?? 0).toLocaleString("de-DE", { minimumFractionDigits: 1 })}
                     </td>
                     <td className="px-4 py-3">{pos.einheit}</td>
                     <td className="px-4 py-3 text-right">
@@ -272,10 +272,10 @@ export default function ProjektKalkulationPage() {
         {/* Bestellliste Sub-Tab */}
         {kalkSubTab === "bestellung" && (
           <div className="divide-y divide-gray-200">
-            {kalkulation.bestellliste.length === 0 ? (
+            {(kalkulation.bestellliste ?? []).length === 0 ? (
               <div className="p-8 text-center text-gray-500">Keine Bestellungen &mdash; erst Preislisten hochladen.</div>
             ) : (
-              kalkulation.bestellliste.map((gruppe, gi) => (
+              (kalkulation.bestellliste ?? []).map((gruppe, gi) => (
                 <div key={gi}>
                   <div className="px-6 py-4 bg-gray-50 flex items-center justify-between">
                     <div>
@@ -295,10 +295,10 @@ export default function ProjektKalkulationPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {gruppe.positionen.map((pos, pi) => (
+                      {(gruppe.positionen ?? []).map((pos, pi) => (
                         <tr key={pi} className="border-t border-gray-50 hover:bg-gray-50">
                           <td className="px-6 py-2">{pos.bezeichnung}</td>
-                          <td className="px-4 py-2 text-right font-mono">{pos.menge.toLocaleString("de-DE", { minimumFractionDigits: 1 })}</td>
+                          <td className="px-4 py-2 text-right font-mono">{(pos.menge ?? 0).toLocaleString("de-DE", { minimumFractionDigits: 1 })}</td>
                           <td className="px-4 py-2">{pos.einheit}</td>
                           <td className="px-4 py-2 text-right">{eur(pos.einzelpreis)}</td>
                           <td className="px-4 py-2 text-right font-medium">{eur(pos.gesamtpreis)}</td>
@@ -309,7 +309,7 @@ export default function ProjektKalkulationPage() {
                 </div>
               ))
             )}
-            {kalkulation.bestellliste.length > 0 && (
+            {(kalkulation.bestellliste ?? []).length > 0 && (
               <div className="px-6 py-4 bg-gray-100 flex items-center justify-between font-semibold">
                 <span>Gesamtsumme alle Lieferanten</span>
                 <span className="text-xl">{eur(kalkulation.gesamt_netto)}</span>
@@ -319,7 +319,7 @@ export default function ProjektKalkulationPage() {
         )}
 
         {/* Kundenangebot Sub-Tab (read-only for project level) */}
-        {kalkSubTab === "angebot" && kalkulation.kundenangebot && (
+        {kalkSubTab === "angebot" && kalkulation?.kundenangebot && (
           <div className="p-6 space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Angebotskalkulation */}
@@ -351,9 +351,9 @@ export default function ProjektKalkulationPage() {
                       </td>
                       <td className="py-3 text-right font-mono">{eur(kalkulation.kundenangebot.lohnkosten_sub)}</td>
                     </tr>
-                    {kalkulation.kundenangebot.zusatzkosten_summe > 0 && (
+                    {(kalkulation.kundenangebot?.zusatzkosten_summe ?? 0) > 0 && (
                       <>
-                        {kalkulation.kundenangebot.zusatzkosten.map((z, zi) => (
+                        {(kalkulation.kundenangebot?.zusatzkosten ?? []).map((z, zi) => (
                           <tr key={zi} className="border-b border-gray-100">
                             <td className="py-3 text-gray-600">+ {z.bezeichnung || "Zusatzkosten"}</td>
                             <td className="py-3 text-right font-mono">{eur(z.betrag)}</td>
@@ -383,23 +383,23 @@ export default function ProjektKalkulationPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-blue-50 rounded-lg p-4">
                     <p className="text-xs text-blue-600">Deckenflaeche</p>
-                    <p className="text-2xl font-bold text-blue-900">{kalkulation.kundenangebot.deckenflaeche_m2} m2</p>
+                    <p className="text-2xl font-bold text-blue-900">{kalkulation.kundenangebot?.deckenflaeche_m2 ?? 0} m2</p>
                   </div>
                   <div className="bg-blue-50 rounded-lg p-4">
                     <p className="text-xs text-blue-600">Wandflaeche</p>
-                    <p className="text-2xl font-bold text-blue-900">{kalkulation.kundenangebot.wandflaeche_m2} m2</p>
+                    <p className="text-2xl font-bold text-blue-900">{kalkulation.kundenangebot?.wandflaeche_m2 ?? 0} m2</p>
                   </div>
                   <div className="bg-green-50 rounded-lg p-4">
                     <p className="text-xs text-green-600">Montage-Stunden gesamt</p>
-                    <p className="text-2xl font-bold text-green-900">{kalkulation.kundenangebot.lohnstunden}h</p>
+                    <p className="text-2xl font-bold text-green-900">{kalkulation.kundenangebot?.lohnstunden ?? 0}h</p>
                   </div>
                   <div className="bg-green-50 rounded-lg p-4">
                     <p className="text-xs text-green-600">Mischkalkulation /h</p>
-                    <p className="text-2xl font-bold text-green-900">{fmt(kalkulation.kundenangebot.stundensatz, 2)} EUR</p>
+                    <p className="text-2xl font-bold text-green-900">{fmt(kalkulation.kundenangebot?.stundensatz, 2)} EUR</p>
                   </div>
                   <div className="bg-purple-50 rounded-lg p-4">
                     <p className="text-xs text-purple-600">Material-Marge</p>
-                    <p className="text-2xl font-bold text-purple-900">{kalkulation.kundenangebot.material_aufschlag_prozent}%</p>
+                    <p className="text-2xl font-bold text-purple-900">{kalkulation.kundenangebot?.material_aufschlag_prozent ?? 0}%</p>
                   </div>
                   <div className="bg-purple-50 rounded-lg p-4">
                     <p className="text-xs text-purple-600">Analysen zusammengefasst</p>
@@ -408,8 +408,8 @@ export default function ProjektKalkulationPage() {
                   <div className="bg-orange-50 rounded-lg p-4">
                     <p className="text-xs text-orange-600">Preis / m2 Decke</p>
                     <p className="text-2xl font-bold text-orange-900">
-                      {kalkulation.kundenangebot.deckenflaeche_m2 > 0
-                        ? fmt(kalkulation.kundenangebot.angebot_netto / (kalkulation.kundenangebot.deckenflaeche_m2 + kalkulation.kundenangebot.wandflaeche_m2), 2) + " EUR"
+                      {(kalkulation.kundenangebot?.deckenflaeche_m2 ?? 0) > 0
+                        ? fmt((kalkulation.kundenangebot?.angebot_netto ?? 0) / ((kalkulation.kundenangebot?.deckenflaeche_m2 ?? 0) + (kalkulation.kundenangebot?.wandflaeche_m2 ?? 0) || 1), 2) + " EUR"
                         : "\u2014"}
                     </p>
                   </div>

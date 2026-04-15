@@ -98,7 +98,7 @@ export default function DashboardPage() {
   // Derive recent completed analyses from projekte
   const recentAnalysen: Array<AnalyseBrief & { projektName: string }> = [];
   for (const p of projekte) {
-    for (const a of p.analysen) {
+    for (const a of (p.analysen ?? [])) {
       if (a.status === "completed") {
         recentAnalysen.push({ ...a, projektName: p.name });
       }
@@ -137,7 +137,7 @@ export default function DashboardPage() {
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <p className="text-sm text-gray-500">API-Kosten gesamt</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">${s.kosten_usd_gesamt.toFixed(2)}</p>
+          <p className="text-3xl font-bold text-gray-900 mt-2">${(s.kosten_usd_gesamt ?? 0).toFixed(2)}</p>
         </div>
       </div>
 

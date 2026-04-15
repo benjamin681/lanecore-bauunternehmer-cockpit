@@ -196,7 +196,7 @@ export default function PreislistenPage() {
 
         {searchResults && (
           <div className="mt-4">
-            {searchResults.ergebnisse.length === 0 ? (
+            {(searchResults.ergebnisse ?? []).length === 0 ? (
               <p className="text-gray-500 text-sm">Keine Produkte gefunden fuer &quot;{searchResults.suche}&quot;</p>
             ) : (
               <>
@@ -216,13 +216,13 @@ export default function PreislistenPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {searchResults.ergebnisse.map((r, i) => (
+                    {(searchResults.ergebnisse ?? []).map((r, i) => (
                       <tr key={i} className={`border-t border-gray-100 ${r.ist_guenstigster ? "bg-green-50 font-medium" : ""}`}>
                         <td className="px-4 py-3">{r.anbieter}</td>
                         <td className="px-4 py-3">{r.produkt.bezeichnung}</td>
                         <td className="px-4 py-3 text-gray-500">{r.produkt.kategorie ?? "—"}</td>
                         <td className="px-4 py-3 text-right">
-                          {r.produkt.preis_netto.toFixed(2)} EUR
+                          {(r.produkt.preis_netto ?? 0).toFixed(2)} EUR
                           {r.ist_guenstigster && <span className="ml-2 text-green-600 text-xs">guenstigster</span>}
                         </td>
                         <td className="px-4 py-3">{r.produkt.einheit}</td>
@@ -317,13 +317,13 @@ export default function PreislistenPage() {
                 </tr>
               </thead>
               <tbody>
-                {detail.produkte.map((p) => (
+                {(detail.produkte ?? []).map((p) => (
                   <tr key={p.id} className="border-t border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-2 font-mono text-xs">{p.artikel_nr ?? "—"}</td>
                     <td className="px-4 py-2 font-medium">{p.bezeichnung}</td>
                     <td className="px-4 py-2 text-gray-500">{p.hersteller ?? "—"}</td>
                     <td className="px-4 py-2 text-gray-500">{p.kategorie ?? "—"}</td>
-                    <td className="px-4 py-2 text-right">{p.preis_netto.toFixed(2)} EUR</td>
+                    <td className="px-4 py-2 text-right">{(p.preis_netto ?? 0).toFixed(2)} EUR</td>
                     <td className="px-4 py-2">{p.einheit}</td>
                   </tr>
                 ))}

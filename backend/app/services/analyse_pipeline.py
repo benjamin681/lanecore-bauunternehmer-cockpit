@@ -197,6 +197,33 @@ def _merge_page_results(page_results: list[dict]) -> dict:
     merged["_raw_response"] = "\n\n---PAGE BREAK---\n\n".join(raw_responses)
     merged["_prompt_hash"] = prompt_hash
 
+    # --- Bug fix: detect empty results and set konfidenz to 0.0 ---
+    # If all pages were skipped (non-relevant plan type) or produced no elements,
+    # do NOT report konfidenz=1.0 — that's misleading.
+    has_elements = (
+        len(merged["raeume"]) > 0
+        or len(merged["waende"]) > 0
+        or len(merged["decken"]) > 0
+    )
+    analysed_pages = [r for r in page_results if r.get("type") != "skipped"]
+
+    if not has_elements:
+        merged["konfidenz"] = 0.0
+        if not analysed_pages:
+            # All pages were skipped (unbekannt / ansicht / etc.)
+            merged["warnungen"].append(
+                "Keine relevanten Baupläne erkannt. Die hochgeladene Datei enthält "
+                "möglicherweise keinen Grundriss, Deckenspiegel oder Schnitt."
+            )
+        else:
+            # Pages were analysed but produced 0 elements
+            merged["warnungen"].append(
+                "Keine Bauelemente (Räume, Wände, Decken) erkannt. Mögliche Ursachen: "
+                "Die Datei ist kein Bauplan (z.B. Angebot, Rechnung), der Plan ist zu "
+                "niedrig aufgelöst, oder das Format wird nicht unterstützt."
+            )
+        merged["keine_elemente"] = True
+
     return merged
 
 

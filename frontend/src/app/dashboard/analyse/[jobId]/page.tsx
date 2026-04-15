@@ -164,6 +164,8 @@ interface KalkulationData {
   filename?: string;
   plantyp?: string;
   geschoss?: string;
+  keine_elemente?: boolean;
+  hinweis?: string;
 }
 
 const phaseLabels: Record<string, string> = {
@@ -264,19 +266,19 @@ export default function AnalyseJobPage() {
     try {
       const body: Record<string, unknown> = {};
       if (Object.keys(editedRaeume).length > 0) {
-        body.raeume = result.raeume.map((r, i) => ({
+        body.raeume = (result.raeume ?? []).map((r, i) => ({
           ...r,
           ...editedRaeume[String(i)],
         }));
       }
       if (Object.keys(editedDecken).length > 0) {
-        body.decken = result.decken.map((d, i) => ({
+        body.decken = (result.decken ?? []).map((d, i) => ({
           ...d,
           ...editedDecken[String(i)],
         }));
       }
       if (Object.keys(editedWaende).length > 0) {
-        body.waende = result.waende.map((w, i) => ({
+        body.waende = (result.waende ?? []).map((w, i) => ({
           ...w,
           ...editedWaende[String(i)],
         }));
@@ -490,8 +492,20 @@ export default function AnalyseJobPage() {
     );
   }
 
+  // Normalize potentially null arrays from API
+  const raeume = result.raeume ?? [];
+  const decken = result.decken ?? [];
+  const waende = result.waende ?? [];
+  const details = result.details ?? [];
+  const warnungen = result.warnungen ?? [];
+  const gestrichene = result.gestrichene_positionen ?? [];
+
+  // Detect empty results (no elements recognised)
+  const hasNoElements = raeume.length === 0 && decken.length === 0 && waende.length === 0;
+
   const konfidenzPct = Math.round((result.konfidenz ?? 0) * 100);
   const konfidenzColor =
+    hasNoElements ? "text-red-700 bg-red-100" :
     konfidenzPct >= 90 ? "text-green-700 bg-green-100" :
     konfidenzPct >= 70 ? "text-yellow-700 bg-yellow-100" :
     "text-red-700 bg-red-100";
@@ -510,8 +524,8 @@ export default function AnalyseJobPage() {
     if (upper.includes("NOTWENDIG") || upper.includes("DRINGEND")) return "kritisch";
     return "warnung";
   };
-  const kritischeWarnungen = result.warnungen.filter((w) => classifyWarning(w) === "kritisch");
-  const normaleWarnungen = result.warnungen.filter((w) => classifyWarning(w) === "warnung");
+  const kritischeWarnungen = warnungen.filter((w) => classifyWarning(w) === "kritisch");
+  const normaleWarnungen = warnungen.filter((w) => classifyWarning(w) === "warnung");
 
   // Extract room number references from warnings for click-to-scroll
   const roomRefPattern = /\b(\d+\.\d+\.\d+)\b/;
@@ -544,11 +558,11 @@ export default function AnalyseJobPage() {
   };
 
   const tabs = [
-    { key: "kalkulation" as const, label: `Kalkulation${kalkulation ? ` (${kalkulation.positionen_gesamt})` : ""}`, show: true },
-    { key: "raeume" as const, label: `Raume (${result.raeume.length})`, show: result.raeume.length > 0 },
-    { key: "decken" as const, label: `Decken (${result.decken.length})`, show: result.decken.length > 0 },
-    { key: "waende" as const, label: `Wande (${result.waende.length})`, show: result.waende.length > 0 },
-    { key: "details" as const, label: `Details (${result.details.length})`, show: result.details.length > 0 },
+    { key: "kalkulation" as const, label: `Kalkulation${kalkulation ? ` (${kalkulation.positionen_gesamt})` : ""}`, show: !hasNoElements },
+    { key: "raeume" as const, label: `Raume (${raeume.length})`, show: raeume.length > 0 },
+    { key: "decken" as const, label: `Decken (${decken.length})`, show: decken.length > 0 },
+    { key: "waende" as const, label: `Wande (${waende.length})`, show: waende.length > 0 },
+    { key: "details" as const, label: `Details (${details.length})`, show: details.length > 0 },
   ].filter((t) => t.show);
 
   // Auto-select first available tab
@@ -570,22 +584,26 @@ export default function AnalyseJobPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <a
-            href={`/api/v1/bauplan/${jobId}/angebot-pdf`}
-            download
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-          >
-            Angebot als PDF
-          </a>
-          <a
-            href={`/api/v1/bauplan/${jobId}/export`}
-            download
-            className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-          >
-            Excel herunterladen
-          </a>
+          {!hasNoElements && (
+            <>
+              <a
+                href={`/api/v1/bauplan/${jobId}/angebot-pdf`}
+                download
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+              >
+                Angebot als PDF
+              </a>
+              <a
+                href={`/api/v1/bauplan/${jobId}/export`}
+                download
+                className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+              >
+                Excel herunterladen
+              </a>
+            </>
+          )}
           <span className={`px-3 py-1.5 rounded-lg text-sm font-medium ${konfidenzColor}`}>
-            Konfidenz: {konfidenzPct}%
+            {hasNoElements ? "Keine Analyse moeglich" : `Konfidenz: ${konfidenzPct}%`}
           </span>
         </div>
       </div>
@@ -600,6 +618,31 @@ export default function AnalyseJobPage() {
         </div>
       )}
 
+      {/* Empty results warning banner */}
+      {hasNoElements && (
+        <div className="bg-red-50 border-2 border-red-300 rounded-xl p-6">
+          <div className="flex items-start gap-4">
+            <div className="text-3xl flex-shrink-0">&#9888;</div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-red-800 mb-2">
+                Keine Bauelemente erkannt
+              </h3>
+              <p className="text-red-700 mb-4">
+                Moegliche Ursachen: Die hochgeladene Datei ist kein Bauplan
+                (z.B. Angebot, Rechnung), der Plan ist zu niedrig aufgeloest,
+                oder das Format wird nicht unterstuetzt.
+              </p>
+              <a
+                href="/dashboard/analyse"
+                className="inline-block bg-primary-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-700 transition-colors"
+              >
+                Neuen Plan hochladen
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Qualitaets-Report */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <h3 className="font-semibold text-gray-900 mb-4">Qualitaets-Report</h3>
@@ -607,41 +650,51 @@ export default function AnalyseJobPage() {
           {/* Konfidenz-Bar */}
           <div>
             <p className="text-xs text-gray-500 mb-1">Konfidenz</p>
-            <div className="w-full bg-gray-200 rounded-full h-3 mb-1">
-              <div
-                className={`h-3 rounded-full transition-all duration-500 ${konfidenzBarColor}`}
-                style={{ width: `${konfidenzPct}%` }}
-              />
-            </div>
-            <p className={`text-sm font-bold ${konfidenzPct >= 80 ? "text-green-700" : konfidenzPct >= 60 ? "text-yellow-700" : "text-red-700"}`}>
-              {konfidenzPct}%
-            </p>
+            {hasNoElements ? (
+              <p className="text-sm font-bold text-red-700">Keine Analyse moeglich</p>
+            ) : (
+              <>
+                <div className="w-full bg-gray-200 rounded-full h-3 mb-1">
+                  <div
+                    className={`h-3 rounded-full transition-all duration-500 ${konfidenzBarColor}`}
+                    style={{ width: `${konfidenzPct}%` }}
+                  />
+                </div>
+                <p className={`text-sm font-bold ${konfidenzPct >= 80 ? "text-green-700" : konfidenzPct >= 60 ? "text-yellow-700" : "text-red-700"}`}>
+                  {konfidenzPct}%
+                </p>
+              </>
+            )}
           </div>
 
           {/* Planqualitaet */}
           <div>
             <p className="text-xs text-gray-500 mb-1">Planqualitaet</p>
-            <p className={`text-lg font-bold ${planqualitaet.color}`}>{planqualitaet.label}</p>
+            <p className={`text-lg font-bold ${hasNoElements ? "text-red-700" : planqualitaet.color}`}>
+              {hasNoElements ? "Nicht erkannt" : planqualitaet.label}
+            </p>
           </div>
 
           {/* Erkannte Elemente */}
           <div>
             <p className="text-xs text-gray-500 mb-1">Erkannte Elemente</p>
             <p className="text-sm font-medium text-gray-900">
-              {result.raeume.length} Raeume, {result.decken.length} Decken, {result.waende.length} Waende
+              {raeume.length} Raeume, {decken.length} Decken, {waende.length} Waende
             </p>
           </div>
 
           {/* Gestrichene Positionen */}
           <div>
             <p className="text-xs text-gray-500 mb-1">Gestrichene Pos.</p>
-            <p className="text-lg font-bold text-gray-900">{result.gestrichene_positionen.length}</p>
+            <p className="text-lg font-bold text-gray-900">{gestrichene.length}</p>
           </div>
 
           {/* Empfehlung */}
           <div>
             <p className="text-xs text-gray-500 mb-1">Empfehlung</p>
-            {konfidenzPct < 70 ? (
+            {hasNoElements ? (
+              <p className="text-sm text-red-600 font-medium">Anderen Plan hochladen</p>
+            ) : konfidenzPct < 70 ? (
               <p className="text-sm text-red-600 font-medium">Plan in hoeherer Aufloesung hochladen</p>
             ) : (
               <p className="text-sm text-green-600 font-medium">Ergebnis plausibel</p>
@@ -651,7 +704,7 @@ export default function AnalyseJobPage() {
       </div>
 
       {/* Warnings - grouped by severity */}
-      {result.warnungen.length > 0 && (
+      {warnungen.length > 0 && (
         <div className="space-y-3">
           {/* Kritische Warnungen */}
           {kritischeWarnungen.length > 0 && (
@@ -684,13 +737,13 @@ export default function AnalyseJobPage() {
       )}
 
       {/* Gestrichene Positionen */}
-      {result.gestrichene_positionen.length > 0 && (
+      {gestrichene.length > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-5">
           <p className="font-medium text-red-800 mb-2">
-            {result.gestrichene_positionen.length} gestrichene Position{result.gestrichene_positionen.length > 1 ? "en" : ""} &mdash; NICHT kalkulieren
+            {gestrichene.length} gestrichene Position{gestrichene.length > 1 ? "en" : ""} &mdash; NICHT kalkulieren
           </p>
           <ul className="space-y-2 text-sm text-red-700">
-            {result.gestrichene_positionen.map((g, i) => (
+            {gestrichene.map((g, i) => (
               <li key={i}>
                 <strong>{g.bezeichnung}</strong>: {g.grund}
               </li>
@@ -716,6 +769,7 @@ export default function AnalyseJobPage() {
       )}
 
       {/* Tabs */}
+      {tabs.length > 0 && (
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="flex border-b border-gray-200">
           {tabs.map((tab) => (
@@ -743,6 +797,11 @@ export default function AnalyseJobPage() {
               </div>
             ) : !kalkulation ? (
               <div className="p-8 text-center text-gray-500">Kalkulation konnte nicht geladen werden.</div>
+            ) : kalkulation.keine_elemente ? (
+              <div className="p-8 text-center">
+                <p className="text-red-600 font-medium mb-2">Keine kalkulierbaren Bauelemente vorhanden</p>
+                <p className="text-gray-500 text-sm">{kalkulation.hinweis || "Die Analyse hat keine Waende oder Decken mit gueltigen Massen erkannt."}</p>
+              </div>
             ) : (
               <>
                 {/* Sub-Tabs */}
@@ -804,7 +863,7 @@ export default function AnalyseJobPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {kalkulation.positionen.map((pos, i) => {
+                        {(kalkulation.positionen ?? []).map((pos, i) => {
                           const editedMenge = mengenOverrides[pos.bezeichnung] ?? pos.menge;
                           const localGesamt = pos.einzelpreis != null ? editedMenge * pos.einzelpreis : null;
                           const isEdited = pos.bezeichnung in mengenOverrides;
@@ -847,10 +906,10 @@ export default function AnalyseJobPage() {
                 {/* ═══ SUB-TAB: Bestellliste ═══ */}
                 {kalkSubTab === "bestellung" && (
                   <div className="divide-y divide-gray-200">
-                    {kalkulation.bestellliste.length === 0 ? (
+                    {(kalkulation.bestellliste ?? []).length === 0 ? (
                       <div className="p-8 text-center text-gray-500">Keine Bestellungen &mdash; erst Preislisten hochladen.</div>
                     ) : (
-                      kalkulation.bestellliste.map((gruppe, gi) => (
+                      (kalkulation.bestellliste ?? []).map((gruppe, gi) => (
                         <div key={gi}>
                           <div className="px-6 py-4 bg-gray-50 flex items-center justify-between">
                             <div>
@@ -870,10 +929,10 @@ export default function AnalyseJobPage() {
                               </tr>
                             </thead>
                             <tbody>
-                              {gruppe.positionen.map((pos, pi) => (
+                              {(gruppe.positionen ?? []).map((pos, pi) => (
                                 <tr key={pi} className="border-t border-gray-50 hover:bg-gray-50">
                                   <td className="px-6 py-2">{pos.bezeichnung}</td>
-                                  <td className="px-4 py-2 text-right font-mono">{pos.menge.toLocaleString("de-DE", { minimumFractionDigits: 1 })}</td>
+                                  <td className="px-4 py-2 text-right font-mono">{(pos.menge ?? 0).toLocaleString("de-DE", { minimumFractionDigits: 1 })}</td>
                                   <td className="px-4 py-2">{pos.einheit}</td>
                                   <td className="px-4 py-2 text-right">{eur(pos.einzelpreis)}</td>
                                   <td className="px-4 py-2 text-right font-medium">{eur(pos.gesamtpreis)}</td>
@@ -884,7 +943,7 @@ export default function AnalyseJobPage() {
                         </div>
                       ))
                     )}
-                    {kalkulation.bestellliste.length > 0 && (
+                    {(kalkulation.bestellliste ?? []).length > 0 && (
                       <div className="px-6 py-4 bg-gray-100 flex items-center justify-between font-semibold">
                         <span>Gesamtsumme alle Lieferanten</span>
                         <span className="text-xl">{eur(kalkulation.gesamt_netto)}</span>
@@ -896,7 +955,7 @@ export default function AnalyseJobPage() {
                 {/* ═══ SUB-TAB: Kundenangebot (editable) ═══ */}
                 {kalkSubTab === "angebot" && kalkParams && (
                   <div className="p-6 space-y-6">
-                    {kalkulation.kundenangebot.material_einkauf === 0 && (
+                    {(kalkulation.kundenangebot?.material_einkauf ?? 0) === 0 && (
                       <div className="p-4 bg-orange-50 border border-orange-300 rounded-lg">
                         <p className="font-semibold text-orange-800">Material-Einkaufspreise fehlen</p>
                         <p className="text-sm text-orange-700 mt-1">
@@ -1077,9 +1136,9 @@ export default function AnalyseJobPage() {
                               </td>
                               <td className="py-3 text-right font-mono">{eur(kalkulation.kundenangebot.lohnkosten_sub)}</td>
                             </tr>
-                            {kalkulation.kundenangebot.zusatzkosten_summe > 0 && (
+                            {(kalkulation.kundenangebot?.zusatzkosten_summe ?? 0) > 0 && (
                               <>
-                                {kalkulation.kundenangebot.zusatzkosten.map((z, zi) => (
+                                {(kalkulation.kundenangebot?.zusatzkosten ?? []).map((z, zi) => (
                                   <tr key={zi} className="border-b border-gray-100">
                                     <td className="py-3 text-gray-600">+ {z.bezeichnung || "Zusatzkosten"}</td>
                                     <td className="py-3 text-right font-mono">{eur(z.betrag)}</td>
@@ -1109,40 +1168,40 @@ export default function AnalyseJobPage() {
                         <div className="grid grid-cols-2 gap-3">
                           <div className="bg-blue-50 rounded-lg p-4">
                             <p className="text-xs text-blue-600">Deckenflaeche</p>
-                            <p className="text-2xl font-bold text-blue-900">{kalkulation.kundenangebot.deckenflaeche_m2} m2</p>
+                            <p className="text-2xl font-bold text-blue-900">{kalkulation.kundenangebot?.deckenflaeche_m2 ?? 0} m2</p>
                           </div>
                           <div className="bg-blue-50 rounded-lg p-4">
                             <p className="text-xs text-blue-600">Wandflaeche</p>
-                            <p className="text-2xl font-bold text-blue-900">{kalkulation.kundenangebot.wandflaeche_m2} m2</p>
+                            <p className="text-2xl font-bold text-blue-900">{kalkulation.kundenangebot?.wandflaeche_m2 ?? 0} m2</p>
                           </div>
                           <div className="bg-green-50 rounded-lg p-4">
                             <p className="text-xs text-green-600">Montage-Stunden gesamt</p>
-                            <p className="text-2xl font-bold text-green-900">{kalkulation.kundenangebot.lohnstunden}h</p>
+                            <p className="text-2xl font-bold text-green-900">{kalkulation.kundenangebot?.lohnstunden ?? 0}h</p>
                           </div>
                           <div className="bg-green-50 rounded-lg p-4">
                             <p className="text-xs text-green-600">Mischkalkulation /h</p>
-                            <p className="text-2xl font-bold text-green-900">{fmt(kalkulation.kundenangebot.stundensatz, 2)} EUR</p>
+                            <p className="text-2xl font-bold text-green-900">{fmt(kalkulation.kundenangebot?.stundensatz, 2)} EUR</p>
                           </div>
                           <div className="bg-purple-50 rounded-lg p-4">
                             <p className="text-xs text-purple-600">Material-Marge</p>
-                            <p className="text-2xl font-bold text-purple-900">{kalkulation.kundenangebot.material_aufschlag_prozent}%</p>
+                            <p className="text-2xl font-bold text-purple-900">{kalkulation.kundenangebot?.material_aufschlag_prozent ?? 0}%</p>
                           </div>
                           <div className="bg-purple-50 rounded-lg p-4">
                             <p className="text-xs text-purple-600">Preis / m2 Decke</p>
                             <p className="text-2xl font-bold text-purple-900">
-                              {kalkulation.kundenangebot.deckenflaeche_m2 > 0
-                                ? fmt(kalkulation.kundenangebot.angebot_netto / kalkulation.kundenangebot.deckenflaeche_m2, 2)
-                                : "—"} EUR
+                              {(kalkulation.kundenangebot?.deckenflaeche_m2 ?? 0) > 0
+                                ? fmt((kalkulation.kundenangebot?.angebot_netto ?? 0) / (kalkulation.kundenangebot?.deckenflaeche_m2 ?? 1), 2)
+                                : "\u2014"} EUR
                             </p>
                           </div>
                           <div className="bg-orange-50 rounded-lg p-4">
                             <p className="text-xs text-orange-600">Eigenleistung</p>
-                            <p className="text-2xl font-bold text-orange-900">{Math.round(kalkulation.kundenangebot.anteil_eigenleistung * 100)}%</p>
+                            <p className="text-2xl font-bold text-orange-900">{Math.round((kalkulation.kundenangebot?.anteil_eigenleistung ?? 0) * 100)}%</p>
                           </div>
-                          {kalkulation.kundenangebot.zusatzkosten_summe > 0 && (
+                          {(kalkulation.kundenangebot?.zusatzkosten_summe ?? 0) > 0 && (
                             <div className="bg-orange-50 rounded-lg p-4">
                               <p className="text-xs text-orange-600">Zusatzkosten</p>
-                              <p className="text-2xl font-bold text-orange-900">{eur(kalkulation.kundenangebot.zusatzkosten_summe)}</p>
+                              <p className="text-2xl font-bold text-orange-900">{eur(kalkulation.kundenangebot?.zusatzkosten_summe)}</p>
                             </div>
                           )}
                         </div>
@@ -1172,7 +1231,7 @@ export default function AnalyseJobPage() {
               </tr>
             </thead>
             <tbody>
-              {result.raeume.map((r, i) => {
+              {raeume.map((r, i) => {
                 const edits = editedRaeume[String(i)];
                 const flaecheEdited = edits?.flaeche_m2 !== undefined;
                 const hoeheEdited = edits?.hoehe_m !== undefined;
@@ -1244,7 +1303,7 @@ export default function AnalyseJobPage() {
               </tr>
             </thead>
             <tbody>
-              {result.decken.map((d, i) => {
+              {decken.map((d, i) => {
                 const edits = editedDecken[String(i)];
                 const flaecheEdited = edits?.flaeche_m2 !== undefined;
                 const curFlaeche = edits?.flaeche_m2 ?? d.flaeche_m2;
@@ -1302,7 +1361,7 @@ export default function AnalyseJobPage() {
               </tr>
             </thead>
             <tbody>
-              {result.waende.map((w, i) => {
+              {waende.map((w, i) => {
                 const edits = editedWaende[String(i)];
                 const laengeEdited = edits?.laenge_m !== undefined;
                 const hoeheEdited = edits?.hoehe_m !== undefined;
@@ -1377,7 +1436,7 @@ export default function AnalyseJobPage() {
               </tr>
             </thead>
             <tbody>
-              {result.details.map((d, i) => (
+              {details.map((d, i) => (
                 <tr key={i} className="border-t border-gray-100 hover:bg-gray-50">
                   <td className="px-6 py-3 font-mono">{d.detail_nr ?? "—"}</td>
                   <td className="px-6 py-3 font-medium">{d.bezeichnung}</td>
@@ -1389,6 +1448,7 @@ export default function AnalyseJobPage() {
           </table>
         )}
       </div>
+      )}
     </div>
   );
 }

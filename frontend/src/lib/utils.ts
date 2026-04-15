@@ -7,12 +7,14 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /** Formats a number as m² (German locale). */
-export function formatM2(val: number): string {
+export function formatM2(val: number | null | undefined): string {
+  if (val == null || isNaN(val)) return "\u2014";
   return `${val.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m²`;
 }
 
 /** Formats a number as meters (German locale). */
-export function formatM(val: number): string {
+export function formatM(val: number | null | undefined): string {
+  if (val == null || isNaN(val)) return "\u2014";
   return `${val.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m`;
 }
 

@@ -1,6 +1,8 @@
 """Application configuration via environment variables."""
 
+import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import model_validator
 
 
 class Settings(BaseSettings):
@@ -14,7 +16,23 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/lanecore"
 
     # Claude API
-    anthropic_api_key: str
+    anthropic_api_key: str = ""
+
+    @model_validator(mode="after")
+    def _load_api_key_from_dotenv_if_empty(self) -> "Settings":
+        """If ANTHROPIC_API_KEY env var is empty, load from .env file directly."""
+        if not self.anthropic_api_key:
+            # pydantic-settings ignores .env when env var is set (even if empty)
+            # So we manually load it
+            from dotenv import dotenv_values
+            for env_path in [".env", "backend/.env"]:
+                if os.path.exists(env_path):
+                    vals = dotenv_values(env_path)
+                    key = vals.get("ANTHROPIC_API_KEY", "")
+                    if key:
+                        self.anthropic_api_key = key
+                        break
+        return self
     claude_model_complex: str = "claude-opus-4-6"    # Für komplexe Baupläne
     claude_model_simple: str = "claude-sonnet-4-6"   # Für Vorverarbeitung
 
