@@ -70,7 +70,7 @@ export default function ProjektePage() {
     if (search.trim()) params.set("search", search.trim());
 
     try {
-      const res = await fetch(`/api/v1/projekte/?${params}`);
+      const res = await fetch(`/api/v1/projekte?${params}`);
       if (res.ok) setProjekte(await res.json());
     } catch { /* ignore */ }
   };

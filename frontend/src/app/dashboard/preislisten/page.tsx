@@ -59,7 +59,7 @@ export default function PreislistenPage() {
 
   const loadPreislisten = useCallback(async () => {
     try {
-      const res = await fetch("/api/v1/preislisten/");
+      const res = await fetch("/api/v1/preislisten");
       if (res.ok) setPreislisten(await res.json());
     } catch { /* ignore */ }
   }, []);

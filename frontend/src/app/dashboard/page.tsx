@@ -46,7 +46,7 @@ export default function DashboardPage() {
       .then(setStats)
       .catch(() => {});
 
-    fetch("/api/v1/projekte/?sort=updated_at&order=desc")
+    fetch("/api/v1/projekte?sort=updated_at&order=desc")
       .then((r) => r.json())
       .then(setProjekte)
       .catch(() => {});
