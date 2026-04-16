@@ -16,14 +16,22 @@ from app.models.preisliste import Preisliste, Produkt
 log = structlog.get_logger()
 
 
-# ── Trockenbau-Materialregeln ────────────────────────────────────────────────
-# Diese Regeln bilden ab, welche Materialien pro System benötigt werden.
-# Verschnitt-Faktoren und Verbräuche basieren auf Knauf/Rigips-Richtwerten.
+# ── Trockenbau Knowledge Base ────────────────────────────────────────────────
+# Herstellergesicherte Daten aus Knauf, Rigips, Fermacell Systemblättern.
+# Importiert aus app/knowledge/trockenbau_systeme.json
 
-VERSCHNITT_PLATTEN = 1.10       # 10% Verschnitt
-VERSCHNITT_PROFILE = 1.05       # 5% Verschnitt
-VERSCHNITT_DAEMMUNG = 1.05      # 5% Verschnitt
-SCHRAUBEN_PRO_M2 = 25           # Schnellbauschrauben pro m² Beplankung
+from app.knowledge import get_kb, get_system, get_material_pro_m2, get_verschnitt
+
+def _kb_val(system_id: str, key: str, default: float) -> float:
+    """Get a value from the knowledge base for a system, with fallback."""
+    mat = get_material_pro_m2(system_id)
+    return mat.get(key, default)
+
+# Legacy constants kept as fallbacks
+VERSCHNITT_PLATTEN = 1.10
+VERSCHNITT_PROFILE = 1.05
+VERSCHNITT_DAEMMUNG = 1.05
+SCHRAUBEN_PRO_M2 = 25
 
 # ── Differenzierte Arbeitszeitwerte (h/m²) nach System ──────────────────────
 # Basierend auf Erfahrungswerten für Trockenbau-Montage inkl. Spachteln.
@@ -150,8 +158,19 @@ def materialliste_aus_analyse(analyse_result: dict) -> list[MaterialPosition]:
         profil = d.get("profil", "CD 60/27")
         herkunft = f"Decke {system} {raum} {raum_nr}".strip()
 
-        # 1. CD-Profile
-        cd_lfm = math.ceil(flaeche * CD_PROFIL_LFM_PRO_M2 * VERSCHNITT_PROFILE * 10) / 10
+        # Detect system ID from plan data (D112, D113 etc.)
+        sys_id = "D112"  # default
+        if system:
+            for sid in ["D113", "D112"]:
+                if sid.lower() in system.lower():
+                    sys_id = sid
+                    break
+
+        # Get KB values for this system
+        kb_mat = get_material_pro_m2(sys_id)
+
+        # 1. CD-Profile (KB: 3.2 lfm/m² for D112, 4.2 for D113)
+        cd_lfm = math.ceil(flaeche * kb_mat.get("cd_profil_lfm", CD_PROFIL_LFM_PRO_M2) * VERSCHNITT_PROFILE * 10) / 10
         positionen.append(MaterialPosition(
             bezeichnung=f"{profil} Tragprofil",
             kategorie="CD-Profil",
@@ -161,8 +180,8 @@ def materialliste_aus_analyse(analyse_result: dict) -> list[MaterialPosition]:
             suchbegriffe=["CD 60/27", "CD-Profil", "CD60", "Tragprofil"],
         ))
 
-        # 2. UD-Randprofil
-        ud_lfm = math.ceil(flaeche * UD_PROFIL_LFM_PRO_M2 * VERSCHNITT_PROFILE * 10) / 10
+        # 2. UD-Randprofil (KB: 0.4 lfm/m²)
+        ud_lfm = math.ceil(flaeche * kb_mat.get("ud_profil_lfm", UD_PROFIL_LFM_PRO_M2) * VERSCHNITT_PROFILE * 10) / 10
         positionen.append(MaterialPosition(
             bezeichnung="UD 28/27 Randprofil",
             kategorie="UD-Profil",
@@ -195,8 +214,8 @@ def materialliste_aus_analyse(analyse_result: dict) -> list[MaterialPosition]:
                 suchbegriffe=["GKB", "Gipskarton", "Knauf", "12.5", "Diamant", platte_typ],
             ))
 
-        # 4. Direktabhänger
-        abhaenger_stk = math.ceil(flaeche * DIREKTABHAENGER_PRO_M2)
+        # 4. Direktabhänger (KB: 1.3 Stk/m²)
+        abhaenger_stk = math.ceil(flaeche * kb_mat.get("abhaenger_stk", DIREKTABHAENGER_PRO_M2))
         positionen.append(MaterialPosition(
             bezeichnung="Direktabhänger",
             kategorie="Zubehoer",
@@ -206,8 +225,8 @@ def materialliste_aus_analyse(analyse_result: dict) -> list[MaterialPosition]:
             suchbegriffe=["Direktabhänger", "Abhänger", "Nonius", "Federbügel"],
         ))
 
-        # 5. Schnellbauschrauben
-        schrauben_stk = math.ceil(flaeche * SCHRAUBEN_PRO_M2)
+        # 5. Schnellbauschrauben (KB: 23 Stk/m² for D112)
+        schrauben_stk = math.ceil(flaeche * kb_mat.get("schrauben_stk", SCHRAUBEN_PRO_M2))
         positionen.append(MaterialPosition(
             bezeichnung="Schnellbauschrauben TN 3.5x25",
             kategorie="Befestigung",

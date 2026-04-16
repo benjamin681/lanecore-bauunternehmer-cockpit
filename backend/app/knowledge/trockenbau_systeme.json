@@ -1,0 +1,303 @@
+{
+  "_meta": {
+    "version": "1.0.0",
+    "updated": "2026-04-16",
+    "sources": [
+      "Knauf W11.at Detailblatt",
+      "Knauf D11.de Konstruktionsübersicht",
+      "Knauf Preisliste Kompakt 2025",
+      "Rigips Verarbeitungsrichtlinien Trockenbau (PDF)",
+      "Rigips Einfachständerwände (PDF)",
+      "Fermacell Verarbeitungsanleitung Gipsfaser (PDF)",
+      "Fermacell Powerpanel H2O Planungsbroschüre",
+      "DIN 18181, DIN 4103-1, DIN 18340 (VOB/C), DIN 4109, DIN EN 520, DIN EN 14195"
+    ]
+  },
+
+  "wandsysteme": {
+    "W111": {
+      "name": "Einfachständerwerk, einlagig beplankt",
+      "beschreibung": "Standard-Trennwand, einseitig oder beidseitig 1x beplankt",
+      "brandschutz": "EI 30 (F30)",
+      "schallschutz_rw_db": {"min": 44, "max": 53},
+      "wanddicken_mm": [75, 100, 125],
+      "achsabstand_mm": 625,
+      "lagen_pro_seite": 1,
+      "material_pro_m2": {
+        "cw_profil_lfm": 1.6,
+        "uw_profil_lfm": 0.7,
+        "platten_m2": 2.0,
+        "schrauben_stk": 30,
+        "schrauben_typ": "TN 3.5x25",
+        "spachtel_kg": 0.5,
+        "fugenband_lfm": 1.5,
+        "dichtungsband_lfm": 1.8,
+        "daemmung_m2": 1.05
+      },
+      "verschnitt": {"platten": 0.10, "profile": 0.05}
+    },
+
+    "W112": {
+      "name": "Einfachständerwerk, zweilagig beplankt",
+      "beschreibung": "Erhöhter Schall-/Brandschutz, beidseitig 2x beplankt",
+      "brandschutz": "bis EI 90 (F90)",
+      "schallschutz_rw_db": {"min": 54, "max": 68},
+      "wanddicken_mm": [100, 125, 150, 175],
+      "achsabstand_mm": 625,
+      "lagen_pro_seite": 2,
+      "material_pro_m2": {
+        "cw_profil_lfm": 1.6,
+        "uw_profil_lfm": 0.7,
+        "platten_m2": 4.0,
+        "schrauben_stk": 60,
+        "schrauben_typ_lage1": "TN 3.5x25",
+        "schrauben_typ_lage2": "TN 3.5x35",
+        "spachtel_kg": 0.8,
+        "fugenband_lfm": 1.8,
+        "dichtungsband_lfm": 1.8,
+        "daemmung_m2": 1.05
+      },
+      "verschnitt": {"platten": 0.10, "profile": 0.05},
+      "brandschutz_hinweis": "F30: Dämmung min. 40mm, F60: min. 40mm, F90: min. 60mm Mineralwolle (Schmelzpunkt ≥ 1000°C)"
+    },
+
+    "W113": {
+      "name": "Einfachständerwerk, dreilagig beplankt",
+      "beschreibung": "Höchster Brandschutz, beidseitig 3x beplankt",
+      "brandschutz": "EI 90 (F90)",
+      "schallschutz_rw_db": {"min": 64, "max": 71},
+      "wanddicken_mm": [150, 175],
+      "achsabstand_mm": 625,
+      "lagen_pro_seite": 3,
+      "material_pro_m2": {
+        "cw_profil_lfm": 1.6,
+        "uw_profil_lfm": 0.7,
+        "platten_m2": 6.0,
+        "schrauben_stk": 90,
+        "spachtel_kg": 1.1,
+        "fugenband_lfm": 1.8,
+        "dichtungsband_lfm": 1.8,
+        "daemmung_m2": 1.05
+      },
+      "verschnitt": {"platten": 0.10, "profile": 0.05}
+    },
+
+    "W115": {
+      "name": "Doppelständerwerk entkoppelt, zweilagig beplankt",
+      "beschreibung": "Wohnungstrennwand, höchster Schallschutz durch entkoppelte Ständer",
+      "brandschutz": "bis EI 90 (F90)",
+      "schallschutz_rw_db": {"min": 61, "max": 74},
+      "wanddicken_mm": [155, 205, 255],
+      "achsabstand_mm": 625,
+      "lagen_pro_seite": 2,
+      "doppelstaender": true,
+      "material_pro_m2": {
+        "cw_profil_lfm": 3.2,
+        "uw_profil_lfm": 0.7,
+        "platten_m2": 4.0,
+        "schrauben_stk": 60,
+        "spachtel_kg": 1.0,
+        "fugenband_lfm": 1.8,
+        "dichtungsband_lfm": 1.8,
+        "daemmung_m2": 2.1
+      },
+      "verschnitt": {"platten": 0.10, "profile": 0.05}
+    },
+
+    "W116": {
+      "name": "Installationswand, Doppelständerwerk mit Abstand",
+      "beschreibung": "Für Sanitär-/Elektroinstallationen, variabler Hohlraum",
+      "brandschutz": "bis EI 90",
+      "schallschutz_rw_db": {"min": 50, "max": 62},
+      "wanddicken_mm": [105, 155, 205, 220],
+      "achsabstand_mm": 625,
+      "lagen_pro_seite": 2,
+      "doppelstaender": true,
+      "material_pro_m2": {
+        "cw_profil_lfm": 3.2,
+        "uw_profil_lfm": 1.4,
+        "platten_m2": 4.0,
+        "schrauben_stk": 72,
+        "spachtel_kg": 1.0,
+        "fugenband_lfm": 1.8,
+        "dichtungsband_lfm": 1.8,
+        "daemmung_m2": 2.1
+      },
+      "verschnitt": {"platten": 0.10, "profile": 0.05}
+    },
+
+    "W118": {
+      "name": "Sicherheitswand (einbruchhemmend)",
+      "beschreibung": "Diamant + Stahlblech-Einlage, WK2/RC3",
+      "brandschutz": "über F90",
+      "widerstandsklasse": "WK2 / RC3",
+      "wanddicken_mm": [125, 175],
+      "achsabstand_mm": 625,
+      "lagen_pro_seite": 2,
+      "material_pro_m2": {
+        "cw_profil_lfm": 1.6,
+        "uw_profil_lfm": 0.7,
+        "platten_m2": 4.0,
+        "platten_typ": "Diamant GKFI",
+        "stahlblech_m2": 2.0,
+        "schrauben_stk": 60,
+        "spachtel_kg": 0.8,
+        "fugenband_lfm": 1.8,
+        "dichtungsband_lfm": 1.8,
+        "daemmung_m2": 1.05
+      },
+      "verschnitt": {"platten": 0.10, "profile": 0.05}
+    }
+  },
+
+  "deckensysteme": {
+    "D112": {
+      "name": "Abgehängte Decke, Metall-UK (Kreuzrost)",
+      "beschreibung": "Standard-Abhangdecke mit CD-Grundprofilen und CD-Tragprofilen im Kreuzrost",
+      "brandschutz": "bis F90 (abhängig von Beplankung)",
+      "achsabstand_grundprofil_mm": 1000,
+      "achsabstand_tragprofil_mm": 500,
+      "material_pro_m2": {
+        "cd_profil_lfm": 3.2,
+        "ud_profil_lfm": 0.4,
+        "platten_m2": 1.0,
+        "schrauben_stk": 23,
+        "schrauben_typ": "TN 3.5x25",
+        "abhaenger_stk": 1.3,
+        "kreuzverbinder_stk": 2.3,
+        "laengsverbinder_stk": 0.6,
+        "spachtel_kg": 0.3,
+        "fugenband_lfm": 1.2
+      },
+      "verschnitt": {"platten": 0.10, "profile": 0.05},
+      "zweilagig": {
+        "platten_m2": 2.0,
+        "schrauben_stk": 40,
+        "spachtel_kg": 0.5
+      }
+    },
+
+    "D113": {
+      "name": "Abgehängte Decke, Metall-UK niveaugleich",
+      "beschreibung": "Alle Profile auf einer Ebene, niedrigere Abhängehöhe möglich",
+      "brandschutz": "bis F90",
+      "achsabstand_mm": 500,
+      "material_pro_m2": {
+        "cd_profil_lfm": 4.2,
+        "ud_profil_lfm": 0.4,
+        "platten_m2": 1.0,
+        "schrauben_stk": 23,
+        "abhaenger_stk": 1.8,
+        "universalverbinder_stk": 4.8,
+        "spachtel_kg": 0.3,
+        "fugenband_lfm": 1.2
+      },
+      "verschnitt": {"platten": 0.10, "profile": 0.05}
+    }
+  },
+
+  "plattentypen": {
+    "GKB": {
+      "name": "Gipskartonplatte (Standard)",
+      "din": "DIN EN 520 Typ A",
+      "hersteller": {"Knauf": "Bauplatte", "Rigips": "Standard"},
+      "dicken_mm": [9.5, 12.5, 15, 18],
+      "gewicht_kg_pro_m2": {"9.5": 7.5, "12.5": 9.5, "15": 12.0, "18": 14.0},
+      "breiten_mm": [600, 625, 1250],
+      "laengen_mm": [2000, 2500, 2600, 3000]
+    },
+    "GKF": {
+      "name": "Gipskarton-Feuerschutzplatte",
+      "din": "DIN EN 520 Typ DF",
+      "hersteller": {"Knauf": "Feuerschutzplatte GKF", "Rigips": "Feuerschutzplatte RF"},
+      "dicken_mm": [12.5, 15, 18],
+      "gewicht_kg_pro_m2": {"12.5": 10.5, "15": 13.0, "18": 15.5}
+    },
+    "GKFI": {
+      "name": "Gipskarton-Feuerschutz imprägniert",
+      "din": "DIN EN 520 Typ DFH2",
+      "hersteller": {"Knauf": "Diamant GKFI", "Rigips": "Feuerschutzplatte RFI"},
+      "dicken_mm": [12.5, 15, 18],
+      "gewicht_kg_pro_m2": {"12.5": 13.0, "15": 15.6, "18": 19.0},
+      "einsatz": "Brandschutz + Feuchtraum"
+    },
+    "GKBI": {
+      "name": "Gipskartonplatte imprägniert (Feuchtraum)",
+      "din": "DIN EN 520 Typ H2",
+      "hersteller": {"Knauf": "Feuchtraumplatte", "Rigips": "Die Grüne"},
+      "dicken_mm": [12.5],
+      "gewicht_kg_pro_m2": {"12.5": 9.4}
+    },
+    "Aquapanel": {
+      "name": "Zementplatte (Nassraum)",
+      "hersteller": {"Knauf": "Aquapanel Indoor/Outdoor", "Fermacell": "Powerpanel H2O"},
+      "dicken_mm": [12.5],
+      "gewicht_kg_pro_m2": {"12.5": 13.0},
+      "einsatz": "Nassräume, Duschen, Schwimmbäder"
+    },
+    "Gipsfaser": {
+      "name": "Gipsfaserplatte (Fermacell)",
+      "din": "ETA-03/0050",
+      "hersteller": {"Fermacell": "Gipsfaserplatte"},
+      "dicken_mm": [10, 12.5, 15, 18],
+      "gewicht_kg_pro_m2": {"10": 11.5, "12.5": 15.0, "15": 18.0, "18": 22.0},
+      "besonderheiten": {
+        "befestigung": "Schrauben mit Fräsrippen (3.9x30mm) oder Klammern",
+        "fugenbehandlung": "Fugenkleber (PU-Kleber), KEIN Uniflott",
+        "schrauben_pro_m2_wand": 20,
+        "schrauben_pro_m2_decke": 26
+      }
+    }
+  },
+
+  "profile": {
+    "CW_50": {"name": "CW 50/50/0.6", "masse_mm": "50x50x0.6", "gewicht_kg_lfm": 0.49, "verwendung": "Ständerprofil Wand"},
+    "CW_75": {"name": "CW 75/50/0.6", "masse_mm": "75x50x0.6", "gewicht_kg_lfm": 0.55, "verwendung": "Ständerprofil Wand (Standard)"},
+    "CW_100": {"name": "CW 100/50/0.6", "masse_mm": "100x50x0.6", "gewicht_kg_lfm": 0.62, "verwendung": "Ständerprofil Wand"},
+    "UW_50": {"name": "UW 50/40/0.6", "masse_mm": "50x40x0.6", "gewicht_kg_lfm": 0.35, "verwendung": "Rahmenprofil Wand"},
+    "UW_75": {"name": "UW 75/40/0.6", "masse_mm": "75x40x0.6", "gewicht_kg_lfm": 0.42, "verwendung": "Rahmenprofil Wand"},
+    "UW_100": {"name": "UW 100/40/0.6", "masse_mm": "100x40x0.6", "gewicht_kg_lfm": 0.49, "verwendung": "Rahmenprofil Wand"},
+    "CD_60_27": {"name": "CD 60/27/0.6", "masse_mm": "60x27x0.6", "gewicht_kg_lfm": 0.49, "verwendung": "Trag-/Grundprofil Decke"},
+    "UD_28_27": {"name": "UD 28/27/0.6", "masse_mm": "28x27x0.6", "gewicht_kg_lfm": 0.28, "verwendung": "Randprofil Decke"}
+  },
+
+  "normen": {
+    "din_18181": {
+      "name": "Verarbeitung von Gipsplatten",
+      "schraubenabstand_wand_mm": 250,
+      "schraubenabstand_decke_mm": 170,
+      "schraubenabstand_heftung_1_lage_mm": 750,
+      "kantenabstand_schraube_mm": 10,
+      "fugenversatz_min_mm": 400,
+      "kreuzfugen": "nicht zulässig"
+    },
+    "din_18340_vob_c": {
+      "name": "Trockenbauarbeiten — Abrechnungsregeln",
+      "oeffnungen_uebermessen_bis_m2": 2.5,
+      "oeffnungen_abzug_ab_m2": 2.5,
+      "standardtuer_m2": 1.89,
+      "hinweis": "Standardtüren (ca. 0.885 x 2.135m = 1.89m²) werden NICHT abgezogen"
+    },
+    "din_4109": {
+      "name": "Schallschutz im Hochbau",
+      "mindest_rw": {
+        "wohnungstrennwand": 53,
+        "wohnungstrennwand_erhoeht": 56,
+        "reihenhaustrennwand": 62,
+        "buerotrennwand": 37,
+        "besprechungsraum": 45
+      }
+    }
+  },
+
+  "verschnitt_richtwerte": {
+    "einfache_raeume": 0.05,
+    "standard": 0.10,
+    "verwinkelte_raeume": 0.15,
+    "dachschraegen": 0.20,
+    "profile_standard": 0.05,
+    "schrauben": 0.10,
+    "spachtel": 0.10,
+    "daemmung": 0.05
+  }
+}
