@@ -117,14 +117,14 @@ def pdf_to_images(pdf_bytes: bytes, dpi: int = 200) -> list[PageImage]:
         page_num = page_idx + 1
         log.info("converting_page", page=page_num, total=num_pages, dpi=dpi)
 
-        # Convert single page (memory-efficient)
+        # Convert single page (memory-efficient, single thread for low-RAM servers)
         images = convert_from_bytes(
             pdf_bytes,
             dpi=dpi,
             first_page=page_num,
             last_page=page_num,
             fmt="PNG",
-            thread_count=2,
+            thread_count=1,
         )
 
         if not images:

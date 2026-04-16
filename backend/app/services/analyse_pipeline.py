@@ -59,8 +59,9 @@ async def run_analyse_pipeline(job_id: uuid.UUID, pdf_bytes: bytes, filename: st
             await _update_s3_key(db, job_id, s3_key)
             await _update_job_status(db, job_id, "processing", progress=15)
 
-            # 3. Convert PDF to images
-            page_images = pdf_to_images(pdf_bytes)
+            # 3. Convert PDF to images (lower DPI in production to fit 512MB RAM)
+            dpi = 150 if settings.app_env == "production" else 200
+            page_images = pdf_to_images(pdf_bytes, dpi=dpi)
             total_pages = len(page_images)
             await _update_job_status(db, job_id, "processing", progress=20)
 
