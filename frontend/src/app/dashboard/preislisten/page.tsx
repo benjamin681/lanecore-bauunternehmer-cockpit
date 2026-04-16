@@ -128,10 +128,10 @@ export default function PreislistenPage() {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Preislisten</h2>
+          <h2 className="text-lg md:text-2xl font-bold text-gray-900">Preislisten</h2>
           <p className="text-sm text-gray-500 mt-1">
             Laden Sie Preislisten von verschiedenen Anbietern hoch. Das System erkennt automatisch alle Produkte und findet den guenstigsten Preis.
           </p>
@@ -139,9 +139,9 @@ export default function PreislistenPage() {
       </div>
 
       {/* Upload Section */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
         <h3 className="font-semibold text-gray-900 mb-4">Neue Preisliste hochladen</h3>
-        <div className="flex gap-4 items-end">
+        <div className="flex flex-col md:flex-row gap-4 md:items-end">
           <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">Anbieter</label>
             <input
@@ -174,9 +174,9 @@ export default function PreislistenPage() {
       </div>
 
       {/* Preisvergleich */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
         <h3 className="font-semibold text-gray-900 mb-4">Preisvergleich</h3>
-        <div className="flex gap-4">
+        <div className="flex flex-col md:flex-row gap-4">
           <input
             type="text"
             value={searchQuery}
@@ -188,7 +188,7 @@ export default function PreislistenPage() {
           <button
             onClick={handleSearch}
             disabled={isSearching}
-            className="bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+            className="w-full md:w-auto bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
           >
             {isSearching ? "Suche..." : "Vergleichen"}
           </button>
@@ -205,6 +205,7 @@ export default function PreislistenPage() {
                     Preisdifferenz: <strong>{searchResults.preisdifferenz_prozent}%</strong> zwischen guenstigstem und teuerstem Anbieter
                   </div>
                 )}
+                <div className="overflow-x-auto -mx-4 md:mx-0">
                 <table className="w-full text-sm">
                   <thead className="text-left text-gray-500 bg-gray-50">
                     <tr>
@@ -230,6 +231,7 @@ export default function PreislistenPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </>
             )}
           </div>
@@ -246,23 +248,24 @@ export default function PreislistenPage() {
             Noch keine Preislisten hochgeladen. Laden Sie PDFs Ihrer Lieferanten hoch.
           </div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-gray-500 bg-gray-50">
               <tr>
-                <th className="px-6 py-2">Anbieter</th>
-                <th className="px-6 py-2">Datei</th>
-                <th className="px-6 py-2">Produkte</th>
-                <th className="px-6 py-2">Status</th>
-                <th className="px-6 py-2">Aktionen</th>
+                <th className="px-3 md:px-6 py-2">Anbieter</th>
+                <th className="px-3 md:px-6 py-2">Datei</th>
+                <th className="px-3 md:px-6 py-2">Produkte</th>
+                <th className="px-3 md:px-6 py-2">Status</th>
+                <th className="px-3 md:px-6 py-2">Aktionen</th>
               </tr>
             </thead>
             <tbody>
               {preislisten.map((p) => (
                 <tr key={p.id} className="border-t border-gray-100 hover:bg-gray-50">
-                  <td className="px-6 py-3 font-medium">{p.anbieter}</td>
-                  <td className="px-6 py-3 text-gray-500 text-xs">{p.dateiname ?? "—"}</td>
-                  <td className="px-6 py-3">{p.produkt_count}</td>
-                  <td className="px-6 py-3">
+                  <td className="px-3 md:px-6 py-3 font-medium">{p.anbieter}</td>
+                  <td className="px-3 md:px-6 py-3 text-gray-500 text-xs">{p.dateiname ?? "—"}</td>
+                  <td className="px-3 md:px-6 py-3">{p.produkt_count}</td>
+                  <td className="px-3 md:px-6 py-3">
                     {p.status === "completed" && (
                       <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">fertig</span>
                     )}
@@ -276,7 +279,7 @@ export default function PreislistenPage() {
                       <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">Fehler</span>
                     )}
                   </td>
-                  <td className="px-6 py-3">
+                  <td className="px-3 md:px-6 py-3">
                     {p.status === "completed" && (
                       <button
                         onClick={() => loadDetail(p.id)}
@@ -290,6 +293,7 @@ export default function PreislistenPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

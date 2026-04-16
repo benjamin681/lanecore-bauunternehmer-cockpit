@@ -68,13 +68,13 @@ export default function AngebotePipelinePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Angebote-Pipeline</h2>
+        <h2 className="text-lg md:text-2xl font-bold text-gray-900">Angebote-Pipeline</h2>
         <p className="text-sm text-gray-500 mt-1">
           {totalCount} Projekt{totalCount !== 1 ? "e" : ""} in der Pipeline
         </p>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {columns.map((col) => {
           const items = pipeline[col.key] || [];
           return (

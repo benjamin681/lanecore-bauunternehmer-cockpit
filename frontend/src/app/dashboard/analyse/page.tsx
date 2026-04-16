@@ -63,8 +63,8 @@ export default function AnalysePage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold text-gray-900 mb-2">Bauplan hochladen</h2>
-      <p className="text-gray-500 mb-8">
+      <h2 className="text-lg md:text-2xl font-bold text-gray-900 mb-2">Bauplan hochladen</h2>
+      <p className="text-gray-500 mb-4 md:mb-8">
         Laden Sie einen PDF-Bauplan hoch. Die KI analysiert automatisch Räume, Wände
         und Decken.
       </p>
@@ -77,7 +77,7 @@ export default function AnalysePage() {
         }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-xl p-16 text-center transition-colors ${
+        className={`border-2 border-dashed rounded-xl p-8 md:p-16 text-center transition-colors ${
           isDragging
             ? "border-primary-500 bg-primary-50"
             : "border-gray-300 hover:border-gray-400"
@@ -111,7 +111,7 @@ export default function AnalysePage() {
         </div>
       )}
 
-      <div className="mt-8 p-6 bg-gray-50 rounded-lg text-sm text-gray-600 space-y-2">
+      <div className="mt-4 md:mt-8 p-4 md:p-6 bg-gray-50 rounded-lg text-sm text-gray-600 space-y-2">
         <p className="font-medium text-gray-800">Unterstützte Plantypen:</p>
         <ul className="list-disc list-inside space-y-1">
           <li><strong>Grundrisse</strong> — Räume, Wandlängen, Wandtypen (W112, W115, W118)</li>

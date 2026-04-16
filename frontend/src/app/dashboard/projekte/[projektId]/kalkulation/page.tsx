@@ -162,12 +162,12 @@ export default function ProjektKalkulationPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
           <a href="/dashboard/projekte" className="text-sm text-primary-600 hover:underline mb-1 inline-block">
             &larr; Zurueck zu Projekte
           </a>
-          <h2 className="text-2xl font-bold text-gray-900">
+          <h2 className="text-lg md:text-2xl font-bold text-gray-900">
             Projekt-Gesamtkalkulation
           </h2>
           {kalkulation.projekt_name && (
@@ -186,7 +186,7 @@ export default function ProjektKalkulationPage() {
       {/* Main Content */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {/* Sub-Tabs */}
-        <div className="flex border-b border-gray-200 bg-gray-50">
+        <div className="flex border-b border-gray-200 bg-gray-50 overflow-x-auto">
           {([
             { key: "material" as KalkSubTab, label: "Materialkosten (Einkauf)" },
             { key: "bestellung" as KalkSubTab, label: "Bestellliste" },
@@ -195,7 +195,7 @@ export default function ProjektKalkulationPage() {
             <button
               key={st.key}
               onClick={() => setKalkSubTab(st.key)}
-              className={`px-5 py-2.5 text-sm font-medium transition-colors ${
+              className={`px-3 md:px-5 py-2.5 text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${
                 kalkSubTab === st.key
                   ? "text-primary-700 border-b-2 border-primary-600 bg-white"
                   : "text-gray-500 hover:text-gray-700"
@@ -215,12 +215,13 @@ export default function ProjektKalkulationPage() {
         {/* Material Sub-Tab */}
         {kalkSubTab === "material" && (
           <>
-            <div className="px-6 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+            <div className="px-3 md:px-6 py-3 bg-gray-50 border-b border-gray-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
               <span className="text-sm text-gray-500">
                 {kalkulation.positionen_gesamt} Positionen &mdash; {kalkulation.positionen_mit_preis} mit Preis
               </span>
               <span className="text-lg font-bold">Einkauf: {eur(kalkulation.gesamt_netto)}</span>
             </div>
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="text-left text-gray-500 bg-gray-50">
                 <tr>
@@ -266,6 +267,7 @@ export default function ProjektKalkulationPage() {
                 </tr>
               </tfoot>
             </table>
+            </div>
           </>
         )}
 
@@ -284,6 +286,7 @@ export default function ProjektKalkulationPage() {
                     </div>
                     <span className="text-lg font-bold text-gray-900">{eur(gruppe.summe_netto)}</span>
                   </div>
+                  <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="text-left text-gray-400 text-xs">
                       <tr>
@@ -306,6 +309,7 @@ export default function ProjektKalkulationPage() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               ))
             )}
@@ -320,8 +324,8 @@ export default function ProjektKalkulationPage() {
 
         {/* Kundenangebot Sub-Tab (read-only for project level) */}
         {kalkSubTab === "angebot" && kalkulation?.kundenangebot && (
-          <div className="p-6 space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="p-3 md:p-6 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
               {/* Angebotskalkulation */}
               <div className="space-y-4">
                 <h4 className="font-semibold text-gray-900 text-lg">Angebotskalkulation</h4>
@@ -383,31 +387,31 @@ export default function ProjektKalkulationPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-blue-50 rounded-lg p-4">
                     <p className="text-xs text-blue-600">Deckenflaeche</p>
-                    <p className="text-2xl font-bold text-blue-900">{kalkulation.kundenangebot?.deckenflaeche_m2 ?? 0} m2</p>
+                    <p className="text-lg md:text-2xl font-bold text-blue-900">{kalkulation.kundenangebot?.deckenflaeche_m2 ?? 0} m2</p>
                   </div>
                   <div className="bg-blue-50 rounded-lg p-4">
                     <p className="text-xs text-blue-600">Wandflaeche</p>
-                    <p className="text-2xl font-bold text-blue-900">{kalkulation.kundenangebot?.wandflaeche_m2 ?? 0} m2</p>
+                    <p className="text-lg md:text-2xl font-bold text-blue-900">{kalkulation.kundenangebot?.wandflaeche_m2 ?? 0} m2</p>
                   </div>
                   <div className="bg-green-50 rounded-lg p-4">
                     <p className="text-xs text-green-600">Montage-Stunden gesamt</p>
-                    <p className="text-2xl font-bold text-green-900">{kalkulation.kundenangebot?.lohnstunden ?? 0}h</p>
+                    <p className="text-lg md:text-2xl font-bold text-green-900">{kalkulation.kundenangebot?.lohnstunden ?? 0}h</p>
                   </div>
                   <div className="bg-green-50 rounded-lg p-4">
                     <p className="text-xs text-green-600">Mischkalkulation /h</p>
-                    <p className="text-2xl font-bold text-green-900">{fmt(kalkulation.kundenangebot?.stundensatz, 2)} EUR</p>
+                    <p className="text-lg md:text-2xl font-bold text-green-900">{fmt(kalkulation.kundenangebot?.stundensatz, 2)} EUR</p>
                   </div>
                   <div className="bg-purple-50 rounded-lg p-4">
                     <p className="text-xs text-purple-600">Material-Marge</p>
-                    <p className="text-2xl font-bold text-purple-900">{kalkulation.kundenangebot?.material_aufschlag_prozent ?? 0}%</p>
+                    <p className="text-lg md:text-2xl font-bold text-purple-900">{kalkulation.kundenangebot?.material_aufschlag_prozent ?? 0}%</p>
                   </div>
                   <div className="bg-purple-50 rounded-lg p-4">
                     <p className="text-xs text-purple-600">Analysen zusammengefasst</p>
-                    <p className="text-2xl font-bold text-purple-900">{kalkulation.analysen_count}</p>
+                    <p className="text-lg md:text-2xl font-bold text-purple-900">{kalkulation.analysen_count}</p>
                   </div>
                   <div className="bg-orange-50 rounded-lg p-4">
                     <p className="text-xs text-orange-600">Preis / m2 Decke</p>
-                    <p className="text-2xl font-bold text-orange-900">
+                    <p className="text-lg md:text-2xl font-bold text-orange-900">
                       {(kalkulation.kundenangebot?.deckenflaeche_m2 ?? 0) > 0
                         ? fmt((kalkulation.kundenangebot?.angebot_netto ?? 0) / ((kalkulation.kundenangebot?.deckenflaeche_m2 ?? 0) + (kalkulation.kundenangebot?.wandflaeche_m2 ?? 0) || 1), 2) + " EUR"
                         : "\u2014"}
@@ -415,7 +419,7 @@ export default function ProjektKalkulationPage() {
                   </div>
                   <div className="bg-orange-50 rounded-lg p-4">
                     <p className="text-xs text-orange-600">Positionen mit Preis</p>
-                    <p className="text-2xl font-bold text-orange-900">
+                    <p className="text-lg md:text-2xl font-bold text-orange-900">
                       {kalkulation.positionen_mit_preis} / {kalkulation.positionen_gesamt}
                     </p>
                   </div>

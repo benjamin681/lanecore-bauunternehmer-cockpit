@@ -576,27 +576,27 @@ export default function AnalyseJobPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Analyse-Ergebnis</h2>
+          <h2 className="text-lg md:text-2xl font-bold text-gray-900">Analyse-Ergebnis</h2>
           <p className="text-sm text-gray-500 mt-1">
             {result.plantyp && <span className="capitalize">{result.plantyp}</span>}
             {result.massstab && <span> &mdash; Massstab {result.massstab}</span>}
             {result.geschoss && <span> &mdash; {result.geschoss}</span>}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3 flex-wrap">
           {!hasNoElements && (
             <>
               <a
                 href={`/api/v1/bauplan/${jobId}/angebot-pdf`}
                 download
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                className="px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg text-xs md:text-sm font-medium hover:bg-blue-700 transition-colors"
               >
                 Angebot als PDF
               </a>
               <a
                 href={`/api/v1/bauplan/${jobId}/export`}
                 download
-                className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                className="px-3 md:px-4 py-2 bg-green-600 text-white rounded-lg text-xs md:text-sm font-medium hover:bg-green-700 transition-colors"
               >
                 Excel herunterladen
               </a>
@@ -610,7 +610,7 @@ export default function AnalyseJobPage() {
 
       {/* Audit Info */}
       {result.model_used && (
-        <div className="flex gap-4 text-xs text-gray-400">
+        <div className="flex flex-wrap gap-2 md:gap-4 text-xs text-gray-400">
           <span>Modell: {result.model_used}</span>
           {result.input_tokens != null && <span>Input: {result.input_tokens.toLocaleString()} Tokens</span>}
           {result.output_tokens != null && <span>Output: {result.output_tokens.toLocaleString()} Tokens</span>}
@@ -644,9 +644,9 @@ export default function AnalyseJobPage() {
       )}
 
       {/* Qualitaets-Report */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <div className="bg-white rounded-xl border border-gray-200 p-3 md:p-5">
         <h3 className="font-semibold text-gray-900 mb-4">Qualitaets-Report</h3>
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
           {/* Konfidenz-Bar */}
           <div>
             <p className="text-xs text-gray-500 mb-1">Konfidenz</p>
@@ -771,12 +771,12 @@ export default function AnalyseJobPage() {
       {/* Tabs */}
       {tabs.length > 0 && (
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="flex border-b border-gray-200">
+        <div className="flex border-b border-gray-200 overflow-x-auto -mx-px">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-6 py-3 text-sm font-medium transition-colors ${
+              className={`px-3 md:px-6 py-3 text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${
                 currentTab === tab.key
                   ? "text-primary-700 border-b-2 border-primary-600 bg-primary-50"
                   : "text-gray-500 hover:text-gray-700"
@@ -805,7 +805,7 @@ export default function AnalyseJobPage() {
             ) : (
               <>
                 {/* Sub-Tabs */}
-                <div className="flex border-b border-gray-200 bg-gray-50">
+                <div className="flex border-b border-gray-200 bg-gray-50 overflow-x-auto">
                   {([
                     { key: "material" as KalkSubTab, label: "Materialkosten (Einkauf)" },
                     { key: "bestellung" as KalkSubTab, label: "Bestellliste" },
@@ -814,7 +814,7 @@ export default function AnalyseJobPage() {
                     <button
                       key={st.key}
                       onClick={() => setKalkSubTab(st.key)}
-                      className={`px-5 py-2.5 text-sm font-medium transition-colors ${
+                      className={`px-3 md:px-5 py-2.5 text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${
                         kalkSubTab === st.key
                           ? "text-primary-700 border-b-2 border-primary-600 bg-white"
                           : "text-gray-500 hover:text-gray-700"
@@ -843,13 +843,14 @@ export default function AnalyseJobPage() {
                 {/* ═══ SUB-TAB: Materialkosten (Einkauf) ═══ */}
                 {kalkSubTab === "material" && (
                   <>
-                    <div className="px-6 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                    <div className="px-3 md:px-6 py-3 bg-gray-50 border-b border-gray-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
                       <span className="text-sm text-gray-500">
                         {kalkulation.positionen_gesamt} Positionen &mdash; {kalkulation.positionen_mit_preis} mit Preis
                         {recalculating && <span className="ml-2 text-primary-600 animate-pulse">Berechne...</span>}
                       </span>
                       <span className="text-lg font-bold">Einkauf: {eur(kalkulation.gesamt_netto)}</span>
                     </div>
+                    <div className="overflow-x-auto -mx-0">
                     <table className="w-full text-sm">
                       <thead className="text-left text-gray-500 bg-gray-50">
                         <tr>
@@ -900,6 +901,7 @@ export default function AnalyseJobPage() {
                         </tr>
                       </tfoot>
                     </table>
+                    </div>
                   </>
                 )}
 
@@ -918,6 +920,7 @@ export default function AnalyseJobPage() {
                             </div>
                             <span className="text-lg font-bold text-gray-900">{eur(gruppe.summe_netto)}</span>
                           </div>
+                          <div className="overflow-x-auto">
                           <table className="w-full text-sm">
                             <thead className="text-left text-gray-400 text-xs">
                               <tr>
@@ -940,6 +943,7 @@ export default function AnalyseJobPage() {
                               ))}
                             </tbody>
                           </table>
+                          </div>
                         </div>
                       ))
                     )}
@@ -954,7 +958,7 @@ export default function AnalyseJobPage() {
 
                 {/* ═══ SUB-TAB: Kundenangebot (editable) ═══ */}
                 {kalkSubTab === "angebot" && kalkParams && (
-                  <div className="p-6 space-y-6">
+                  <div className="p-3 md:p-6 space-y-6">
                     {(kalkulation.kundenangebot?.material_einkauf ?? 0) === 0 && (
                       <div className="p-4 bg-orange-50 border border-orange-300 rounded-lg">
                         <p className="font-semibold text-orange-800">Material-Einkaufspreise fehlen</p>
@@ -968,7 +972,7 @@ export default function AnalyseJobPage() {
                     {recalculating && (
                       <div className="text-sm text-primary-600 animate-pulse">Kalkulation wird aktualisiert...</div>
                     )}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                       {/* ── Linke Spalte: Editable Parameter ── */}
                       <div className="space-y-5">
                         <h4 className="font-semibold text-gray-900 text-lg">Parameter anpassen</h4>
@@ -1168,27 +1172,27 @@ export default function AnalyseJobPage() {
                         <div className="grid grid-cols-2 gap-3">
                           <div className="bg-blue-50 rounded-lg p-4">
                             <p className="text-xs text-blue-600">Deckenflaeche</p>
-                            <p className="text-2xl font-bold text-blue-900">{kalkulation.kundenangebot?.deckenflaeche_m2 ?? 0} m2</p>
+                            <p className="text-lg md:text-2xl font-bold text-blue-900">{kalkulation.kundenangebot?.deckenflaeche_m2 ?? 0} m2</p>
                           </div>
                           <div className="bg-blue-50 rounded-lg p-4">
                             <p className="text-xs text-blue-600">Wandflaeche</p>
-                            <p className="text-2xl font-bold text-blue-900">{kalkulation.kundenangebot?.wandflaeche_m2 ?? 0} m2</p>
+                            <p className="text-lg md:text-2xl font-bold text-blue-900">{kalkulation.kundenangebot?.wandflaeche_m2 ?? 0} m2</p>
                           </div>
                           <div className="bg-green-50 rounded-lg p-4">
                             <p className="text-xs text-green-600">Montage-Stunden gesamt</p>
-                            <p className="text-2xl font-bold text-green-900">{kalkulation.kundenangebot?.lohnstunden ?? 0}h</p>
+                            <p className="text-lg md:text-2xl font-bold text-green-900">{kalkulation.kundenangebot?.lohnstunden ?? 0}h</p>
                           </div>
                           <div className="bg-green-50 rounded-lg p-4">
                             <p className="text-xs text-green-600">Mischkalkulation /h</p>
-                            <p className="text-2xl font-bold text-green-900">{fmt(kalkulation.kundenangebot?.stundensatz, 2)} EUR</p>
+                            <p className="text-lg md:text-2xl font-bold text-green-900">{fmt(kalkulation.kundenangebot?.stundensatz, 2)} EUR</p>
                           </div>
                           <div className="bg-purple-50 rounded-lg p-4">
                             <p className="text-xs text-purple-600">Material-Marge</p>
-                            <p className="text-2xl font-bold text-purple-900">{kalkulation.kundenangebot?.material_aufschlag_prozent ?? 0}%</p>
+                            <p className="text-lg md:text-2xl font-bold text-purple-900">{kalkulation.kundenangebot?.material_aufschlag_prozent ?? 0}%</p>
                           </div>
                           <div className="bg-purple-50 rounded-lg p-4">
                             <p className="text-xs text-purple-600">Preis / m2 Decke</p>
-                            <p className="text-2xl font-bold text-purple-900">
+                            <p className="text-lg md:text-2xl font-bold text-purple-900">
                               {(kalkulation.kundenangebot?.deckenflaeche_m2 ?? 0) > 0
                                 ? fmt((kalkulation.kundenangebot?.angebot_netto ?? 0) / (kalkulation.kundenangebot?.deckenflaeche_m2 ?? 1), 2)
                                 : "\u2014"} EUR
@@ -1196,12 +1200,12 @@ export default function AnalyseJobPage() {
                           </div>
                           <div className="bg-orange-50 rounded-lg p-4">
                             <p className="text-xs text-orange-600">Eigenleistung</p>
-                            <p className="text-2xl font-bold text-orange-900">{Math.round((kalkulation.kundenangebot?.anteil_eigenleistung ?? 0) * 100)}%</p>
+                            <p className="text-lg md:text-2xl font-bold text-orange-900">{Math.round((kalkulation.kundenangebot?.anteil_eigenleistung ?? 0) * 100)}%</p>
                           </div>
                           {(kalkulation.kundenangebot?.zusatzkosten_summe ?? 0) > 0 && (
                             <div className="bg-orange-50 rounded-lg p-4">
                               <p className="text-xs text-orange-600">Zusatzkosten</p>
-                              <p className="text-2xl font-bold text-orange-900">{eur(kalkulation.kundenangebot?.zusatzkosten_summe)}</p>
+                              <p className="text-lg md:text-2xl font-bold text-orange-900">{eur(kalkulation.kundenangebot?.zusatzkosten_summe)}</p>
                             </div>
                           )}
                         </div>
@@ -1219,6 +1223,7 @@ export default function AnalyseJobPage() {
 
         {/* Raeume Tab (editable: flaeche_m2, hoehe_m) */}
         {currentTab === "raeume" && (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-gray-500 bg-gray-50">
               <tr>
@@ -1286,10 +1291,12 @@ export default function AnalyseJobPage() {
               })}
             </tbody>
           </table>
+          </div>
         )}
 
         {/* Decken Tab (editable: flaeche_m2) */}
         {currentTab === "decken" && (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-gray-500 bg-gray-50">
               <tr>
@@ -1345,10 +1352,12 @@ export default function AnalyseJobPage() {
               })}
             </tbody>
           </table>
+          </div>
         )}
 
         {/* Waende Tab (editable: laenge_m, hoehe_m) */}
         {currentTab === "waende" && (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-gray-500 bg-gray-50">
               <tr>
@@ -1422,10 +1431,12 @@ export default function AnalyseJobPage() {
               })}
             </tbody>
           </table>
+          </div>
         )}
 
         {/* Details Tab */}
         {currentTab === "details" && (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-gray-500 bg-gray-50">
               <tr>
@@ -1446,6 +1457,7 @@ export default function AnalyseJobPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
       )}

@@ -108,9 +108,9 @@ export default function ProjektePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Projekte</h2>
+          <h2 className="text-lg md:text-2xl font-bold text-gray-900">Projekte</h2>
           <p className="text-sm text-gray-500 mt-1">
             Projekte werden automatisch aus dem Bauplan erstellt. Sortieren Sie nach Auftraggeber, Name oder Datum.
           </p>
@@ -118,7 +118,7 @@ export default function ProjektePage() {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex gap-4 items-center">
+      <div className="flex flex-col md:flex-row gap-3 md:gap-4 md:items-center">
         <div className="flex-1">
           <input
             type="text"
@@ -129,24 +129,26 @@ export default function ProjektePage() {
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           />
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg bg-white"
-        >
-          <option value="">Alle Status</option>
-          <option value="aktiv">Aktiv</option>
-          <option value="angebot_erstellt">Angebot erstellt</option>
-          <option value="beauftragt">Beauftragt</option>
-          <option value="abgeschlossen">Abgeschlossen</option>
-          <option value="archiviert">Archiviert</option>
-        </select>
-        <button
-          onClick={loadProjekte}
-          className="px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700"
-        >
-          Suchen
-        </button>
+        <div className="flex gap-3">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="flex-1 md:flex-none px-4 py-2 border border-gray-300 rounded-lg bg-white"
+          >
+            <option value="">Alle Status</option>
+            <option value="aktiv">Aktiv</option>
+            <option value="angebot_erstellt">Angebot erstellt</option>
+            <option value="beauftragt">Beauftragt</option>
+            <option value="abgeschlossen">Abgeschlossen</option>
+            <option value="archiviert">Archiviert</option>
+          </select>
+          <button
+            onClick={loadProjekte}
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700"
+          >
+            Suchen
+          </button>
+        </div>
       </div>
 
       {/* Projekte Table */}
@@ -166,17 +168,18 @@ export default function ProjektePage() {
             </a>
           </div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-gray-500 bg-gray-50">
               <tr>
                 <th
-                  className="px-6 py-3 cursor-pointer hover:text-gray-800 select-none"
+                  className="px-3 md:px-6 py-3 cursor-pointer hover:text-gray-800 select-none"
                   onClick={() => handleSort("auftraggeber")}
                 >
                   Auftraggeber{sortIcon("auftraggeber")}
                 </th>
                 <th
-                  className="px-6 py-3 cursor-pointer hover:text-gray-800 select-none"
+                  className="px-3 md:px-6 py-3 cursor-pointer hover:text-gray-800 select-none"
                   onClick={() => handleSort("name")}
                 >
                   Projekt{sortIcon("name")}
@@ -204,10 +207,10 @@ export default function ProjektePage() {
                   className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer"
                   onClick={() => setExpandedId(expandedId === p.id ? null : p.id)}
                 >
-                  <td className="px-6 py-4 font-semibold text-gray-900">
+                  <td className="px-3 md:px-6 py-4 font-semibold text-gray-900">
                     {p.auftraggeber || p.bauherr || <span className="text-gray-400">—</span>}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 md:px-6 py-4">
                     <div className="font-medium text-gray-900">{p.name}</div>
                     {p.plan_nr && <div className="text-xs text-gray-400">{p.plan_nr}</div>}
                   </td>
@@ -225,6 +228,7 @@ export default function ProjektePage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
@@ -233,8 +237,8 @@ export default function ProjektePage() {
         const p = projekte.find(pr => pr.id === expandedId);
         if (!p) return null;
         return (
-          <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
               <h3 className="text-lg font-bold text-gray-900">{p.name}</h3>
               <div className="flex items-center gap-2">
                 {p.status !== "archiviert" && (
@@ -272,7 +276,7 @@ export default function ProjektePage() {
                 <button onClick={() => setExpandedId(null)} className="text-gray-400 hover:text-gray-600 text-sm ml-2">Schliessen</button>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 text-sm">
               <div><span className="text-gray-500">Auftraggeber:</span> <strong>{p.auftraggeber || "—"}</strong></div>
               <div><span className="text-gray-500">Bauherr:</span> <strong>{p.bauherr || "—"}</strong></div>
               <div><span className="text-gray-500">Architekt:</span> <strong>{p.architekt || "—"}</strong></div>

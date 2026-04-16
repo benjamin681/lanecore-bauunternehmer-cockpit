@@ -117,31 +117,31 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
           <p className="text-sm text-gray-500">Projekte</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{s.projekte}</p>
+          <p className="text-xl md:text-3xl font-bold text-gray-900 mt-2">{s.projekte}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
           <p className="text-sm text-gray-500">Analysen</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">
+          <p className="text-xl md:text-3xl font-bold text-gray-900 mt-2">
             {s.analysen_erfolgreich}
             {s.analysen_gesamt > s.analysen_erfolgreich && (
               <span className="text-lg text-gray-400"> / {s.analysen_gesamt}</span>
             )}
           </p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
           <p className="text-sm text-gray-500">Eingesparte Stunden</p>
-          <p className="text-3xl font-bold text-green-600 mt-2">{s.eingesparte_stunden}h</p>
+          <p className="text-xl md:text-3xl font-bold text-green-600 mt-2">{s.eingesparte_stunden}h</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
           <p className="text-sm text-gray-500">API-Kosten gesamt</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">${(s.kosten_usd_gesamt ?? 0).toFixed(2)}</p>
+          <p className="text-xl md:text-3xl font-bold text-gray-900 mt-2">${(s.kosten_usd_gesamt ?? 0).toFixed(2)}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         {/* Quick Upload */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h3 className="font-semibold text-gray-900 mb-3">Schnell-Upload</h3>
@@ -249,34 +249,34 @@ export default function DashboardPage() {
       {/* Schnellzugriff */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h3 className="font-semibold text-gray-900 mb-4">Schnellzugriff</h3>
-        <div className="flex gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <a
             href="/dashboard/analyse"
-            className="flex-1 p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors text-center"
+            className="p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors text-center"
           >
             <p className="text-2xl mb-1">&#128208;</p>
-            <p className="font-medium text-gray-900">Neuen Plan analysieren</p>
+            <p className="font-medium text-gray-900 text-sm md:text-base">Neuen Plan analysieren</p>
           </a>
           <a
             href="/dashboard/angebote"
-            className="flex-1 p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors text-center"
+            className="p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors text-center"
           >
             <p className="text-2xl mb-1">&#128203;</p>
-            <p className="font-medium text-gray-900">Angebote-Pipeline</p>
+            <p className="font-medium text-gray-900 text-sm md:text-base">Angebote-Pipeline</p>
           </a>
           <a
             href="/dashboard/projekte"
-            className="flex-1 p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors text-center"
+            className="p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors text-center"
           >
             <p className="text-2xl mb-1">&#128193;</p>
-            <p className="font-medium text-gray-900">Projekte verwalten</p>
+            <p className="font-medium text-gray-900 text-sm md:text-base">Projekte verwalten</p>
           </a>
           <a
             href="/dashboard/preislisten"
-            className="flex-1 p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors text-center"
+            className="p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors text-center"
           >
             <p className="text-2xl mb-1">&#128176;</p>
-            <p className="font-medium text-gray-900">Preislisten</p>
+            <p className="font-medium text-gray-900 text-sm md:text-base">Preislisten</p>
           </a>
         </div>
       </div>
