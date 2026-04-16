@@ -61,3 +61,4 @@ secrets/
 
 # Prisma
 frontend/prisma/migrations/ # nur lokal
+.claude/worktrees/
