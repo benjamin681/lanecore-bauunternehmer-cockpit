@@ -66,9 +66,15 @@ class BauplanAnalyseService:
         """Analysiert eine einzelne Planseite. Returns structured dict + stats."""
         log.info("analysing_bauplan_page", page=page_num)
 
-        # Schritt 1: Plantyp klassifizieren
-        plantyp, classify_stats = await self._classify_plantyp(image_base64)
-        log.info("plantyp_classified", page=page_num, plantyp=plantyp)
+        # Schritt 1: Plantyp klassifizieren + Basis-Metadaten (Sonnet — günstig)
+        plantyp, classify_stats, metadata = await self._classify_plantyp(image_base64)
+        log.info(
+            "plantyp_classified",
+            page=page_num,
+            plantyp=plantyp,
+            massstab=metadata.get("massstab"),
+            raeume_count=metadata.get("raeume_count"),
+        )
 
         if plantyp not in RELEVANTE_PLANTYPEN:
             return {
@@ -76,36 +82,49 @@ class BauplanAnalyseService:
                 "type": "skipped",
                 "reason": f"Plantyp '{plantyp}' nicht relevant für Trockenbau-Kalkulation",
                 "stats": classify_stats,
+                "_classification_metadata": metadata,
             }
 
-        # Schritt 2: Detail-Analyse
-        parsed_result, analyse_stats = await self._detail_analyse(image_base64, page_num, plantyp)
+        # Schritt 2: Detail-Analyse (Opus — genau), mit Klassifikations-Kontext
+        parsed_result, analyse_stats = await self._detail_analyse(
+            image_base64, page_num, plantyp, classification_metadata=metadata,
+        )
 
         # Schritt 3: Validierung
         validated = self._validate_result(parsed_result, plantyp)
 
-        # Kosten zusammenzählen
+        # Kosten zusammenzählen — separat ausweisen
         total_cost = classify_stats.cost_usd + analyse_stats.cost_usd
         total_input = classify_stats.input_tokens + analyse_stats.input_tokens
         total_output = classify_stats.output_tokens + analyse_stats.output_tokens
 
         validated["_stats"] = {
+            "classify_model": classify_stats.model,
+            "classify_cost_usd": round(classify_stats.cost_usd, 6),
+            "analyse_model": analyse_stats.model,
+            "analyse_cost_usd": round(analyse_stats.cost_usd, 6),
             "model": analyse_stats.model,
             "input_tokens": total_input,
             "output_tokens": total_output,
             "cost_usd": round(total_cost, 6),
         }
+        validated["_classification_metadata"] = metadata
 
         return validated
 
     # --- Plantyp-Klassifikation ---
 
-    async def _classify_plantyp(self, image_base64: str) -> tuple[PlanTyp, AnalyseCallStats]:
-        """Klassifiziert den Plantyp (günstig mit Sonnet)."""
+    async def _classify_plantyp(self, image_base64: str) -> tuple[PlanTyp, AnalyseCallStats, dict]:
+        """Klassifiziert den Plantyp und extrahiert Basis-Metadaten (günstig mit Sonnet).
+
+        Returns:
+            Tuple of (plantyp, stats, metadata_dict).
+            metadata_dict contains keys: massstab, geschoss, projekt_info, raeume_count, raum_namen.
+        """
         model = settings.claude_model_simple
         response = await self._call_claude(
             model=model,
-            max_tokens=50,
+            max_tokens=500,
             messages=[{
                 "role": "user",
                 "content": [
@@ -116,13 +135,18 @@ class BauplanAnalyseService:
                     {
                         "type": "text",
                         "text": (
-                            "Klassifiziere diesen Bauplan. Antworte NUR mit einem Wort:\n"
-                            "- grundriss (Draufsicht mit Wänden, Türen, Räumen)\n"
-                            "- deckenspiegel (Spiegelansicht der Decke, Leuchten, Deckenraster)\n"
-                            "- schnitt (vertikaler Querschnitt, Geschosse übereinander)\n"
-                            "- detail (Konstruktionsdetail, Maßstab 1:10 oder kleiner)\n"
-                            "- ansicht (Außenansicht / Fassade)\n"
-                            "- unbekannt"
+                            "Analysiere diesen Bauplan in zwei Schritten.\n\n"
+                            "1. Klassifiziere den Plantyp als EXAKT eines von:\n"
+                            "   grundriss | deckenspiegel | schnitt | detail | ansicht | unbekannt\n\n"
+                            "2. Extrahiere folgende Metadaten (soweit erkennbar):\n"
+                            "   - Maßstab (z.B. '1:100')\n"
+                            "   - Geschoss (z.B. 'EG', 'OG1', 'UG')\n"
+                            "   - Projekt-Info (Projektname, Adresse, Plan-Nr falls sichtbar)\n"
+                            "   - Anzahl erkennbarer Räume und deren Namen/Nummern\n\n"
+                            "Antworte NUR als JSON:\n"
+                            '{"plantyp": "grundriss", "massstab": "1:100", "geschoss": "EG", '
+                            '"projekt_info": {"name": "...", "adresse": "...", "plan_nr": "..."}, '
+                            '"raeume_count": 5, "raum_namen": ["Flur 0.1.01", "Büro 0.1.02"]}'
                         ),
                     },
                 ],
@@ -130,19 +154,42 @@ class BauplanAnalyseService:
         )
 
         stats = self._calc_stats(model, response)
-        answer = response.content[0].text.strip().lower()
+        raw_text = response.content[0].text.strip()
+
+        # Try to parse JSON response
+        metadata: dict = {}
+        try:
+            parsed = self._extract_json(raw_text)
+            metadata = {
+                "massstab": parsed.get("massstab"),
+                "geschoss": parsed.get("geschoss"),
+                "projekt_info": parsed.get("projekt_info"),
+                "raeume_count": parsed.get("raeume_count"),
+                "raum_namen": parsed.get("raum_namen", []),
+            }
+            answer = (parsed.get("plantyp") or "").lower()
+        except Exception:
+            answer = raw_text.lower()
 
         for plantyp in ("grundriss", "deckenspiegel", "schnitt", "detail", "ansicht"):
             if plantyp in answer:
-                return plantyp, stats  # type: ignore[return-value]
-        return "unbekannt", stats
+                return plantyp, stats, metadata  # type: ignore[return-value]
+        return "unbekannt", stats, metadata
 
     # --- Detail-Analyse ---
 
     async def _detail_analyse(
-        self, image_base64: str, page_num: int, plantyp: PlanTyp
+        self,
+        image_base64: str,
+        page_num: int,
+        plantyp: PlanTyp,
+        classification_metadata: dict | None = None,
     ) -> tuple[dict, AnalyseCallStats]:
-        """Detaillierte Bauplan-Analyse mit Opus — plantyp-spezifisch."""
+        """Detaillierte Bauplan-Analyse mit Opus — plantyp-spezifisch.
+
+        classification_metadata from Stage 1 (Sonnet) is injected as context prefix
+        so Opus knows the plan type, scale, and room count upfront.
+        """
         system_prompt = self._load_system_prompt()
         model = settings.claude_model_complex
 
@@ -167,7 +214,29 @@ class BauplanAnalyseService:
             ),
         }
 
+        # Build context prefix from Stage 1 classification
+        context_prefix = ""
+        meta = classification_metadata or {}
+        if meta:
+            parts = [f"Vorklassifikation (Stufe 1): Plantyp={plantyp}"]
+            if meta.get("massstab"):
+                parts.append(f"Maßstab={meta['massstab']}")
+            if meta.get("geschoss"):
+                parts.append(f"Geschoss={meta['geschoss']}")
+            if meta.get("raeume_count"):
+                parts.append(f"Erkannte Räume={meta['raeume_count']}")
+            if meta.get("raum_namen"):
+                parts.append(f"Raumnamen: {', '.join(meta['raum_namen'][:15])}")
+            if meta.get("projekt_info"):
+                pi = meta["projekt_info"]
+                if isinstance(pi, dict):
+                    pi_parts = [f"{k}={v}" for k, v in pi.items() if v]
+                    if pi_parts:
+                        parts.append(f"Projekt: {', '.join(pi_parts)}")
+            context_prefix = " | ".join(parts) + "\n\n"
+
         user_text = (
+            f"{context_prefix}"
             f"Seite {page_num}, Plantyp: {plantyp}.\n\n"
             f"{plantyp_instructions.get(plantyp, 'Analysiere diesen Plan.')}\n\n"
             f"Antworte im JSON-Format gemäß dem System-Prompt."

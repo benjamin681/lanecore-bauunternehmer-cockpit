@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -429,6 +429,13 @@ async def get_angebot_pdf(
         analyse_data, db, custom_params=custom_params if custom_params else None,
         projekt_adresse=_adresse,
     )
+
+    if kalkulation.get("positionen_mit_preis", 0) == 0:
+        raise HTTPException(
+            status_code=422,
+            detail="Keine Preise verfügbar. Bitte laden Sie zuerst Preislisten hoch.",
+        )
+
     kalkulation["job_id"] = str(job_id)
     kalkulation["filename"] = _filename
     kalkulation["plantyp"] = _plantyp

@@ -146,13 +146,20 @@ async def run_analyse_pipeline(job_id: uuid.UUID, pdf_bytes: bytes, filename: st
 
 
 def _merge_page_results(page_results: list[dict]) -> dict:
-    """Merge results from multiple pages into one combined result."""
+    """Merge results from multiple pages into one combined result.
+
+    - Rooms: deduplicated by raum_nr (first occurrence wins, highest konfidenz kept)
+    - Walls: all walls from all pages combined
+    - Ceilings: deduplicated by raum_nr
+    - Warnings: combined from all pages (deduplicated)
+    - Konfidenz: highest value across all pages
+    """
     merged: dict = {
         "plantyp": None,
         "massstab": None,
         "geschoss": None,
         "projekt": None,
-        "konfidenz": 1.0,
+        "konfidenz": 0.0,
         "raeume": [],
         "waende": [],
         "decken": [],
@@ -164,6 +171,11 @@ def _merge_page_results(page_results: list[dict]) -> dict:
 
     raw_responses: list[str] = []
     prompt_hash = None
+
+    # Deduplication indices
+    seen_raum_nrs: dict[str, int] = {}   # raum_nr -> index in merged["raeume"]
+    seen_decke_nrs: dict[str, int] = {}  # raum_nr -> index in merged["decken"]
+    seen_warnungen: set[str] = set()
 
     for result in page_results:
         if result.get("type") == "skipped":
@@ -179,16 +191,45 @@ def _merge_page_results(page_results: list[dict]) -> dict:
         if merged["projekt"] is None and result.get("projekt"):
             merged["projekt"] = result["projekt"]
 
-        # Konfidenz: take minimum (most conservative)
-        page_conf = result.get("konfidenz", 1.0)
-        if isinstance(page_conf, (int, float)) and page_conf < merged["konfidenz"]:
+        # Konfidenz: take highest value
+        page_conf = result.get("konfidenz", 0.0)
+        if isinstance(page_conf, (int, float)) and page_conf > merged["konfidenz"]:
             merged["konfidenz"] = page_conf
 
-        # Merge lists
-        for key in ("raeume", "waende", "decken", "oeffnungen", "details", "gestrichene_positionen", "warnungen"):
+        # Merge rooms — deduplicate by raum_nr
+        for raum in result.get("raeume", []) if isinstance(result.get("raeume"), list) else []:
+            nr = raum.get("raum_nr")
+            if nr and nr in seen_raum_nrs:
+                continue  # skip duplicate
+            merged["raeume"].append(raum)
+            if nr:
+                seen_raum_nrs[nr] = len(merged["raeume"]) - 1
+
+        # Merge walls — all walls from all pages
+        walls = result.get("waende", [])
+        if isinstance(walls, list):
+            merged["waende"].extend(walls)
+
+        # Merge ceilings — deduplicate by raum_nr
+        for decke in result.get("decken", []) if isinstance(result.get("decken"), list) else []:
+            nr = decke.get("raum_nr")
+            if nr and nr in seen_decke_nrs:
+                continue  # skip duplicate
+            merged["decken"].append(decke)
+            if nr:
+                seen_decke_nrs[nr] = len(merged["decken"]) - 1
+
+        # Merge other lists without deduplication
+        for key in ("oeffnungen", "details", "gestrichene_positionen"):
             items = result.get(key, [])
             if isinstance(items, list):
                 merged[key].extend(items)
+
+        # Merge warnings — deduplicate by text
+        for w in result.get("warnungen", []) if isinstance(result.get("warnungen"), list) else []:
+            if w not in seen_warnungen:
+                seen_warnungen.add(w)
+                merged["warnungen"].append(w)
 
         if result.get("_raw_response"):
             raw_responses.append(result["_raw_response"])
@@ -198,9 +239,7 @@ def _merge_page_results(page_results: list[dict]) -> dict:
     merged["_raw_response"] = "\n\n---PAGE BREAK---\n\n".join(raw_responses)
     merged["_prompt_hash"] = prompt_hash
 
-    # --- Bug fix: detect empty results and set konfidenz to 0.0 ---
-    # If all pages were skipped (non-relevant plan type) or produced no elements,
-    # do NOT report konfidenz=1.0 — that's misleading.
+    # --- Detect empty results and set konfidenz to 0.0 ---
     has_elements = (
         len(merged["raeume"]) > 0
         or len(merged["waende"]) > 0
@@ -211,13 +250,11 @@ def _merge_page_results(page_results: list[dict]) -> dict:
     if not has_elements:
         merged["konfidenz"] = 0.0
         if not analysed_pages:
-            # All pages were skipped (unbekannt / ansicht / etc.)
             merged["warnungen"].append(
                 "Keine relevanten Baupläne erkannt. Die hochgeladene Datei enthält "
                 "möglicherweise keinen Grundriss, Deckenspiegel oder Schnitt."
             )
         else:
-            # Pages were analysed but produced 0 elements
             merged["warnungen"].append(
                 "Keine Bauelemente (Räume, Wände, Decken) erkannt. Mögliche Ursachen: "
                 "Die Datei ist kein Bauplan (z.B. Angebot, Rechnung), der Plan ist zu "
@@ -261,20 +298,14 @@ async def _auto_create_projekt(
     Otherwise create a new one.
     """
     projekt_info = merged.get("projekt") or {}
-    # Name: aus Plan, oder aus Dateiname einen lesbaren Namen machen
+
+    # Priority 1: projekt_info.name from Claude analysis
     name = projekt_info.get("name")
+
+    # Priority 2: fallback to filename
     if not name:
-        # "deckenspiegel_eg_kopfbau_himmelweiler.pdf" → "Himmelweiler - EG Kopfbau"
         raw = job.filename.replace(".pdf", "").replace("_", " ").strip()
-        # Capitalize words
         name = " ".join(w.capitalize() for w in raw.split())
-        # Wenn Adresse vorhanden, als Name verwenden
-        if projekt_info.get("adresse"):
-            addr = projekt_info["adresse"]
-            # Extrahiere Ort aus Adresse (z.B. "Franz-Mack-Str., 89160 Dornstadt" → "Dornstadt")
-            parts = addr.split()
-            if len(parts) >= 2:
-                name = parts[-1]  # Letztes Wort = Ortsname
 
     if not name:
         return None

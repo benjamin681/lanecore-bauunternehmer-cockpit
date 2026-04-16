@@ -586,13 +586,22 @@ export default function AnalyseJobPage() {
         <div className="flex items-center gap-2 md:gap-3 flex-wrap">
           {!hasNoElements && (
             <>
-              <a
-                href={`/api/v1/bauplan/${jobId}/angebot-pdf`}
-                download
-                className="px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg text-xs md:text-sm font-medium hover:bg-blue-700 transition-colors"
-              >
-                Angebot als PDF
-              </a>
+              {kalkulation && kalkulation.positionen_mit_preis === 0 ? (
+                <span
+                  title="Preislisten erforderlich"
+                  className="px-3 md:px-4 py-2 bg-gray-300 text-gray-500 rounded-lg text-xs md:text-sm font-medium cursor-not-allowed"
+                >
+                  Angebot als PDF
+                </span>
+              ) : (
+                <a
+                  href={`/api/v1/bauplan/${jobId}/angebot-pdf`}
+                  download
+                  className="px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg text-xs md:text-sm font-medium hover:bg-blue-700 transition-colors"
+                >
+                  Angebot als PDF
+                </a>
+              )}
               <a
                 href={`/api/v1/bauplan/${jobId}/export`}
                 download

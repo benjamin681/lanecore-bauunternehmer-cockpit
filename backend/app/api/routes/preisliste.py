@@ -199,6 +199,20 @@ async def delete_preisliste(
     await db.commit()
 
 
+@router.get("/lieferanten")
+async def list_lieferanten():
+    """List all available supplier sources (PDF imports + API connections)."""
+    return {
+        "pdf_imports": "active",  # Always available
+        "api_connections": [
+            {"name": "KEMLER Baustoffe", "status": "coming_soon", "type": "api"},
+            {"name": "Saint-Gobain", "status": "coming_soon", "type": "api"},
+            {"name": "Knauf", "status": "coming_soon", "type": "api"},
+        ],
+        "hinweis": "Preislisten können als PDF hochgeladen werden. API-Anbindungen an Lieferanten folgen in v2."
+    }
+
+
 @router.get("/vergleich/suche")
 async def preisvergleich(
     q: str = Query(..., description="Produktbezeichnung suchen"),

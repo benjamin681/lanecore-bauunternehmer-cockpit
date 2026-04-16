@@ -92,6 +92,9 @@ class MaterialPosition:
     suchbegriffe: list[str] = field(default_factory=list)
     # Suchbegriffe für Preislisten-Match
 
+    # Verschnitt-Info (gesetzt nach apply_verschnitt)
+    verschnitt_prozent: float | None = None  # z.B. 12.0 für 12%
+
     # Wird nach Preisvergleich gesetzt:
     bester_preis: float | None = None
     bester_anbieter: str | None = None
@@ -111,6 +114,13 @@ def materialliste_aus_analyse(analyse_result: dict) -> list[MaterialPosition]:
     """Leitet aus einem Analyse-Ergebnis die benötigten Materialien ab."""
     positionen: list[MaterialPosition] = []
 
+    # ── Raum-Flächen-Lookup für Decken ohne eigene Fläche ──
+    raum_flaechen: dict[str, float] = {}
+    for r in analyse_result.get("raeume", []):
+        nr = r.get("raum_nr")
+        if nr and r.get("flaeche_m2"):
+            raum_flaechen[nr] = r["flaeche_m2"]
+
     # ── Decken verarbeiten ──
     decken = analyse_result.get("decken", [])
     for d in decken:
@@ -118,6 +128,18 @@ def materialliste_aus_analyse(analyse_result: dict) -> list[MaterialPosition]:
             continue
 
         flaeche = d.get("flaeche_m2") or 0
+        # Fallback: Fläche aus zugehörigem Raum ableiten
+        if flaeche <= 0 and d.get("raum_nr"):
+            flaeche = raum_flaechen.get(d["raum_nr"], 0)
+        # Fallback 2: Wenn raum_nr "diverse" ist, Summe aller Räume mit passendem Deckentyp
+        if flaeche <= 0 and d.get("raum_nr") == "diverse":
+            deckentyp = d.get("typ", "").lower()
+            for r in analyse_result.get("raeume", []):
+                r_decke = (r.get("deckentyp") or "").lower()
+                if r.get("flaeche_m2") and (
+                    "gk" in r_decke or "abhang" in r_decke or deckentyp[:10] in r_decke
+                ):
+                    flaeche += r["flaeche_m2"]
         if flaeche <= 0:
             continue
 
@@ -374,6 +396,88 @@ def aggregiere_positionen(positionen: list[MaterialPosition]) -> list[MaterialPo
     return sorted(agg.values(), key=lambda p: p.kategorie)
 
 
+# ── Differenzierte Verschnitt-Faktoren nach Material ─────────────────────────
+# Angewendet NACH Aggregation, VOR Preisvergleich.
+# Basiert auf Praxis-Erfahrungswerten für Trockenbau.
+VERSCHNITT_FAKTOREN: dict[str, float] = {
+    "GKB": 1.12,                # 12% Verschnitt auf Gipskartonplatten
+    "GKF": 1.12,                # 12% auf Feuerschutzplatten
+    "Aquapanel": 1.15,          # 15% auf Aquapanel (teuer, mehr Verschnitt)
+    "CD 60/27": 1.05,           # 5% auf Tragprofile
+    "UD 28/27": 1.05,           # 5% auf Randprofile
+    "CW": 1.05,                 # 5% auf Ständerprofile
+    "UW": 1.05,                 # 5% auf U-Profile
+    "Schnellbauschrauben": 1.10,  # 10% Schrauben (fallen runter, verbiegen)
+    "Direktabhänger": 1.05,     # 5%
+    "Fugenspachtel": 1.10,      # 10%
+    "Bewehrungsstreifen": 1.05, # 5%
+}
+
+
+def apply_verschnitt(positionen: list[MaterialPosition]) -> list[MaterialPosition]:
+    """Wendet differenzierte Verschnitt-Faktoren auf aggregierte Positionen an.
+
+    Prüft ob die Bezeichnung einer Position einen der Schlüssel aus
+    VERSCHNITT_FAKTOREN enthält. Falls ja, wird die Menge multipliziert
+    und verschnitt_prozent gesetzt.
+    """
+    for pos in positionen:
+        bez_lower = pos.bezeichnung.lower()
+        for key, faktor in VERSCHNITT_FAKTOREN.items():
+            if key.lower() in bez_lower:
+                prozent = round((faktor - 1.0) * 100)
+                pos.menge = round(pos.menge * faktor, 1)
+                pos.verschnitt_prozent = prozent
+                log.debug(
+                    "verschnitt_applied",
+                    bezeichnung=pos.bezeichnung,
+                    faktor=faktor,
+                    prozent=prozent,
+                )
+                break  # Nur der erste Treffer zählt
+    return positionen
+
+
+# ── Produkt-Aliase für besseren Preislisten-Match ────────────────────────────
+PRODUKT_ALIASE: dict[str, list[str]] = {
+    "GKB": ["Gipskarton", "Gipskartonplatte", "Knauf Diamant", "Rigips"],
+    "GKF": ["Gipskarton Feuerschutz", "GKFi", "Fireboard", "Feuerschutzplatte"],
+    "CD 60/27": ["CD-Profil", "Tragprofil", "CD60", "C-Profil"],
+    "UD 28/27": ["UD-Profil", "Randprofil", "UD28", "U-Profil"],
+    "CW 75": ["CW-Profil", "Ständerprofil", "CW75"],
+    "UW 75": ["UW-Profil", "UW75", "Anschlussprofil"],
+    "Uniflott": ["Fugenspachtel", "Spachtelmasse", "Fugenfüller"],
+    "Aquapanel": ["Aquapanel Indoor", "Zementplatte", "Aquapanel Outdoor"],
+    "Schnellbauschrauben": ["TN 3.5x25", "Gipsplattenschraube", "TN3.5", "Schnellbauschraube"],
+    "Direktabhänger": ["Abhänger", "Nonius", "Federbügel"],
+    "Bewehrungsstreifen": ["Fugenband", "Kurt", "Papierband"],
+}
+
+
+def _expand_suchbegriffe(suchbegriffe: list[str]) -> list[str]:
+    """Erweitert Suchbegriffe um alle bekannten Aliase.
+
+    Wenn ein Suchbegriff einen Schlüssel aus PRODUKT_ALIASE enthält (oder
+    umgekehrt), werden alle zugehörigen Aliase hinzugefügt.
+    """
+    expanded = set(suchbegriffe)
+    for term in suchbegriffe:
+        term_lower = term.lower()
+        for key, aliases in PRODUKT_ALIASE.items():
+            # Check if term matches the key or any alias
+            key_lower = key.lower()
+            if key_lower in term_lower or term_lower in key_lower:
+                expanded.add(key)
+                expanded.update(aliases)
+            else:
+                for alias in aliases:
+                    if alias.lower() in term_lower or term_lower in alias.lower():
+                        expanded.add(key)
+                        expanded.update(aliases)
+                        break
+    return list(expanded)
+
+
 async def _has_pg_trgm(db: AsyncSession) -> bool:
     """Check if pg_trgm extension is available."""
     try:
@@ -416,14 +520,19 @@ async def preise_matchen(
         if not pos.suchbegriffe:
             continue
 
+        # Expand search terms with known product aliases
+        search_terms = _expand_suchbegriffe(pos.suchbegriffe)
+
         # Build ONE query that ORs all search terms
         if use_trigram:
             # Trigram similarity: find products where ANY search term is similar
             similarity_conditions = []
-            for term in pos.suchbegriffe:
+            for term in search_terms:
+                # Use a collision-safe bind param name
+                param_name = f"term_{abs(hash(term)) & 0xFFFF}_{len(term)}"
                 similarity_conditions.append(
-                    text(f"similarity(produkte.bezeichnung, :term_{hash(term) & 0xFFFF}) > 0.15")
-                    .bindparams(**{f"term_{hash(term) & 0xFFFF}": term})
+                    text(f"similarity(produkte.bezeichnung, :{param_name}) > 0.15")
+                    .bindparams(**{param_name: term})
                 )
                 # Also include ILIKE for exact substring matches
                 similarity_conditions.append(
@@ -434,7 +543,7 @@ async def preise_matchen(
             # Fallback: ILIKE with all terms ORed
             ilike_conditions = [
                 Produkt.bezeichnung.ilike(f"%{term}%")
-                for term in pos.suchbegriffe
+                for term in search_terms
             ]
             filter_expr = or_(*ilike_conditions)
 
@@ -460,17 +569,22 @@ async def preise_matchen(
 
             preis = float(produkt.preis_netto)
 
-            # Unit normalization: if product is sold as Pkg and menge_pro_einheit
-            # is set, calculate per-piece price for better comparison
-            einheit_normalized = produkt.einheit
+            # Unit normalization: convert package prices to per-piece/per-unit
+            # for better comparison across suppliers with different packaging.
+            einheit_normalized = produkt.einheit or ""
+            mpe = float(produkt.menge_pro_einheit) if produkt.menge_pro_einheit else 0
+
             if (
-                produkt.einheit
-                and produkt.einheit.lower() in ("pkg", "paket", "bund", "ve")
-                and produkt.menge_pro_einheit
-                and float(produkt.menge_pro_einheit) > 0
+                einheit_normalized.lower() in ("pkg", "paket", "bund", "ve")
+                and mpe > 0
             ):
-                preis = round(preis / float(produkt.menge_pro_einheit), 4)
-                einheit_normalized = "Stk"
+                preis = round(preis / mpe, 4)
+                # Determine target unit: if the position expects m², keep m²;
+                # otherwise default to Stk.
+                if pos.einheit == "m²" and einheit_normalized.lower() in ("pkg", "paket"):
+                    einheit_normalized = "m²"
+                else:
+                    einheit_normalized = "Stk"
 
             # Scoring: exact category match gets priority (lower score = better)
             score = preis  # base score is price
@@ -582,7 +696,13 @@ async def erstelle_kalkulation(
     aggregiert = aggregiere_positionen(positionen)
     log.info("materialliste_aggregiert", positionen=len(aggregiert))
 
-    # 2b. Apply mengen_overrides if provided
+    # 2b. Verschnitt-Faktoren anwenden (NACH Aggregation, VOR Preisvergleich)
+    aggregiert = apply_verschnitt(aggregiert)
+    log.info("verschnitt_applied", positionen_mit_verschnitt=sum(
+        1 for p in aggregiert if p.verschnitt_prozent is not None
+    ))
+
+    # 2c. Apply mengen_overrides if provided (AFTER verschnitt, so user overrides win)
     mengen_overrides = params.get("mengen_overrides")
     if mengen_overrides:
         for pos in aggregiert:
@@ -607,7 +727,7 @@ async def erstelle_kalkulation(
         else:
             ohne_preise += 1
 
-        result_positionen.append({
+        pos_dict: dict = {
             "bezeichnung": pos.bezeichnung,
             "kategorie": pos.kategorie,
             "menge": pos.menge,
@@ -617,7 +737,11 @@ async def erstelle_kalkulation(
             "anbieter": pos.bester_anbieter,
             "alternativen": pos.alle_preise or [],
             "herkunft": pos.herkunft[:200],
-        })
+        }
+        if pos.verschnitt_prozent is not None:
+            pos_dict["verschnitt_prozent"] = pos.verschnitt_prozent
+            pos_dict["verschnitt_hinweis"] = f"inkl. {pos.verschnitt_prozent:.0f}% Verschnitt"
+        result_positionen.append(pos_dict)
 
     # 5. Bestellliste: nach Lieferant gruppiert
     bestellliste: dict[str, list[dict]] = {}
