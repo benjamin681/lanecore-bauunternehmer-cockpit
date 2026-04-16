@@ -2,8 +2,11 @@
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+import traceback
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.core.exceptions import LaneCoreError, lanecore_exception_handler
@@ -27,6 +30,16 @@ app = FastAPI(
 
 # Exception handlers
 app.add_exception_handler(LaneCoreError, lanecore_exception_handler)  # type: ignore[arg-type]
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Return traceback in response so we can debug production errors."""
+    tb = traceback.format_exception(type(exc), exc, exc.__traceback__)
+    return JSONResponse(
+        status_code=500,
+        content={"error": str(exc), "traceback": "".join(tb[-5:])},
+    )
 
 # CORS — allow Vercel preview URLs + configured origins
 _cors_origins = list(settings.cors_origins)
