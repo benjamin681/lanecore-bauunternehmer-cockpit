@@ -94,9 +94,13 @@ Antworte IMMER im folgenden JSON-Format:
   "oeffnungen": [
     {
       "typ": "Tuer",
+      "variante": "Standard-Drehtuer",
       "breite_m": 0.9,
-      "hoehe_m": 2.1,
-      "wand_id": "W1"
+      "hoehe_m": 2.135,
+      "wand_id": "W1",
+      "wand": "Trennwand Büro 1.01",
+      "zargen_typ": "Stahl",
+      "entfaellt": false
     }
   ],
   "details": [
@@ -226,3 +230,32 @@ Antworte IMMER im folgenden JSON-Format:
 - Flächen in m² (auf 2 Dezimalstellen)
 - Gestrichene Positionen ("entfällt") separat in `gestrichene_positionen` aufnehmen
 - Bei Deckenspiegel: Nassraum-Decken immer von Trockenraum-Decken trennen
+
+## Zusätzliche Pflichtfelder (für präzise Kalkulation)
+
+### Für jeden Raum (raeume[]):
+- `nutzung`: Aufenthalt | Büro | WC | Dusche | Bad | Teeküche | Lager | Flur | Technik | ...
+- `nassraum`: **true** wenn Raum Dusche/WC/Bad/Nassküche/Waschraum (automatische Aquapanel-Auswahl)
+- `brandschutz`: F30 | F60 | F90 | null (aus Legende/Plan)
+- `hoehe_m`: Raumhöhe wenn erkennbar (wichtig für UA-Profile an Türen)
+
+### Für jede Öffnung (oeffnungen[]):
+- `typ`: Tuer | Fenster | Oberlicht | Durchbruch
+- `variante`: Standard-Drehtuer | Schiebetuer | Doppeltuer | Glastrennwand | Oberlicht
+- `wand`: Name der Wand (zusätzlich zu wand_id, damit Matching robust ist)
+- `entfaellt`: true wenn rot markiert/gestrichen — Kalkulation überspringt diese
+- `zargen_typ`: Holz | Stahl | null
+
+### Für jede Wand (waende[]):
+- `brandschutz`: F30 | F60 | F90 | null — OBLIGATORISCH wenn in Legende angegeben
+- `von_raum_nr`, `zu_raum_nr`: Raum-Nummern beider Seiten (für Nassraum-Erkennung)
+
+### Plan-weit (top-level):
+- `brandschutzklasse`: Wenn einheitliche Anforderung im Plan (z.B. "alle Trennwände F30")
+- `gebaeudetyp`: Büro | Wohnen | Gewerbe | Bildung | Sanitär
+
+### Regeln
+- Gestrichene Öffnungen MÜSSEN auch in `oeffnungen` aufgeführt werden (mit `entfaellt: true`),
+  nicht nur in `gestrichene_positionen`, damit Wandlängen-Öffnungs-Zuordnung nachvollziehbar ist.
+- Nassraum-Erkennung: Ein Raum gilt auch dann als Nassraum, wenn Bodenablauf, Dusche,
+  gefliester Boden oder WC-Symbol sichtbar ist — auch ohne explizite Beschriftung.

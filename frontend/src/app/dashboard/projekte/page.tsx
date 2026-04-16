@@ -37,32 +37,51 @@ export default function ProjektePage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
+  const [error, setError] = useState<string | null>(null);
+  const [actionPending, setActionPending] = useState<string | null>(null);
+
   const archiveProjekt = async (id: string) => {
+    setActionPending(id);
     try {
       const res = await fetch(`/api/v1/projekte/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "archiviert" }),
       });
-      if (res.ok) {
-        await loadProjekte();
-        setExpandedId(null);
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.detail || `Archivieren fehlgeschlagen (${res.status})`);
       }
-    } catch { /* ignore */ }
+      await loadProjekte();
+      setExpandedId(null);
+      setError(null);
+    } catch (err: any) {
+      setError(err?.message || "Archivieren fehlgeschlagen");
+    } finally {
+      setActionPending(null);
+    }
   };
 
   const deleteProjekt = async (id: string) => {
+    setActionPending(id);
     try {
       const res = await fetch(`/api/v1/projekte/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        setConfirmDeleteId(null);
-        setExpandedId(null);
-        await loadProjekte();
+      if (!res.ok && res.status !== 204) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.detail || `Löschen fehlgeschlagen (${res.status})`);
       }
-    } catch { /* ignore */ }
+      setConfirmDeleteId(null);
+      setExpandedId(null);
+      await loadProjekte();
+      setError(null);
+    } catch (err: any) {
+      setError(err?.message || "Löschen fehlgeschlagen");
+    } finally {
+      setActionPending(null);
+    }
   };
 
-  const loadProjekte = async () => {
+  const loadProjekte = async (signal?: AbortSignal) => {
     const params = new URLSearchParams();
     params.set("sort", sort);
     params.set("order", order);
@@ -70,12 +89,21 @@ export default function ProjektePage() {
     if (search.trim()) params.set("search", search.trim());
 
     try {
-      const res = await fetch(`/api/v1/projekte?${params}`);
-      if (res.ok) setProjekte(await res.json());
-    } catch { /* ignore */ }
+      const res = await fetch(`/api/v1/projekte?${params}`, { signal });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setProjekte(await res.json());
+      setError(null);
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
+      setError(err?.message || "Projekte konnten nicht geladen werden");
+    }
   };
 
-  useEffect(() => { loadProjekte(); }, [sort, order, statusFilter]);
+  useEffect(() => {
+    const ctrl = new AbortController();
+    loadProjekte(ctrl.signal);
+    return () => ctrl.abort();
+  }, [sort, order, statusFilter]);
 
   const handleSort = (field: SortField) => {
     if (sort === field) {
@@ -108,6 +136,18 @@ export default function ProjektePage() {
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 flex items-start justify-between gap-3">
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => setError(null)}
+            className="underline font-medium hover:text-red-900"
+          >
+            Schließen
+          </button>
+        </div>
+      )}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
         <div>
           <h2 className="text-lg md:text-2xl font-bold text-gray-900">Projekte</h2>
@@ -143,7 +183,7 @@ export default function ProjektePage() {
             <option value="archiviert">Archiviert</option>
           </select>
           <button
-            onClick={loadProjekte}
+            onClick={() => loadProjekte()}
             className="px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700"
           >
             Suchen

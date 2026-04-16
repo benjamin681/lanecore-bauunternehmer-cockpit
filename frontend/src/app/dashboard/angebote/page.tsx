@@ -32,15 +32,25 @@ const columns = [
 export default function AngebotePipelinePage() {
   const [pipeline, setPipeline] = useState<PipelineData | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const loadPipeline = async () => {
+  const loadPipeline = async (signal?: AbortSignal) => {
     try {
-      const res = await fetch("/api/v1/projekte/pipeline");
-      if (res.ok) setPipeline(await res.json());
-    } catch { /* ignore */ }
+      const res = await fetch("/api/v1/projekte/pipeline", { signal });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setPipeline(await res.json());
+      setError(null);
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
+      setError(err?.message || "Pipeline konnte nicht geladen werden");
+    }
   };
 
-  useEffect(() => { loadPipeline(); }, []);
+  useEffect(() => {
+    const ctrl = new AbortController();
+    loadPipeline(ctrl.signal);
+    return () => ctrl.abort();
+  }, []);
 
   const changeStatus = async (projektId: string, newStatus: string) => {
     setUpdating(projektId);
@@ -50,15 +60,37 @@ export default function AngebotePipelinePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
-      if (res.ok) await loadPipeline();
-    } catch { /* ignore */ }
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.detail || `Statuswechsel fehlgeschlagen (${res.status})`);
+      }
+      await loadPipeline();
+    } catch (err: any) {
+      setError(err?.message || "Statuswechsel fehlgeschlagen");
+    }
     finally { setUpdating(null); }
   };
 
   if (!pipeline) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="animate-spin h-8 w-8 border-4 border-primary-600 border-t-transparent rounded-full" />
+      <div className="space-y-4">
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+            {error}
+            <button
+              type="button"
+              onClick={() => { setError(null); loadPipeline(); }}
+              className="ml-3 underline font-medium hover:text-red-900"
+            >
+              Neu versuchen
+            </button>
+          </div>
+        )}
+        {!error && (
+          <div className="flex items-center justify-center py-16">
+            <div className="animate-spin h-8 w-8 border-4 border-primary-600 border-t-transparent rounded-full" />
+          </div>
+        )}
       </div>
     );
   }
@@ -67,6 +99,18 @@ export default function AngebotePipelinePage() {
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+          {error}
+          <button
+            type="button"
+            onClick={() => setError(null)}
+            className="ml-3 underline font-medium hover:text-red-900"
+          >
+            Schließen
+          </button>
+        </div>
+      )}
       <div>
         <h2 className="text-lg md:text-2xl font-bold text-gray-900">Angebote-Pipeline</h2>
         <p className="text-sm text-gray-500 mt-1">

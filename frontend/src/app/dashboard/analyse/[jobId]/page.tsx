@@ -369,29 +369,52 @@ export default function AnalyseJobPage() {
     [recalculate, kalkParams],
   );
 
-  // SSE live progress
+  // SSE live progress — only depends on jobId to avoid reconnection loops
   useEffect(() => {
-    if (status?.status === "completed" || status?.status === "failed") return;
-
+    let closed = false;
     const es = new EventSource(`/api/v1/bauplan/${jobId}/stream`);
+
+    const closeSafe = () => {
+      if (closed) return;
+      closed = true;
+      try {
+        es.close();
+      } catch {}
+    };
+
     es.onmessage = (event) => {
-      const data = JSON.parse(event.data);
+      let data: any = null;
+      try {
+        data = JSON.parse(event.data);
+      } catch {
+        return; // malformed — skip
+      }
       setStatus((prev) => ({ ...prev, ...data, job_id: jobId }));
 
       if (data.status === "completed") {
-        es.close();
-        // Load result + kalkulation
-        fetch(`/api/v1/bauplan/${jobId}/result`).then((r) => r.ok ? r.json() : null).then((d) => { if (d) setResult(d); });
-        fetch(`/api/v1/bauplan/${jobId}/kalkulation`).then((r) => r.ok ? r.json() : null).then((d) => { if (d) setKalkulation(d); });
-      }
-      if (data.status === "failed") {
-        es.close();
+        closeSafe();
+        fetch(`/api/v1/bauplan/${jobId}/result`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d) => { if (d) setResult(d); })
+          .catch(() => {});
+        fetch(`/api/v1/bauplan/${jobId}/kalkulation`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d) => { if (d) setKalkulation(d); })
+          .catch(() => {});
+      } else if (data.status === "failed" || data.status === "timeout") {
+        closeSafe();
       }
     };
-    es.onerror = () => { es.close(); };
 
-    return () => es.close();
-  }, [jobId, status?.status]);
+    es.onerror = () => {
+      // Browser auto-retries on network errors — force-close after permanent error
+      if (es.readyState === EventSource.CLOSED) {
+        closeSafe();
+      }
+    };
+
+    return () => { closeSafe(); };
+  }, [jobId]);
 
   // Initial fetch
   useEffect(() => {

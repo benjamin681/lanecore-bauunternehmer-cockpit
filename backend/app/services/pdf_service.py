@@ -100,7 +100,7 @@ def pdf_to_images(pdf_bytes: bytes, dpi: int = 200) -> list[PageImage]:
     """
     Convert all PDF pages to base64-encoded PNG images.
 
-    Memory-efficient: converts one page at a time.
+    Memory-efficient: converts one page at a time with explicit GC.
 
     Args:
         pdf_bytes: Raw PDF file content
@@ -109,6 +109,8 @@ def pdf_to_images(pdf_bytes: bytes, dpi: int = 200) -> list[PageImage]:
     Returns:
         List of PageImage with base64 data
     """
+    import gc
+
     reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
     num_pages = len(reader.pages)
     results: list[PageImage] = []
@@ -133,26 +135,38 @@ def pdf_to_images(pdf_bytes: bytes, dpi: int = 200) -> list[PageImage]:
 
         img = images[0]
 
-        # Enhance for better OCR
-        img = _enhance_for_analysis(img)
+        try:
+            # Enhance for better OCR
+            img = _enhance_for_analysis(img)
 
-        # Scale down if too large for Claude Vision (max ~2048px on longest side)
-        img = _scale_for_vision(img, max_size=2048)
+            # Scale down if too large for Claude Vision (max ~2048px on longest side)
+            img = _scale_for_vision(img, max_size=2048)
 
-        # Encode to base64
-        buffer = io.BytesIO()
-        img.save(buffer, format="PNG", optimize=True)
-        image_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+            # Encode to base64
+            buffer = io.BytesIO()
+            img.save(buffer, format="PNG", optimize=True)
+            png_bytes = buffer.getvalue()
+            image_base64 = base64.b64encode(png_bytes).decode("utf-8")
 
-        results.append(PageImage(
-            page_num=page_num,
-            image_base64=image_base64,
-            width_px=img.width,
-            height_px=img.height,
-        ))
-
-        # Free memory
-        del images, img, buffer
+            results.append(PageImage(
+                page_num=page_num,
+                image_base64=image_base64,
+                width_px=img.width,
+                height_px=img.height,
+            ))
+        finally:
+            # Always free memory, also on exceptions
+            try:
+                img.close()
+            except Exception:
+                pass
+            for pil_img in images:
+                try:
+                    pil_img.close()
+                except Exception:
+                    pass
+            del images, img, buffer, png_bytes
+            gc.collect()
 
     log.info("pdf_conversion_complete", pages_converted=len(results), total_pages=num_pages)
     return results

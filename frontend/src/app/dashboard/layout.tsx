@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "📊" },
@@ -114,7 +115,9 @@ export default function DashboardLayout({
         <header className="h-14 md:h-16 bg-white border-b border-gray-200 items-center px-4 md:px-8 hidden md:flex">
           <h1 className="text-lg font-semibold text-gray-800">{currentPage}</h1>
         </header>
-        <div className="p-4 md:p-8">{children}</div>
+        <div className="p-4 md:p-8">
+          <ErrorBoundary>{children}</ErrorBoundary>
+        </div>
       </main>
     </div>
   );

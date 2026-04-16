@@ -120,7 +120,17 @@ async def stream_analyse_status(job_id: UUID, db: AsyncSession = Depends(get_db)
 
     async def event_generator():
         last_status = None
+        from datetime import datetime, timedelta
+        start_time = datetime.utcnow()
+        MAX_DURATION = timedelta(minutes=10)  # Hard limit to prevent runaway streams
+        HEARTBEAT_INTERVAL = 15  # seconds — keep proxies from closing idle conns
+        last_heartbeat = start_time
         while True:
+            # Timeout-Guard: never stream longer than MAX_DURATION
+            if datetime.utcnow() - start_time > MAX_DURATION:
+                yield f"data: {json.dumps({'status': 'timeout', 'error_message': 'SSE stream timeout'})}\n\n"
+                return
+
             # Fresh session for each poll
             async with AsyncSessionLocal() as session:
                 result = await session.execute(select(AnalyseJob).where(AnalyseJob.id == job_id))
@@ -133,6 +143,10 @@ async def stream_analyse_status(job_id: UUID, db: AsyncSession = Depends(get_db)
                 if current != last_status:
                     last_status = current
                     yield f"data: {json.dumps({'status': job.status, 'progress': job.progress, 'error_message': job.error_message})}\n\n"
+                elif (datetime.utcnow() - last_heartbeat).total_seconds() >= HEARTBEAT_INTERVAL:
+                    # Heartbeat comment — signals liveness without changing state
+                    last_heartbeat = datetime.utcnow()
+                    yield ": heartbeat\n\n"
 
                 if job.status in ("completed", "failed"):
                     return

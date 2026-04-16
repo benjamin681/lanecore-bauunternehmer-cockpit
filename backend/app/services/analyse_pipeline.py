@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 import structlog
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from pathlib import Path
@@ -280,13 +280,17 @@ async def _update_job_status(
     progress: int = 0,
     error_message: str | None = None,
 ) -> None:
-    job = await _get_job(db, job_id)
-    if job:
-        job.status = status
-        job.progress = progress
-        if error_message:
-            job.error_message = error_message
-        await db.commit()
+    """Atomic status update via UPDATE...WHERE (no SELECT+UPDATE race)."""
+    values: dict = {
+        "status": status,
+        "progress": progress,
+        "updated_at": func.now(),
+    }
+    if error_message:
+        values["error_message"] = error_message
+    stmt = update(AnalyseJob).where(AnalyseJob.id == job_id).values(**values)
+    await db.execute(stmt)
+    await db.commit()
 
 
 async def _auto_create_projekt(

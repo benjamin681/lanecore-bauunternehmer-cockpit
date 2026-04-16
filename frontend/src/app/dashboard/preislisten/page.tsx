@@ -57,15 +57,25 @@ export default function PreislistenPage() {
   const [searchResults, setSearchResults] = useState<PreisvergleichResponse | null>(null);
   const [isSearching, setIsSearching] = useState(false);
 
-  const loadPreislisten = useCallback(async () => {
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
+
+  const loadPreislisten = useCallback(async (signal?: AbortSignal) => {
     try {
-      const res = await fetch("/api/v1/preislisten");
-      if (res.ok) setPreislisten(await res.json());
-    } catch { /* ignore */ }
+      const res = await fetch("/api/v1/preislisten", { signal });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setPreislisten(await res.json());
+      setLoadError(null);
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
+      setLoadError(err?.message || "Preislisten konnten nicht geladen werden");
+    }
   }, []);
 
   useEffect(() => {
-    loadPreislisten();
+    const ctrl = new AbortController();
+    loadPreislisten(ctrl.signal);
+    return () => ctrl.abort();
   }, [loadPreislisten]);
 
   // Poll for processing preislisten
@@ -111,19 +121,30 @@ export default function PreislistenPage() {
 
   const loadDetail = async (id: string) => {
     setSelectedId(id);
+    setDetail(null);
     try {
       const res = await fetch(`/api/v1/preislisten/${id}`);
-      if (res.ok) setDetail(await res.json());
-    } catch { /* ignore */ }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setDetail(await res.json());
+    } catch (err: any) {
+      setLoadError(err?.message || "Detail konnte nicht geladen werden");
+    }
   };
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
     setIsSearching(true);
+    setSearchError(null);
     try {
       const res = await fetch(`/api/v1/preislisten/vergleich/suche?q=${encodeURIComponent(searchQuery)}`);
-      if (res.ok) setSearchResults(await res.json());
-    } catch { /* ignore */ }
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.detail || `Suche fehlgeschlagen (${res.status})`);
+      }
+      setSearchResults(await res.json());
+    } catch (err: any) {
+      setSearchError(err?.message || "Suche fehlgeschlagen");
+    }
     setIsSearching(false);
   };
 

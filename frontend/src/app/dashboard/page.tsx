@@ -40,16 +40,24 @@ export default function DashboardPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetch("/api/v1/stats/dashboard")
-      .then((r) => r.json())
-      .then(setStats)
-      .catch(() => {});
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-    fetch("/api/v1/projekte?sort=updated_at&order=desc")
-      .then((r) => r.json())
-      .then(setProjekte)
-      .catch(() => {});
+  useEffect(() => {
+    const ctrl = new AbortController();
+    (async () => {
+      try {
+        const [s, p] = await Promise.all([
+          fetch("/api/v1/stats/dashboard", { signal: ctrl.signal }).then((r) => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))),
+          fetch("/api/v1/projekte?sort=updated_at&order=desc", { signal: ctrl.signal }).then((r) => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))),
+        ]);
+        setStats(s);
+        setProjekte(Array.isArray(p) ? p : []);
+      } catch (err: any) {
+        if (err?.name === "AbortError") return;
+        setLoadError(err?.message || "Dashboard konnte nicht geladen werden");
+      }
+    })();
+    return () => ctrl.abort();
   }, []);
 
   // Quick upload handler
@@ -116,6 +124,18 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {loadError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+          <strong>Daten konnten nicht geladen werden:</strong> {loadError}
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="ml-3 underline font-medium hover:text-red-900"
+          >
+            Neu laden
+          </button>
+        </div>
+      )}
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
         <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">

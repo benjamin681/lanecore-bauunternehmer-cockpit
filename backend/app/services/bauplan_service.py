@@ -289,9 +289,12 @@ class BauplanAnalyseService:
                 pass
 
         # 3. Erstes vollständiges JSON-Objekt finden (mit Brace-Matching)
+        # Sanity-Limit: Bei pathologisch großen Responses nicht endlos iterieren
+        MAX_SCAN_CHARS = 200_000
+        scan_text = response_text[:MAX_SCAN_CHARS] if len(response_text) > MAX_SCAN_CHARS else response_text
         depth = 0
         start = None
-        for i, char in enumerate(response_text):
+        for i, char in enumerate(scan_text):
             if char == "{":
                 if depth == 0:
                     start = i
@@ -300,7 +303,7 @@ class BauplanAnalyseService:
                 depth -= 1
                 if depth == 0 and start is not None:
                     try:
-                        return json.loads(response_text[start : i + 1])
+                        return json.loads(scan_text[start : i + 1])
                     except json.JSONDecodeError:
                         start = None
 

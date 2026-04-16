@@ -118,16 +118,67 @@ class Kalkulation:
     gesamt_ohne_preise: int = 0
 
 
+def _is_nassraum(raum: dict | None) -> bool:
+    """Detect wet room from Raum-Metadaten (Nutzung oder Bezeichnung)."""
+    if not isinstance(raum, dict):
+        return False
+    text = " ".join(str(raum.get(k, "")) for k in ("nutzung", "bezeichnung", "deckentyp")).lower()
+    nassraum_keywords = ("nassraum", "dusche", "wc", "bad", "bäd", "teekueche", "teeküche",
+                         "küche", "kueche", "waschraum", "sanitä", "sanita")
+    return any(k in text for k in nassraum_keywords)
+
+
+def _brandschutz_klasse(analyse_result: dict, raum: dict | None = None) -> str | None:
+    """Extract Brandschutzklasse (F30/F60/F90) from analysis or room.
+
+    Returns the strictest class found (F90 > F60 > F30), or None.
+    """
+    candidates: list[str] = []
+    # Global plan-level
+    bs = analyse_result.get("brandschutzklasse")
+    if bs:
+        candidates.append(str(bs).upper())
+    # Room-level
+    if raum and isinstance(raum, dict):
+        for key in ("brandschutz", "brandschutzklasse", "anforderung"):
+            v = raum.get(key)
+            if v:
+                candidates.append(str(v).upper())
+    # Normalize + rank
+    ranking = {"F90": 3, "EI90": 3, "F60": 2, "EI60": 2, "F30": 1, "EI30": 1}
+    best = None
+    best_rank = 0
+    for c in candidates:
+        for key, rank in ranking.items():
+            if key in c and rank > best_rank:
+                best = key.replace("EI", "F")
+                best_rank = rank
+    return best
+
+
+def _daemmungsdicke_mm(brandschutz: str | None) -> int:
+    """Return required mineralwolle thickness in mm by fire class."""
+    if not brandschutz:
+        return 50  # Standard Schallschutz ohne Brandschutz
+    mapping = {"F30": 40, "F60": 60, "F90": 100}
+    return mapping.get(brandschutz, 50)
+
+
 def materialliste_aus_analyse(analyse_result: dict) -> list[MaterialPosition]:
     """Leitet aus einem Analyse-Ergebnis die benötigten Materialien ab."""
     positionen: list[MaterialPosition] = []
 
     # ── Raum-Flächen-Lookup für Decken ohne eigene Fläche ──
     raum_flaechen: dict[str, float] = {}
+    raum_by_nr: dict[str, dict] = {}
     for r in analyse_result.get("raeume", []):
+        if not isinstance(r, dict):
+            continue
         nr = r.get("raum_nr")
-        if nr and r.get("flaeche_m2"):
-            raum_flaechen[nr] = r["flaeche_m2"]
+        if nr:
+            raum_by_nr[nr] = r
+            if r.get("flaeche_m2"):
+                raum_flaechen[nr] = r["flaeche_m2"]
 
     # ── Decken verarbeiten ──
     decken = analyse_result.get("decken", [])
@@ -191,8 +242,21 @@ def materialliste_aus_analyse(analyse_result: dict) -> list[MaterialPosition]:
             suchbegriffe=["UD 28/27", "UD-Profil", "UD28", "Randprofil"],
         ))
 
-        # 3. Beplankung
-        if "aquapanel" in (beplankung or "").lower() or "aquapanel" in (d.get("typ") or "").lower():
+        # 3. Beplankung mit Nassraum-Auto-Detection (DIN 18181)
+        zugehoeriger_raum = raum_by_nr.get(raum_nr) if raum_nr else None
+        ist_nassraum = _is_nassraum(zugehoeriger_raum)
+        bep_lower = (beplankung or "").lower()
+        typ_lower = (d.get("typ") or "").lower()
+        brandschutz = _brandschutz_klasse(analyse_result, zugehoeriger_raum)
+
+        use_aquapanel = "aquapanel" in bep_lower or "aquapanel" in typ_lower
+        # Auto-Upgrade bei Nassraum: GKB → Aquapanel/GKFi (DIN 18181 erfordert Feuchteschutz)
+        if not use_aquapanel and ist_nassraum:
+            use_aquapanel = True
+            log.info("nassraum_auto_upgrade_decke", raum=raum, original_beplankung=beplankung)
+        # Brandschutz-Auto-Upgrade: Bei F30+ sollte GKF statt GKB verwendet werden
+        use_gkf = bool(brandschutz) and not use_aquapanel and "gkf" not in bep_lower
+        if use_aquapanel:
             platten_m2 = math.ceil(flaeche * VERSCHNITT_PLATTEN * 10) / 10
             positionen.append(MaterialPosition(
                 bezeichnung="Knauf Aquapanel Indoor",
@@ -204,7 +268,7 @@ def materialliste_aus_analyse(analyse_result: dict) -> list[MaterialPosition]:
             ))
         else:
             platten_m2 = math.ceil(flaeche * VERSCHNITT_PLATTEN * 10) / 10
-            platte_typ = "GKB" if "gkb" in (beplankung or "").lower() or not beplankung else beplankung
+            platte_typ = "GKF" if use_gkf else ("GKB" if "gkb" in bep_lower or not beplankung else beplankung)
             positionen.append(MaterialPosition(
                 bezeichnung=f"{platte_typ} Gipskartonplatte",
                 kategorie="GK-Platte",
@@ -381,8 +445,31 @@ def materialliste_aus_analyse(analyse_result: dict) -> list[MaterialPosition]:
         ))
 
         # 3. Beplankung (beidseitig, ggf. mehrlagig — mit Öffnungsabzug)
+        # Plattentyp-Auto-Upgrade:
+        #   W118 oder Brandschutz F90 → GKF
+        #   Feuchträume (Raumnutzung = Nassraum) → GKFi
+        #   Brandschutz F30/F60 → GKF
+        brandschutz_wand = _brandschutz_klasse(analyse_result, None) or (
+            w.get("brandschutz") if isinstance(w.get("brandschutz"), str) else None
+        )
+        if isinstance(brandschutz_wand, str):
+            brandschutz_wand = brandschutz_wand.upper()
+            if "F" not in brandschutz_wand:
+                brandschutz_wand = None
+        # Nassraum-Check: Wenn Wand zu einem Nassraum gehört
+        von_raum = raum_by_nr.get(w.get("von_raum_nr", ""))
+        zu_raum = raum_by_nr.get(w.get("zu_raum_nr", ""))
+        wand_bei_nassraum = _is_nassraum(von_raum) or _is_nassraum(zu_raum)
+
+        if typ in ("W118",) or brandschutz_wand == "F90":
+            platte_typ = "GKF"
+        elif wand_bei_nassraum:
+            platte_typ = "GKFi"
+        elif brandschutz_wand in ("F30", "F60"):
+            platte_typ = "GKF"
+        else:
+            platte_typ = "GKB"
         platten_m2 = math.ceil(flaeche_beplankung * seiten * lagen * VERSCHNITT_PLATTEN * 10) / 10
-        platte_typ = "GKF" if typ in ("W118",) else "GKB"
         positionen.append(MaterialPosition(
             bezeichnung=f"{platte_typ} 12.5mm Platte",
             kategorie="GK-Platte",
@@ -392,15 +479,20 @@ def materialliste_aus_analyse(analyse_result: dict) -> list[MaterialPosition]:
             suchbegriffe=[platte_typ, "Gipskarton", "12.5", "Platte"],
         ))
 
-        # 4. Dämmung (alle Öffnungen abgezogen)
+        # 4. Dämmung (alle Öffnungen abgezogen) — Dicke nach Brandschutz
         daemmung_m2 = math.ceil(flaeche_daemmung * VERSCHNITT_DAEMMUNG * 10) / 10
+        dicke_mm = _daemmungsdicke_mm(brandschutz_wand)
+        daemmung_bez = f"Mineralwolle Trennwand {dicke_mm}mm"
+        if brandschutz_wand:
+            daemmung_bez += f" ({brandschutz_wand})"
         positionen.append(MaterialPosition(
-            bezeichnung="Mineralwolle Trennwand",
+            bezeichnung=daemmung_bez,
             kategorie="Daemmung",
             menge=daemmung_m2,
             einheit="m²",
             herkunft=herkunft,
-            suchbegriffe=["Mineralwolle", "Steinwolle", "Dämmung", "Trennwand", "Isover", "Rockwool"],
+            suchbegriffe=["Mineralwolle", "Steinwolle", "Dämmung", "Trennwand",
+                          "Isover", "Rockwool", f"{dicke_mm}mm"],
         ))
 
         # 5. Schrauben (basierend auf Beplankungsfläche)
@@ -476,38 +568,96 @@ def materialliste_aus_analyse(analyse_result: dict) -> list[MaterialPosition]:
             ))
 
     # ── Türöffnungen: UA-Profile + Zubehör ──
+    # UA-Profile werden auf RAUMHÖHE zugeschnitten (nicht Türhöhe!), da sie
+    # von OK Boden bis UK Decke durchgehen. Standard-Raumhöhe 2.75m.
+    # UA-Stäbe werden typisch in 2.60/2.75/3.00/4.00m geliefert.
+    UA_STAB_LAENGE = 4.0  # 4m-Stäbe, angenommen als Standard
     oeffnungen = analyse_result.get("oeffnungen", [])
+
+    # Raumhöhe ableiten: max hoehe_m aus Räumen, sonst 2.75m
+    raeume_hoehen = [
+        r.get("hoehe_m") for r in (analyse_result.get("raeume") or [])
+        if isinstance(r, dict) and r.get("hoehe_m")
+    ]
+    try:
+        raumhoehe_default = max(float(h) for h in raeume_hoehen if h) if raeume_hoehen else 2.75
+    except (TypeError, ValueError):
+        raumhoehe_default = 2.75
+
     for o in oeffnungen:
         if not isinstance(o, dict):
+            continue
+        # Skip entfallene Öffnungen
+        if o.get("entfaellt") is True:
             continue
         typ = (o.get("typ") or "").lower()
         if "tür" not in typ and "door" not in typ and "tuer" not in typ:
             continue
 
-        hoehe = o.get("hoehe_m") or 2.135  # Standard-Türhöhe
-        breite = o.get("breite_m") or 0.885  # Standard-Türbreite
+        hoehe = float(o.get("hoehe_m") or 2.135)
+        breite = float(o.get("breite_m") or 0.885)
         wand_name = o.get("wand", "Trennwand")
         herkunft = f"Tür in {wand_name} ({breite:.2f}x{hoehe:.2f}m)"
 
-        # UA-Aussteifungsprofile (2 Stk pro Tür, Länge = Raumhöhe ca. 2.75m)
-        ua_laenge = hoehe + 0.10  # etwas länger als Türhöhe
+        # UA-Profile: Anzahl abhängig von Türbreite:
+        #   bis 1.00m: 2 Profile (Standard-Drehtür)
+        #   1.00 - 1.60m: 3 Profile (breite Tür / Doppelflügel)
+        #   > 1.60m: 4 Profile (Schiebetüren, Glastrennwände)
+        if breite <= 1.00:
+            ua_count = 2
+        elif breite <= 1.60:
+            ua_count = 3
+        else:
+            ua_count = 4
+
+        # Länge: Raumhöhe minus ca. 5cm Spiel oben, +5cm Übermaß
+        ua_laenge_pro_profil = max(raumhoehe_default - 0.05, hoehe + 0.15)
+        ua_gesamt_lfm = round(ua_laenge_pro_profil * ua_count, 2)
+
+        # Auf volle Stäbe aufrunden (Verschnitt inklusive)
+        ua_staebe = math.ceil(ua_gesamt_lfm / UA_STAB_LAENGE) if ua_gesamt_lfm > 0 else 0
+        ua_einkauf_lfm = ua_staebe * UA_STAB_LAENGE
+
+        # Passende UA-Breite nach Wandsystem: 75 = Standard, 100 bei W115/W118/Installationswand
+        ua_breite = "75"
+        # Versuch: aus den Wandsystemen die breiteste Wand nehmen
+        for w in (analyse_result.get("waende") or []):
+            if not isinstance(w, dict):
+                continue
+            if (w.get("bezeichnung") or "") == wand_name:
+                sys_code = (w.get("system") or "").upper()
+                if any(x in sys_code for x in ("W115", "W116", "W118")):
+                    ua_breite = "100"
+                break
+
         positionen.append(MaterialPosition(
-            bezeichnung="UA-Aussteifungsprofil 75",
+            bezeichnung=f"UA-Aussteifungsprofil {ua_breite}",
             kategorie="UA-Profil",
-            menge=round(ua_laenge * 2, 1),  # 2 Stück pro Tür
+            menge=float(ua_einkauf_lfm),
             einheit="lfm",
             herkunft=herkunft,
-            suchbegriffe=["UA-Profil", "Aussteifungsprofil", "UA 75", "Türpfosten"],
+            suchbegriffe=[f"UA-Profil {ua_breite}", "Aussteifungsprofil", f"UA {ua_breite}", "Türpfosten"],
         ))
 
-        # Türpfosten-Steckwinkel (4 pro Tür: 2 oben + 2 unten)
+        # Türpfosten-Steckwinkel (2 Stk pro UA-Profil: oben + unten)
         positionen.append(MaterialPosition(
             bezeichnung="Steckwinkel für UA-Profil",
             kategorie="Zubehoer",
-            menge=4,
+            menge=ua_count * 2,
             einheit="Stk",
             herkunft=herkunft,
             suchbegriffe=["Steckwinkel", "UA Winkel", "Türpfostenwinkel"],
+        ))
+
+        # Türsturzprofil (1 Stk pro Tür, Länge = Türbreite + 2x 15cm Auflager)
+        sturz_lfm = round(breite + 0.30, 2)
+        positionen.append(MaterialPosition(
+            bezeichnung="Türsturzprofil (UW/CW)",
+            kategorie="Zubehoer",
+            menge=float(sturz_lfm),
+            einheit="lfm",
+            herkunft=herkunft,
+            suchbegriffe=["Sturzprofil", "Türsturz", "UW Sturz"],
         ))
 
     return positionen
