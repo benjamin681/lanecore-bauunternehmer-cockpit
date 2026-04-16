@@ -28,10 +28,12 @@ app = FastAPI(
 # Exception handlers
 app.add_exception_handler(LaneCoreError, lanecore_exception_handler)  # type: ignore[arg-type]
 
-# CORS
+# CORS — allow Vercel preview URLs + configured origins
+_cors_origins = list(settings.cors_origins)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=_cors_origins,
+    allow_origin_regex=r"https://.*-lanecore-ai\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

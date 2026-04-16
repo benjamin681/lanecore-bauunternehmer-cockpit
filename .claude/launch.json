@@ -4,8 +4,8 @@
     {
       "name": "lanecore",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "cd /Users/benundsasifeichtenbeiner/Bauunternehmer-Cockpit/frontend && exec npx next dev --port $PORT"],
-      "port": 4000
+      "runtimeArgs": ["-c", "cd /Users/benundsasifeichtenbeiner/Bauunternehmer-Cockpit/frontend && exec npx next dev -p $PORT"],
+      "port": 4321
     }
   ]
 }

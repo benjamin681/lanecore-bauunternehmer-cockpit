@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/lanecore"
 
     # Claude API
-    anthropic_api_key: str = ""
+    anthropic_api_key: str  # required — fails fast if missing
 
     @model_validator(mode="after")
     def _load_api_key_from_dotenv_if_empty(self) -> "Settings":
@@ -47,7 +47,13 @@ class Settings(BaseSettings):
     clerk_publishable_key: str = ""
 
     # CORS
-    cors_origins: list[str] = ["http://localhost:3000"]
+    cors_origins: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:3456",
+        "http://localhost:4321",
+        "https://frontend-lanecore-ai.vercel.app",
+        "https://lanecore-ai.vercel.app",
+    ]
 
     # Limits
     max_pdf_size_mb: int = 50
