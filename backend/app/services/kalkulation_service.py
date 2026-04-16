@@ -257,6 +257,51 @@ def materialliste_aus_analyse(analyse_result: dict) -> list[MaterialPosition]:
             suchbegriffe=["Bewehrungsstreifen", "Fugenband", "Kurt", "Papierband"],
         ))
 
+        # 8. Kreuzverbinder (D112 Kreuzrost)
+        kreuzverbinder_stk = math.ceil(flaeche * kb_mat.get("kreuzverbinder_stk", 2.3))
+        positionen.append(MaterialPosition(
+            bezeichnung="Kreuzverbinder CD 60/27",
+            kategorie="Zubehoer",
+            menge=kreuzverbinder_stk,
+            einheit="Stk",
+            herkunft=herkunft,
+            suchbegriffe=["Kreuzverbinder", "CD 60/27 Kreuz", "Kreuzstück"],
+        ))
+
+        # 9. Längsverbinder (bei Räumen > 4m)
+        laengsverbinder_stk = math.ceil(flaeche * kb_mat.get("laengsverbinder_stk", 0.6))
+        if laengsverbinder_stk > 0:
+            positionen.append(MaterialPosition(
+                bezeichnung="Längsverbinder CD 60/27",
+                kategorie="Zubehoer",
+                menge=laengsverbinder_stk,
+                einheit="Stk",
+                herkunft=herkunft,
+                suchbegriffe=["Längsverbinder", "CD Verbinder", "Profilverbinder"],
+            ))
+
+        # 10. Dübel/Anker für Abhänger an Rohdecke
+        duebel_stk = abhaenger_stk  # 1 Dübel pro Abhängepunkt
+        positionen.append(MaterialPosition(
+            bezeichnung="Schlagdübel 6x40 (Deckenbefestigung)",
+            kategorie="Befestigung",
+            menge=duebel_stk,
+            einheit="Stk",
+            herkunft=herkunft,
+            suchbegriffe=["Schlagdübel", "Deckendübel", "Metalldübel", "Anker 6x40"],
+        ))
+
+        # 11. PE-Dichtungsband auf UD-Profil
+        pe_band_lfm = ud_lfm  # gleiche Länge wie UD-Profil
+        positionen.append(MaterialPosition(
+            bezeichnung="PE-Dichtungsband (auf UD-Profil)",
+            kategorie="Dichtung",
+            menge=pe_band_lfm,
+            einheit="lfm",
+            herkunft=herkunft,
+            suchbegriffe=["Dichtungsband", "PE-Band", "Anschlussdichtung", "Trennstreifen"],
+        ))
+
     # ── Öffnungen (Türen/Fenster) einlesen und nach Wand-ID gruppieren ──
     oeffnungen = analyse_result.get("oeffnungen", [])
     oeffnungen_by_wand: dict[str, list[dict]] = {}
@@ -369,7 +414,52 @@ def materialliste_aus_analyse(analyse_result: dict) -> list[MaterialPosition]:
             suchbegriffe=["Schnellbauschraube", "TN 3.5", "TN3.5x25"],
         ))
 
-        # 6. Türzargen-Bekleidung (Zusatzposition wenn Türen vorhanden)
+        # 6. Spachtel für Wände
+        kb_mat_wand = get_material_pro_m2(typ) if typ else {}
+        wand_spachtel_kg = math.ceil(flaeche * kb_mat_wand.get("spachtel_kg", 0.5) * 10) / 10
+        positionen.append(MaterialPosition(
+            bezeichnung="Fugenspachtel Wand (Uniflott o.ä.)",
+            kategorie="Spachtel",
+            menge=wand_spachtel_kg,
+            einheit="kg",
+            herkunft=herkunft,
+            suchbegriffe=["Uniflott", "Fugenspachtel", "Spachtelmasse", "Fugenfüller"],
+        ))
+
+        # 7. Fugenband für Wände
+        wand_fugenband_lfm = math.ceil(flaeche * kb_mat_wand.get("fugenband_lfm", 1.5) * 10) / 10
+        positionen.append(MaterialPosition(
+            bezeichnung="Bewehrungsstreifen Wand",
+            kategorie="Band",
+            menge=wand_fugenband_lfm,
+            einheit="lfm",
+            herkunft=herkunft,
+            suchbegriffe=["Bewehrungsstreifen", "Fugenband", "Kurt", "Papierband"],
+        ))
+
+        # 8. PE-Dichtungsband auf UW-Profilen (normativ MUSS)
+        pe_band_wand_lfm = math.ceil(uw_lfm * 10) / 10  # gleiche Länge wie UW
+        positionen.append(MaterialPosition(
+            bezeichnung="PE-Dichtungsband (auf UW-Profil)",
+            kategorie="Dichtung",
+            menge=pe_band_wand_lfm,
+            einheit="lfm",
+            herkunft=herkunft,
+            suchbegriffe=["Dichtungsband", "PE-Band", "Anschlussdichtung"],
+        ))
+
+        # 9. Dübel für UW-Profil-Befestigung (3 Stk/lfm)
+        duebel_uw_stk = math.ceil(uw_lfm * 3)
+        positionen.append(MaterialPosition(
+            bezeichnung="Schlagdübel 6x40 (UW-Befestigung)",
+            kategorie="Befestigung",
+            menge=duebel_uw_stk,
+            einheit="Stk",
+            herkunft=herkunft,
+            suchbegriffe=["Schlagdübel", "Dübel", "Metalldübel", "Anker"],
+        ))
+
+        # 10. Türzargen-Bekleidung (Zusatzposition wenn Türen vorhanden)
         if hat_tueren:
             tuer_count = sum(
                 1 for o in wand_oeffnungen
@@ -384,6 +474,41 @@ def materialliste_aus_analyse(analyse_result: dict) -> list[MaterialPosition]:
                 herkunft=herkunft,
                 suchbegriffe=["Türzarge", "Zargenbekleidung", "Zarge", "Umfassungszarge"],
             ))
+
+    # ── Türöffnungen: UA-Profile + Zubehör ──
+    oeffnungen = analyse_result.get("oeffnungen", [])
+    for o in oeffnungen:
+        if not isinstance(o, dict):
+            continue
+        typ = (o.get("typ") or "").lower()
+        if "tür" not in typ and "door" not in typ and "tuer" not in typ:
+            continue
+
+        hoehe = o.get("hoehe_m") or 2.135  # Standard-Türhöhe
+        breite = o.get("breite_m") or 0.885  # Standard-Türbreite
+        wand_name = o.get("wand", "Trennwand")
+        herkunft = f"Tür in {wand_name} ({breite:.2f}x{hoehe:.2f}m)"
+
+        # UA-Aussteifungsprofile (2 Stk pro Tür, Länge = Raumhöhe ca. 2.75m)
+        ua_laenge = hoehe + 0.10  # etwas länger als Türhöhe
+        positionen.append(MaterialPosition(
+            bezeichnung="UA-Aussteifungsprofil 75",
+            kategorie="UA-Profil",
+            menge=round(ua_laenge * 2, 1),  # 2 Stück pro Tür
+            einheit="lfm",
+            herkunft=herkunft,
+            suchbegriffe=["UA-Profil", "Aussteifungsprofil", "UA 75", "Türpfosten"],
+        ))
+
+        # Türpfosten-Steckwinkel (4 pro Tür: 2 oben + 2 unten)
+        positionen.append(MaterialPosition(
+            bezeichnung="Steckwinkel für UA-Profil",
+            kategorie="Zubehoer",
+            menge=4,
+            einheit="Stk",
+            herkunft=herkunft,
+            suchbegriffe=["Steckwinkel", "UA Winkel", "Türpfostenwinkel"],
+        ))
 
     return positionen
 
