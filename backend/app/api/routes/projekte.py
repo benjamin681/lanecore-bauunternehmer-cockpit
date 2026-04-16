@@ -75,7 +75,7 @@ async def get_angebote_pipeline(
     return pipeline
 
 
-@router.get("/", response_model=list[ProjektResponse])
+@router.get("", response_model=list[ProjektResponse])
 async def list_projekte(
     user_id: str = Depends(get_current_user_id),
     sort: str = Query("updated_at", description="Sort by: auftraggeber, name, status, created_at, updated_at"),
@@ -146,7 +146,7 @@ async def list_projekte(
     return responses
 
 
-@router.post("/", response_model=ProjektResponse, status_code=201)
+@router.post("", response_model=ProjektResponse, status_code=201)
 async def create_projekt(
     data: ProjektCreate,
     user_id: str = Depends(get_current_user_id),

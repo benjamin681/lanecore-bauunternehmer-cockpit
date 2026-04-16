@@ -71,7 +71,7 @@ async def upload_preisliste(
     )
 
 
-@router.get("/", response_model=list[PreislisteListResponse])
+@router.get("", response_model=list[PreislisteListResponse])
 async def list_preislisten(
     db: AsyncSession = Depends(get_db),
 ) -> list[PreislisteListResponse]:
@@ -93,6 +93,60 @@ async def list_preislisten(
         )
         for p in preislisten
     ]
+
+
+# ── Static routes BEFORE parameterized /{preisliste_id} ──
+
+
+@router.get("/lieferanten")
+async def list_lieferanten():
+    """List all available supplier sources (PDF imports + API connections)."""
+    return {
+        "pdf_imports": "active",
+        "api_connections": [
+            {"name": "KEMLER Baustoffe", "status": "coming_soon", "type": "api"},
+            {"name": "Saint-Gobain", "status": "coming_soon", "type": "api"},
+            {"name": "Knauf", "status": "coming_soon", "type": "api"},
+        ],
+        "hinweis": "Preislisten können als PDF hochgeladen werden. API-Anbindungen an Lieferanten folgen in v2."
+    }
+
+
+@router.get("/vergleich/suche")
+async def preisvergleich(
+    q: str = Query(..., description="Produktbezeichnung suchen"),
+    kategorie: str | None = Query(None, description="Kategorie-Filter"),
+    db: AsyncSession = Depends(get_db),
+) -> PreisvergleichResponse:
+    """Preisvergleich über alle Anbieter für ein bestimmtes Produkt."""
+    service = PreislisteService()
+    results = await service.preisvergleich(q, kategorie)
+
+    guenstigster = results[0]["anbieter"] if results else None
+    if len(results) >= 2:
+        min_price = results[0]["produkt"]["preis_netto"]
+        max_price = results[-1]["produkt"]["preis_netto"]
+        diff_pct = ((max_price - min_price) / min_price * 100) if min_price > 0 else 0
+    else:
+        diff_pct = None
+
+    return PreisvergleichResponse(
+        suche=q,
+        ergebnisse=[
+            PreisvergleichResult(
+                anbieter=r["anbieter"],
+                produkt=ProduktSchema(**r["produkt"]),
+                gesamtpreis=r["produkt"]["preis_netto"],
+                ist_guenstigster=r["ist_guenstigster"],
+            )
+            for r in results
+        ],
+        guenstigster_anbieter=guenstigster,
+        preisdifferenz_prozent=diff_pct,
+    )
+
+
+# ── Parameterized routes ──
 
 
 @router.get("/{preisliste_id}")
@@ -197,51 +251,3 @@ async def delete_preisliste(
 
     await db.delete(preisliste)
     await db.commit()
-
-
-@router.get("/lieferanten")
-async def list_lieferanten():
-    """List all available supplier sources (PDF imports + API connections)."""
-    return {
-        "pdf_imports": "active",  # Always available
-        "api_connections": [
-            {"name": "KEMLER Baustoffe", "status": "coming_soon", "type": "api"},
-            {"name": "Saint-Gobain", "status": "coming_soon", "type": "api"},
-            {"name": "Knauf", "status": "coming_soon", "type": "api"},
-        ],
-        "hinweis": "Preislisten können als PDF hochgeladen werden. API-Anbindungen an Lieferanten folgen in v2."
-    }
-
-
-@router.get("/vergleich/suche")
-async def preisvergleich(
-    q: str = Query(..., description="Produktbezeichnung suchen"),
-    kategorie: str | None = Query(None, description="Kategorie-Filter"),
-    db: AsyncSession = Depends(get_db),
-) -> PreisvergleichResponse:
-    """Preisvergleich über alle Anbieter für ein bestimmtes Produkt."""
-    service = PreislisteService()
-    results = await service.preisvergleich(q, kategorie)
-
-    guenstigster = results[0]["anbieter"] if results else None
-    if len(results) >= 2:
-        min_price = results[0]["produkt"]["preis_netto"]
-        max_price = results[-1]["produkt"]["preis_netto"]
-        diff_pct = ((max_price - min_price) / min_price * 100) if min_price > 0 else 0
-    else:
-        diff_pct = None
-
-    return PreisvergleichResponse(
-        suche=q,
-        ergebnisse=[
-            PreisvergleichResult(
-                anbieter=r["anbieter"],
-                produkt=ProduktSchema(**r["produkt"]),
-                gesamtpreis=r["produkt"]["preis_netto"],
-                ist_guenstigster=r["ist_guenstigster"],
-            )
-            for r in results
-        ],
-        guenstigster_anbieter=guenstigster,
-        preisdifferenz_prozent=round(diff_pct, 1) if diff_pct else None,
-    )
