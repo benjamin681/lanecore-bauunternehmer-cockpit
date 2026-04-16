@@ -14,8 +14,8 @@ from app.models.base import Base, UUIDMixin, TimestampMixin
 class AnalyseJob(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "analyse_jobs"
 
-    projekt_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("projekte.id"), index=True
+    projekt_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projekte.id"), nullable=True, index=True
     )
     filename: Mapped[str] = mapped_column(String(255))
     s3_key: Mapped[str] = mapped_column(String(512))
