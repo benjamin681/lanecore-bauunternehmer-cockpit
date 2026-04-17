@@ -70,26 +70,29 @@ class TestMergeResults:
         assert merged["plantyp"] == "grundriss"
         assert len(merged["raeume"]) == 1
 
-    def test_merge_konfidenz_takes_minimum(self):
+    def test_merge_konfidenz_takes_maximum(self):
+        # Takes max since we trust the best-analyzed page
         results = [
-            {"plantyp": "grundriss", "konfidenz": 0.95, "raeume": [], "waende": [], "decken": [], "warnungen": []},
-            {"plantyp": "grundriss", "konfidenz": 0.72, "raeume": [], "waende": [], "decken": [], "warnungen": ["Unsicher"]},
+            {"plantyp": "grundriss", "konfidenz": 0.95, "raeume": [{"bezeichnung": "R1"}], "waende": [], "decken": [], "warnungen": []},
+            {"plantyp": "grundriss", "konfidenz": 0.72, "raeume": [{"bezeichnung": "R2"}], "waende": [], "decken": [], "warnungen": ["Unsicher"]},
         ]
         merged = _merge_page_results(results)
-        assert merged["konfidenz"] == 0.72
+        assert merged["konfidenz"] == 0.95
 
     def test_merge_combines_warnings(self):
         results = [
-            {"plantyp": "grundriss", "konfidenz": 0.9, "raeume": [], "waende": [], "decken": [], "warnungen": ["W1"]},
-            {"plantyp": "grundriss", "konfidenz": 0.9, "raeume": [], "waende": [], "decken": [], "warnungen": ["W2", "W3"]},
+            {"plantyp": "grundriss", "konfidenz": 0.9, "raeume": [{"bezeichnung": "R1"}], "waende": [], "decken": [], "warnungen": ["W1"]},
+            {"plantyp": "grundriss", "konfidenz": 0.9, "raeume": [{"bezeichnung": "R2"}], "waende": [], "decken": [], "warnungen": ["W2", "W3"]},
         ]
         merged = _merge_page_results(results)
         assert len(merged["warnungen"]) == 3
 
     def test_merge_empty_list(self):
         merged = _merge_page_results([])
-        assert merged["konfidenz"] == 1.0
+        # Empty input → no elements → konfidenz 0.0 + "keine relevante Bauplan" warning
+        assert merged["konfidenz"] == 0.0
         assert merged["raeume"] == []
+        assert merged.get("keine_elemente") is True
 
 
 # --- Validation Tests ---
