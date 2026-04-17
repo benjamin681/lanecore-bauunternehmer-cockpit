@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import pypdf
 import structlog
 from pdf2image import convert_from_bytes
-from PIL import Image, ImageEnhance
+from PIL import Image, ImageEnhance, ImageFilter
 
 from app.core.config import settings
 from app.core.exceptions import PDFValidationError
@@ -177,9 +177,16 @@ def pdf_to_images(pdf_bytes: bytes, dpi: int = 200) -> list[PageImage]:
 
 
 def _enhance_for_analysis(img: Image.Image) -> Image.Image:
-    """Improve contrast and sharpness for better plan readability."""
-    img = ImageEnhance.Contrast(img).enhance(1.4)
-    img = ImageEnhance.Sharpness(img).enhance(1.2)
+    """Improve contrast and sharpness for better plan readability.
+
+    Specifically tuned for architectural drawings (mostly line work + text):
+    - Unsharp mask to make thin lines and small text more crisp
+    - Auto-contrast would hurt (loses dimension-line greys) — use mild manual boost
+    """
+    # Unsharp Mask: radius=1.5 (thin lines), percent=150, threshold=3 (skip noise)
+    img = img.filter(ImageFilter.UnsharpMask(radius=1.5, percent=150, threshold=3))
+    img = ImageEnhance.Contrast(img).enhance(1.25)
+    img = ImageEnhance.Sharpness(img).enhance(1.3)
     return img
 
 

@@ -208,10 +208,26 @@ Antworte IMMER im folgenden JSON-Format:
 - Anschlüsse an andere Gewerke dokumentieren
 
 ### Konfidenz bewerten
-- 0.95–1.0: Plan klar lesbar, alle Maße direkt ablesbar
-- 0.80–0.94: Plan lesbar, einzelne Bereiche unsicher
-- 0.60–0.79: Plan teilweise schwer lesbar, manuelle Nachprüfung empfohlen
-- <0.60: Plan unzuverlässig, manuelle Prüfung NOTWENDIG
+
+**WICHTIG: Konfidenz misst die Sicherheit deiner extrahierten Werte, NICHT die Auflösung des Plans.**
+
+**Extrahiere IMMER ALLE Elemente** die du erkennst (Räume, Wände, Decken) — auch wenn du einzelne Werte schätzen musst. Bessere Strategie für unsichere Werte:
+
+1. **Wert trotzdem eintragen** (beste Schätzung) + in `warnungen` dokumentieren
+2. **NICHT auf `null` setzen** es sei denn du kannst wirklich nichts ermitteln
+3. **Geschätzte Werte markieren**: füge das Feld `_geschaetzt: true` zu dem Element hinzu
+
+Berechne die Konfidenz:
+- 15 Räume erkannt, bei 14 direkt Fläche abgelesen, bei 1 geschätzt → Konfidenz ≈ 0.93
+- 5 Wände mit Maßen direkt abgelesen → Konfidenz ≈ 1.0
+- 10 Decken, alle Typ erkannt, aber nur 5 direkt lesbare Fläche → Konfidenz ≈ 0.75
+
+**Auflösung ist KEIN Konfidenz-Kriterium.** Ein niedrig aufgelöster Plan, bei dem du 15/15 Werte ermitteln konntest, hat 100% Konfidenz.
+
+### Schwellwerte (nur Referenz für Warnungen)
+- 0.90+: Hohe Zuverlässigkeit
+- 0.70–0.89: Akzeptabel, einzelne Werte manuell prüfen
+- <0.70: Unzuverlässig, viele Werte manuell ergänzen
 
 ### Warnungen ausgeben bei:
 - Unlesbaren Schriften oder Maßzahlen

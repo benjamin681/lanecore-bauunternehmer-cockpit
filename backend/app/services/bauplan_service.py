@@ -48,7 +48,7 @@ class BauplanAnalyseService:
     def __init__(self) -> None:
         self.client = anthropic.AsyncAnthropic(
             api_key=settings.anthropic_api_key,
-            timeout=120.0,  # 2 Minuten Timeout für große Pläne
+            timeout=300.0,  # 5 Minuten — erlaubt hohe Auflösung + Extended Thinking
         )
         self._prompt_cache: dict[str, str] = {}
 
@@ -247,9 +247,20 @@ class BauplanAnalyseService:
             f"Antworte im JSON-Format gemäß dem System-Prompt."
         )
 
+        # Extended Thinking: lasse Claude länger über den Plan nachdenken
+        # DEFAULT OFF — Extended Thinking mit großen Plan-Bildern überschreitet
+        # oft den 120s Client-Timeout. Nur einschalten via env var, mit extended timeout.
+        import os as _os
+        use_thinking = _os.getenv("CLAUDE_EXTENDED_THINKING", "false").lower() in ("true", "1", "yes")
+        extra_kwargs: dict = {}
+        if use_thinking and "opus" in model.lower():
+            extra_kwargs["thinking"] = {"type": "enabled", "budget_tokens": 3000}
+            # With thinking, max_tokens must exceed thinking budget
+            extra_kwargs.setdefault("max_tokens", 12000)
+
         response = await self._call_claude(
             model=model,
-            max_tokens=8192,
+            max_tokens=extra_kwargs.pop("max_tokens", 8192),
             system=system_prompt,
             messages=[{
                 "role": "user",
@@ -261,10 +272,19 @@ class BauplanAnalyseService:
                     {"type": "text", "text": user_text},
                 ],
             }],
+            **extra_kwargs,
         )
 
         stats = self._calc_stats(model, response)
-        raw_text = response.content[0].text
+        # Extended Thinking adds "thinking" blocks BEFORE "text" blocks — find the text one
+        raw_text = ""
+        for block in response.content:
+            if getattr(block, "type", None) == "text":
+                raw_text = block.text
+                break
+        if not raw_text:
+            # Fallback: first block's text
+            raw_text = getattr(response.content[0], "text", "")
 
         # JSON aus Antwort extrahieren
         parsed = self._extract_json(raw_text)
@@ -336,7 +356,23 @@ class BauplanAnalyseService:
                 konfidenz = float(konfidenz)
             except (TypeError, ValueError):
                 konfidenz = 0.0
-        result["konfidenz"] = konfidenz
+
+        # Element-basierte Konfidenz-Nachberechnung:
+        # Wenn Claude konservativ ist (<80%) aber viele Elemente mit
+        # konkreten Maßen extrahiert hat, rechnen wir die Konfidenz neu.
+        element_confidence = BauplanAnalyseService._compute_element_confidence(result)
+        if element_confidence is not None:
+            # Nimm das Maximum — Claude's Wert als Untergrenze, aber wenn
+            # Element-basiert höher, ist das der zuverlässigere Wert.
+            if element_confidence > konfidenz:
+                log.info(
+                    "konfidenz_raised_by_element_completeness",
+                    claude_konfidenz=konfidenz,
+                    element_konfidenz=element_confidence,
+                )
+                konfidenz = element_confidence
+
+        result["konfidenz"] = round(konfidenz, 2)
         if konfidenz < 0.6:
             warnungen.append(
                 f"Konfidenz sehr niedrig ({konfidenz:.0%}) — manuelle Prüfung NOTWENDIG"
@@ -360,6 +396,60 @@ class BauplanAnalyseService:
 
         result["warnungen"] = warnungen
         return result
+
+    @staticmethod
+    def _compute_element_confidence(result: dict) -> float | None:
+        """Compute confidence based on how complete the extracted elements are.
+
+        Returns a ratio (0..1) of "elements with all key fields" to "total elements",
+        or None if there are too few elements to judge.
+
+        Key fields per type:
+          raum:   bezeichnung + flaeche_m2
+          decke:  raum + typ + (system OR beplankung)
+          wand:   typ + laenge_m
+        """
+        raeume = result.get("raeume") or []
+        decken = result.get("decken") or []
+        waende = result.get("waende") or []
+
+        if not isinstance(raeume, list):
+            raeume = []
+        if not isinstance(decken, list):
+            decken = []
+        if not isinstance(waende, list):
+            waende = []
+
+        total = len(raeume) + len(decken) + len(waende)
+        if total < 3:
+            return None  # Too few elements to compute reliably
+
+        complete = 0
+
+        # Raum: has both bezeichnung and numeric flaeche_m2
+        for r in raeume:
+            if not isinstance(r, dict):
+                continue
+            if r.get("bezeichnung") and isinstance(r.get("flaeche_m2"), (int, float)) and r["flaeche_m2"] > 0:
+                complete += 1
+
+        # Decke: has raum, typ, and either system or beplankung
+        for d in decken:
+            if not isinstance(d, dict):
+                continue
+            if d.get("raum") and d.get("typ") and (d.get("system") or d.get("beplankung")):
+                complete += 1
+
+        # Wand: has typ and laenge_m
+        for w in waende:
+            if not isinstance(w, dict):
+                continue
+            if w.get("typ") and isinstance(w.get("laenge_m"), (int, float)) and w["laenge_m"] > 0:
+                complete += 1
+
+        ratio = complete / total
+        # Cap at 0.95 — perfection requires human verification
+        return min(ratio, 0.95)
 
     # --- Hilfsfunktionen ---
 
