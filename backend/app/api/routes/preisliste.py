@@ -71,17 +71,30 @@ async def upload_preisliste(
     )
 
 
-@router.get("", response_model=list[PreislisteListResponse])
+@router.get("")
 async def list_preislisten(
+    limit: int | None = Query(None, ge=1, le=500),
+    offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
-) -> list[PreislisteListResponse]:
-    """Alle hochgeladenen Preislisten auflisten."""
-    result = await db.execute(
-        select(Preisliste).order_by(Preisliste.created_at.desc())
-    )
+):
+    """Alle Preislisten — optional paginiert.
+
+    Wenn `limit` gesetzt ist → `{items, total, limit, offset, has_more}`.
+    Sonst legacy array response.
+    """
+    from sqlalchemy import func
+
+    total: int | None = None
+    if limit is not None:
+        total = (await db.execute(select(func.count()).select_from(Preisliste))).scalar_one()
+
+    query = select(Preisliste).order_by(Preisliste.created_at.desc())
+    if limit is not None:
+        query = query.limit(limit).offset(offset)
+    result = await db.execute(query)
     preislisten = result.scalars().all()
 
-    return [
+    items = [
         PreislisteListResponse(
             id=p.id,
             anbieter=p.anbieter,
@@ -93,6 +106,15 @@ async def list_preislisten(
         )
         for p in preislisten
     ]
+    if limit is None:
+        return items
+    return {
+        "items": items,
+        "total": total or 0,
+        "limit": limit,
+        "offset": offset,
+        "has_more": (offset + len(items)) < (total or 0),
+    }
 
 
 # ── Static routes BEFORE parameterized /{preisliste_id} ──

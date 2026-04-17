@@ -52,6 +52,10 @@ dependencies = [
     "python-multipart>=0.0.12",  # File uploads
     "structlog>=24.0.0",          # Structured logging
     "tenacity>=8.5.0",            # Retry logic für Claude API
+
+    # Observability & Subscriptions
+    "sentry-sdk[fastapi,sqlalchemy]>=2.0.0",  # Error tracking
+    "stripe>=11.0.0",                          # Subscription billing
 ]
 
 [project.optional-dependencies]

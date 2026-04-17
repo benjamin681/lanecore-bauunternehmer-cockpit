@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SentryInit } from "@/components/SentryInit";
 
 export const metadata: Metadata = {
   title: "LaneCore AI — Bauunternehmer-Cockpit",
@@ -13,7 +14,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="de">
-      <body>{children}</body>
+      <body>
+        <SentryInit />
+        {children}
+      </body>
     </html>
   );
 }

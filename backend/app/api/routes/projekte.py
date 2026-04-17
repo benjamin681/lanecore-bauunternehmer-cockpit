@@ -75,42 +75,59 @@ async def get_angebote_pipeline(
     return pipeline
 
 
-@router.get("", response_model=list[ProjektResponse])
+ALLOWED_SORT_FIELDS = {"auftraggeber", "name", "status", "created_at", "updated_at", "plan_nr"}
+
+
+@router.get("")
 async def list_projekte(
     user_id: str = Depends(get_current_user_id),
-    sort: str = Query("updated_at", description="Sort by: auftraggeber, name, status, created_at, updated_at"),
+    sort: str = Query("updated_at", description="Sort by"),
     order: str = Query("desc", description="asc or desc"),
-    status: str | None = Query(None, description="Filter by status: aktiv, abgeschlossen, archiviert"),
-    search: str | None = Query(None, description="Search in name, auftraggeber, adresse"),
+    status: str | None = Query(None),
+    search: str | None = Query(None),
+    limit: int | None = Query(None, ge=1, le=500, description="Page size — if omitted, returns array (legacy)"),
+    offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
 ):
-    """Alle Projekte des Nutzers auflisten mit Sortierung und Filter."""
-    query = (
-        select(Projekt)
-        .options(selectinload(Projekt.analyse_jobs))
-        .where(Projekt.user_id == user_id)
-    )
+    """Alle Projekte des Nutzers auflisten mit Sortierung + Filter + optionaler Pagination.
 
-    # Filter by status
+    Backward-compatible: wenn `limit` nicht gesetzt ist → legacy array response.
+    Wenn `limit` gesetzt → paginated response `{items, total, limit, offset, has_more}`.
+    """
+    from sqlalchemy import func
+    # Validate sort field
+    if sort not in ALLOWED_SORT_FIELDS:
+        sort = "updated_at"
+
+    base_filters = [Projekt.user_id == user_id]
     if status:
-        query = query.where(Projekt.status == status)
-
-    # Search
+        base_filters.append(Projekt.status == status)
     if search:
         search_pattern = f"%{search}%"
-        query = query.where(
+        base_filters.append(
             Projekt.name.ilike(search_pattern)
             | Projekt.auftraggeber.ilike(search_pattern)
             | Projekt.adresse.ilike(search_pattern)
             | Projekt.bauherr.ilike(search_pattern)
         )
 
-    # Sort
+    # Count query (only needed for paginated response)
+    total: int | None = None
+    if limit is not None:
+        count_stmt = select(func.count()).select_from(Projekt).where(*base_filters)
+        total = (await db.execute(count_stmt)).scalar_one()
+
+    # Main query
+    query = (
+        select(Projekt)
+        .options(selectinload(Projekt.analyse_jobs))
+        .where(*base_filters)
+    )
     sort_column = getattr(Projekt, sort, Projekt.updated_at)
-    if order == "asc":
-        query = query.order_by(sort_column.asc())
-    else:
-        query = query.order_by(sort_column.desc())
+    query = query.order_by(sort_column.asc() if order == "asc" else sort_column.desc())
+
+    if limit is not None:
+        query = query.limit(limit).offset(offset)
 
     result = await db.execute(query)
     projekte = result.scalars().all()
@@ -143,7 +160,16 @@ async def list_projekte(
             analysen=analysen,
         ))
 
-    return responses
+    if limit is None:
+        # Legacy: return array directly
+        return responses
+    return {
+        "items": responses,
+        "total": total or 0,
+        "limit": limit,
+        "offset": offset,
+        "has_more": (offset + len(responses)) < (total or 0),
+    }
 
 
 @router.post("", response_model=ProjektResponse, status_code=201)

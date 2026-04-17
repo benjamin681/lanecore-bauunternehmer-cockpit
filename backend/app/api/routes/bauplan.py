@@ -242,13 +242,16 @@ async def get_analyse_result(
 async def patch_analyse_result(
     job_id: UUID,
     update: AnalyseResultUpdate,
+    user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ) -> AnalyseResultResponse:
     """Analyse-Ergebnis teilweise aktualisieren (Raeume/Decken/Waende).
 
     Erlaubt dem Nutzer, von Claude erkannte Werte manuell zu korrigieren.
-    Gibt das aktualisierte Ergebnis zurueck.
+    Jede Änderung wird im Audit-Log erfasst.
     """
+    from app.services.audit_service import log_field_changes
+
     result = await db.execute(
         select(AnalyseJob)
         .options(selectinload(AnalyseJob.ergebnis))
@@ -261,13 +264,40 @@ async def patch_analyse_result(
 
     erg = job.ergebnis
 
+    # Snapshot old values for audit
+    old_snapshot = {
+        "raeume": list(erg.raeume or []),
+        "decken": list(erg.decken or []),
+        "waende": list(erg.waende or []),
+    }
+
     # Apply partial updates to JSONB columns
+    new_snapshot: dict = {}
     if update.raeume is not None:
         erg.raeume = [r.model_dump() for r in update.raeume]
+        new_snapshot["raeume"] = erg.raeume
     if update.decken is not None:
         erg.decken = [d.model_dump() for d in update.decken]
+        new_snapshot["decken"] = erg.decken
     if update.waende is not None:
         erg.waende = [w.model_dump() for w in update.waende]
+        new_snapshot["waende"] = erg.waende
+
+    # Audit-Log: one entry per changed field
+    if new_snapshot:
+        try:
+            await log_field_changes(
+                db,
+                entity_type="analyse_ergebnis",
+                entity_id=erg.id,
+                user_id=user_id,
+                old={k: v for k, v in old_snapshot.items() if k in new_snapshot},
+                new=new_snapshot,
+            )
+        except Exception:
+            # Audit failure must not block business update
+            import structlog
+            structlog.get_logger().exception("audit_log_failed", job_id=str(job_id))
 
     await db.commit()
     await db.refresh(erg)

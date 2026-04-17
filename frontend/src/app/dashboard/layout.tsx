@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { SubscriptionBanner } from "@/components/SubscriptionBanner";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "📊" },
@@ -11,6 +12,7 @@ const navItems = [
   { href: "/dashboard/preislisten", label: "Preislisten", icon: "💰" },
   { href: "/dashboard/angebote", label: "Angebote", icon: "📋" },
   { href: "/dashboard/projekte", label: "Projekte", icon: "📁" },
+  { href: "/dashboard/abo", label: "Abonnement", icon: "⭐" },
 ];
 
 export default function DashboardLayout({
@@ -115,7 +117,8 @@ export default function DashboardLayout({
         <header className="h-14 md:h-16 bg-white border-b border-gray-200 items-center px-4 md:px-8 hidden md:flex">
           <h1 className="text-lg font-semibold text-gray-800">{currentPage}</h1>
         </header>
-        <div className="p-4 md:p-8">
+        <div className="p-4 md:p-8 space-y-4">
+          <SubscriptionBanner />
           <ErrorBoundary>{children}</ErrorBoundary>
         </div>
       </main>

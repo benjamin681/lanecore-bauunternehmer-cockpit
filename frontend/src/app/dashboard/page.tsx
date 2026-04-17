@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { KpiGridSkeleton, CardSkeleton } from "@/components/Skeleton";
 
 interface DashboardStats {
   projekte: number;
@@ -95,6 +96,7 @@ export default function DashboardPage() {
     [router],
   );
 
+  const isLoading = stats === null && !loadError;
   const s = stats ?? {
     projekte: 0,
     analysen_gesamt: 0,
@@ -136,6 +138,18 @@ export default function DashboardPage() {
           </button>
         </div>
       )}
+      {isLoading && (
+        <>
+          <KpiGridSkeleton />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+            <CardSkeleton lines={3} />
+            <CardSkeleton lines={5} />
+            <CardSkeleton lines={5} />
+          </div>
+        </>
+      )}
+      {!isLoading && (
+      <>
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
         <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
@@ -300,6 +314,8 @@ export default function DashboardPage() {
           </a>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }
