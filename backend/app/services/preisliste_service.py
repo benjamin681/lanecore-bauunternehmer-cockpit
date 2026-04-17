@@ -110,12 +110,12 @@ class PreislisteService:
                 # Convert PDF to images
                 pdf_info = validate_pdf(pdf_bytes)
                 page_images = pdf_to_images(pdf_bytes)
-                images = [pi.image_base64 for pi in page_images[:20]]
+                images_with_mime = [(pi.image_base64, pi.media_type) for pi in page_images[:20]]
 
                 all_produkte = []
 
-                for page_num, img_b64 in enumerate(images, 1):
-                    log.info("extracting_preisliste_page", page=page_num, total=len(images), anbieter=anbieter)
+                for page_num, (img_b64, mime) in enumerate(images_with_mime, 1):
+                    log.info("extracting_preisliste_page", page=page_num, total=len(images_with_mime), anbieter=anbieter)
 
                     try:
                         response = await _call_claude_for_preisliste(
@@ -129,7 +129,7 @@ class PreislisteService:
                                         "type": "image",
                                         "source": {
                                             "type": "base64",
-                                            "media_type": "image/png",
+                                            "media_type": mime,
                                             "data": img_b64,
                                         },
                                     },

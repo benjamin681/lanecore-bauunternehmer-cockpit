@@ -61,9 +61,11 @@ async def run_analyse_pipeline(job_id: uuid.UUID, pdf_bytes: bytes, filename: st
             await _update_job_status(db, job_id, "processing", progress=15)
 
             # 3. Convert PDF to images
-            # 200 DPI ist der Norm-Wert für lesbare Pläne. Bei Production kann
-            # via env var PDF_DPI gesenkt werden falls RAM knapp wird.
-            dpi = int(os.getenv("PDF_DPI", "200"))
+            # DPI-Strategie: Bei 1-Seiter 300 DPI für maximale Detail-Erkennung,
+            # bei mehrseitigen PDFs 200 DPI (RAM-Schonung). Env-Override möglich.
+            pdf_info_tmp = validate_pdf(pdf_bytes)
+            default_dpi = 300 if pdf_info_tmp.num_pages == 1 else 200
+            dpi = int(os.getenv("PDF_DPI", str(default_dpi)))
             page_images = pdf_to_images(pdf_bytes, dpi=dpi)
             total_pages = len(page_images)
             await _update_job_status(db, job_id, "processing", progress=20)
@@ -80,7 +82,9 @@ async def run_analyse_pipeline(job_id: uuid.UUID, pdf_bytes: bytes, filename: st
                 await _update_job_status(db, job_id, "processing", progress=progress)
 
                 log.info("analysing_page", job_id=str(job_id), page=page_img.page_num, total=total_pages)
-                result = await analyse_service.analyse_page(page_img.image_base64, page_img.page_num)
+                result = await analyse_service.analyse_page(
+                    page_img.image_base64, page_img.page_num, media_type=page_img.media_type,
+                )
                 page_results.append(result)
 
                 # Track stats

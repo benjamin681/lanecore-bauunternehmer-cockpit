@@ -62,12 +62,14 @@ class BauplanAnalyseService:
         """Claude API call with automatic retry on rate limit / timeout."""
         return await self.client.messages.create(**kwargs)
 
-    async def analyse_page(self, image_base64: str, page_num: int) -> dict:
+    async def analyse_page(
+        self, image_base64: str, page_num: int, media_type: str = "image/png",
+    ) -> dict:
         """Analysiert eine einzelne Planseite. Returns structured dict + stats."""
-        log.info("analysing_bauplan_page", page=page_num)
+        log.info("analysing_bauplan_page", page=page_num, media_type=media_type)
 
         # Schritt 1: Plantyp klassifizieren + Basis-Metadaten (Sonnet — günstig)
-        plantyp, classify_stats, metadata = await self._classify_plantyp(image_base64)
+        plantyp, classify_stats, metadata = await self._classify_plantyp(image_base64, media_type)
         log.info(
             "plantyp_classified",
             page=page_num,
@@ -87,7 +89,7 @@ class BauplanAnalyseService:
 
         # Schritt 2: Detail-Analyse (Opus — genau), mit Klassifikations-Kontext
         parsed_result, analyse_stats = await self._detail_analyse(
-            image_base64, page_num, plantyp, classification_metadata=metadata,
+            image_base64, page_num, plantyp, classification_metadata=metadata, media_type=media_type,
         )
 
         # Schritt 3: Validierung
@@ -114,7 +116,9 @@ class BauplanAnalyseService:
 
     # --- Plantyp-Klassifikation ---
 
-    async def _classify_plantyp(self, image_base64: str) -> tuple[PlanTyp, AnalyseCallStats, dict]:
+    async def _classify_plantyp(
+        self, image_base64: str, media_type: str = "image/png",
+    ) -> tuple[PlanTyp, AnalyseCallStats, dict]:
         """Klassifiziert den Plantyp und extrahiert Basis-Metadaten (günstig mit Sonnet).
 
         Returns:
@@ -130,7 +134,7 @@ class BauplanAnalyseService:
                 "content": [
                     {
                         "type": "image",
-                        "source": {"type": "base64", "media_type": "image/png", "data": image_base64},
+                        "source": {"type": "base64", "media_type": media_type, "data": image_base64},
                     },
                     {
                         "type": "text",
@@ -184,6 +188,7 @@ class BauplanAnalyseService:
         page_num: int,
         plantyp: PlanTyp,
         classification_metadata: dict | None = None,
+        media_type: str = "image/png",
     ) -> tuple[dict, AnalyseCallStats]:
         """Detaillierte Bauplan-Analyse mit Opus — plantyp-spezifisch.
 
@@ -251,7 +256,7 @@ class BauplanAnalyseService:
                 "content": [
                     {
                         "type": "image",
-                        "source": {"type": "base64", "media_type": "image/png", "data": image_base64},
+                        "source": {"type": "base64", "media_type": media_type, "data": image_base64},
                     },
                     {"type": "text", "text": user_text},
                 ],

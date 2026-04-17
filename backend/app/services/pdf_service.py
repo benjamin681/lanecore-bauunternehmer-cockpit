@@ -27,11 +27,12 @@ class PDFInfo:
 
 @dataclass
 class PageImage:
-    """A single PDF page rendered as base64 PNG."""
+    """A single PDF page rendered as base64 image."""
     page_num: int        # 1-based
-    image_base64: str    # PNG base64
+    image_base64: str    # base64-encoded image
     width_px: int
     height_px: int
+    media_type: str = "image/png"  # "image/png" or "image/jpeg"
 
 
 def validate_pdf(pdf_bytes: bytes) -> PDFInfo:
@@ -139,20 +140,23 @@ def pdf_to_images(pdf_bytes: bytes, dpi: int = 200) -> list[PageImage]:
             # Enhance for better OCR
             img = _enhance_for_analysis(img)
 
-            # Scale down if too large for Claude Vision (max ~2048px on longest side)
-            img = _scale_for_vision(img, max_size=2048)
+            # Claude Vision accepts up to 8000x8000 px and 5MB per image.
+            # For construction plans we want MAX detail — only scale if really huge.
+            # Target: ~3500px longest side keeps plan legibility without hitting 5MB.
+            import os as _os
+            max_px = int(_os.getenv("VISION_MAX_PX", "3500"))
+            img = _scale_for_vision(img, max_size=max_px)
 
-            # Encode to base64
-            buffer = io.BytesIO()
-            img.save(buffer, format="PNG", optimize=True)
-            png_bytes = buffer.getvalue()
-            image_base64 = base64.b64encode(png_bytes).decode("utf-8")
+            # Encode to base64 — keep trying lower quality until under 4.5MB
+            image_base64, buffer, media_type = _encode_under_limit(img, max_bytes=int(4.5 * 1024 * 1024))
+            png_bytes = buffer.getvalue() if buffer else b""
 
             results.append(PageImage(
                 page_num=page_num,
                 image_base64=image_base64,
                 width_px=img.width,
                 height_px=img.height,
+                media_type=media_type,
             ))
         finally:
             # Always free memory, also on exceptions
@@ -189,6 +193,44 @@ def _scale_for_vision(img: Image.Image, max_size: int = 2048) -> Image.Image:
     new_size = (int(img.width * ratio), int(img.height * ratio))
     log.info("image_scaled", original=img.size, scaled=new_size)
     return img.resize(new_size, Image.LANCZOS)
+
+
+def _encode_under_limit(img: Image.Image, max_bytes: int = 4_500_000) -> tuple[str, io.BytesIO, str]:
+    """Encode image to base64; progressively reduce size if over max_bytes.
+
+    Returns (base64_str, buffer, media_type).
+
+    Strategy:
+      1. Try PNG optimized
+      2. If too big → JPEG q=92
+      3. If still too big → scale down 15% and retry JPEG
+    """
+    # Attempt 1: PNG
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG", optimize=True)
+    data = buffer.getvalue()
+    if len(data) <= max_bytes:
+        return base64.b64encode(data).decode("utf-8"), buffer, "image/png"
+
+    # Attempt 2: JPEG q=92 (baupläne sind mostly B/W, kompression OK)
+    buffer2 = io.BytesIO()
+    img_rgb = img.convert("RGB") if img.mode != "RGB" else img
+    img_rgb.save(buffer2, format="JPEG", quality=92, optimize=True)
+    data = buffer2.getvalue()
+    if len(data) <= max_bytes:
+        log.info("image_encoded_jpeg", reason="png_too_big", size_mb=round(len(data)/1_000_000, 2))
+        return base64.b64encode(data).decode("utf-8"), buffer2, "image/jpeg"
+
+    # Attempt 3: Scale 85% + JPEG q=90
+    new_w = int(img.width * 0.85)
+    new_h = int(img.height * 0.85)
+    img_scaled = img.resize((new_w, new_h), Image.LANCZOS)
+    img_scaled_rgb = img_scaled.convert("RGB") if img_scaled.mode != "RGB" else img_scaled
+    buffer3 = io.BytesIO()
+    img_scaled_rgb.save(buffer3, format="JPEG", quality=90, optimize=True)
+    data = buffer3.getvalue()
+    log.warning("image_shrunk_to_fit", final_size_mb=round(len(data)/1_000_000, 2), new_dim=(new_w, new_h))
+    return base64.b64encode(data).decode("utf-8"), buffer3, "image/jpeg"
 
 
 def _classify_page_format(width_mm: float, height_mm: float) -> str:
