@@ -1,5 +1,6 @@
 """Analyse-Pipeline — orchestrates full PDF→Claude→DB workflow as background task."""
 
+import os
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -59,8 +60,10 @@ async def run_analyse_pipeline(job_id: uuid.UUID, pdf_bytes: bytes, filename: st
             await _update_s3_key(db, job_id, s3_key)
             await _update_job_status(db, job_id, "processing", progress=15)
 
-            # 3. Convert PDF to images (lower DPI in production to fit 512MB RAM)
-            dpi = 150 if settings.app_env == "production" else 200
+            # 3. Convert PDF to images
+            # 200 DPI ist der Norm-Wert für lesbare Pläne. Bei Production kann
+            # via env var PDF_DPI gesenkt werden falls RAM knapp wird.
+            dpi = int(os.getenv("PDF_DPI", "200"))
             page_images = pdf_to_images(pdf_bytes, dpi=dpi)
             total_pages = len(page_images)
             await _update_job_status(db, job_id, "processing", progress=20)
