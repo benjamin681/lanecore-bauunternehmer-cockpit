@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { api, LVDetail, Position } from "@/lib/api";
+import { api, Job, LVDetail, Position, pollJob } from "@/lib/api";
 import { fmtEur, fmtNum } from "@/lib/format";
 
 type Edit = { field: "menge" | "einheit" | "kurztext" | "erkanntes_system" | "ep"; value: string } | null;
@@ -60,6 +60,21 @@ export default function LvDetailPage() {
       await load();
     } catch (e: any) {
       toast.error(e?.detail || "Speichern fehlgeschlagen");
+    }
+  }
+
+  async function retryParsing() {
+    setBusy(true);
+    try {
+      const job = await api<Job>(`/lvs/${id}/retry-parse`, { method: "POST" });
+      toast.info("Parsing neu gestartet");
+      await pollJob(job.id, { onProgress: () => {} });
+      toast.success("Parsing fertig");
+      await load();
+    } catch (e: any) {
+      toast.error(`Neustart fehlgeschlagen: ${e?.detail || e?.message}`);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -142,6 +157,25 @@ export default function LvDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Parsing-Hinweis wenn stuck */}
+      {(lv.status === "queued" || lv.status === "error" || lv.positionen_gesamt === 0) && (
+        <div className="rounded-xl bg-warning-500/10 border border-warning-500/30 p-4 flex items-center justify-between gap-4">
+          <div>
+            <div className="font-medium text-slate-900">
+              {lv.status === "error" ? "Parsing fehlgeschlagen" : "Parsing nicht abgeschlossen"}
+            </div>
+            <div className="text-sm text-slate-600 mt-0.5">
+              Das LV hat noch keine Positionen. Starte das Parsing neu — der Upload wurde
+              gespeichert.
+            </div>
+          </div>
+          <Button onClick={retryParsing} disabled={busy}>
+            <Play className="w-4 h-4" />
+            {busy ? "Läuft…" : "Parsing neu starten"}
+          </Button>
+        </div>
+      )}
 
       {/* Action-Bar */}
       <div className="rounded-xl bg-white border border-slate-200 p-4 flex items-center gap-2 flex-wrap">

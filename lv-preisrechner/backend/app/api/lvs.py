@@ -68,6 +68,54 @@ async def upload_lv_async(
     return JobOut.model_validate(job)
 
 
+@router.post("/{lv_id}/retry-parse", response_model=JobOut, status_code=202)
+def retry_parse_lv(
+    lv_id: str,
+    user: CurrentUser,
+    db: DbSession,
+    background_tasks: BackgroundTasks,
+) -> JobOut:
+    """Neustart des Parse-Jobs für ein LV, das in 'queued' oder 'error' hängt.
+
+    Liest das Original-PDF aus dem Upload-Ordner und startet den Background-Task neu.
+    """
+    from pathlib import Path
+
+    from app.models.position import Position
+    from app.services.jobs import enqueue_job, run_parse_lv
+
+    lv = db.query(LV).filter(LV.id == lv_id, LV.tenant_id == user.tenant_id).first()
+    if not lv:
+        raise HTTPException(status_code=404, detail="LV nicht gefunden")
+    if not lv.original_pdf_pfad:
+        raise HTTPException(status_code=400, detail="Kein Original-PDF gespeichert")
+    pdf_path = Path(lv.original_pdf_pfad)
+    if not pdf_path.exists():
+        raise HTTPException(status_code=404, detail="Original-PDF verloren (Disk)")
+
+    pdf_bytes = pdf_path.read_bytes()
+
+    # Alte Positionen löschen
+    db.query(Position).filter(Position.lv_id == lv.id).delete()
+    lv.status = "queued"
+    lv.positionen_gesamt = 0
+    lv.positionen_gematcht = 0
+    lv.positionen_unsicher = 0
+    lv.projekt_name = ""
+    lv.auftraggeber = ""
+    db.commit()
+
+    job = enqueue_job(
+        db, tenant_id=user.tenant_id, kind="parse_lv",
+        target_id=lv.id, target_kind="lv",
+    )
+    background_tasks.add_task(
+        run_parse_lv, job_id=job.id, tenant_id=user.tenant_id,
+        lv_id=lv.id, pdf_bytes=pdf_bytes,
+    )
+    return JobOut.model_validate(job)
+
+
 @router.post("/upload", response_model=LVDetail, status_code=201)
 async def upload_lv(
     user: CurrentUser,

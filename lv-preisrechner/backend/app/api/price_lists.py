@@ -75,6 +75,54 @@ async def upload_price_list_async(
     return JobOut.model_validate(job)
 
 
+@router.post("/{price_list_id}/retry-parse", response_model=JobOut, status_code=202)
+def retry_parse_price_list(
+    price_list_id: str,
+    user: CurrentUser,
+    db: DbSession,
+    background_tasks: BackgroundTasks,
+) -> JobOut:
+    """Neustart des Parse-Jobs für eine Preisliste, die in 'queued' oder 'error' hängt."""
+    from pathlib import Path
+
+    from app.services.jobs import enqueue_job, run_parse_price_list
+
+    pl = (
+        db.query(PriceList)
+        .filter(PriceList.id == price_list_id, PriceList.tenant_id == user.tenant_id)
+        .first()
+    )
+    if not pl:
+        raise HTTPException(status_code=404, detail="Preisliste nicht gefunden")
+    if not pl.original_pdf_pfad:
+        raise HTTPException(status_code=400, detail="Kein Original-PDF gespeichert")
+    pdf_path = Path(pl.original_pdf_pfad)
+    if not pdf_path.exists():
+        raise HTTPException(status_code=404, detail="Original-PDF verloren (Disk)")
+
+    pdf_bytes = pdf_path.read_bytes()
+
+    # Alte Einträge löschen
+    db.query(PriceEntry).filter(PriceEntry.price_list_id == pl.id).delete()
+    pl.status = "queued"
+    pl.eintraege_gesamt = 0
+    pl.eintraege_unsicher = 0
+    db.commit()
+
+    job = enqueue_job(
+        db, tenant_id=user.tenant_id, kind="parse_price_list",
+        target_id=pl.id, target_kind="price_list",
+    )
+    background_tasks.add_task(
+        run_parse_price_list,
+        job_id=job.id,
+        tenant_id=user.tenant_id,
+        price_list_id=pl.id,
+        pdf_bytes=pdf_bytes,
+    )
+    return JobOut.model_validate(job)
+
+
 @router.post("/upload", response_model=PriceListDetail, status_code=201)
 async def upload_price_list(
     user: CurrentUser,
