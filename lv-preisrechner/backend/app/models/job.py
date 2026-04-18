@@ -25,10 +25,12 @@ class Job(Base):
     target_id: ID des Ziel-Objekts (price_list_id oder lv_id)
     """
 
-    __tablename__ = "jobs"
+    __tablename__ = "lvp_jobs"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
-    tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id"), nullable=False, index=True)
+    tenant_id: Mapped[str] = mapped_column(
+        ForeignKey("lvp_tenants.id"), nullable=False, index=True
+    )
 
     kind: Mapped[str] = mapped_column(String(50), nullable=False)
     status: Mapped[str] = mapped_column(String(20), default="queued")

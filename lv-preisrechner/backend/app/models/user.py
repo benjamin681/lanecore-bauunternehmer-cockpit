@@ -18,10 +18,12 @@ def _now() -> datetime:
 
 
 class User(Base):
-    __tablename__ = "users"
+    __tablename__ = "lvp_users"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
-    tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id"), nullable=False, index=True)
+    tenant_id: Mapped[str] = mapped_column(
+        ForeignKey("lvp_tenants.id"), nullable=False, index=True
+    )
 
     email: Mapped[str] = mapped_column(String(200), unique=True, nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(String(200), nullable=False)

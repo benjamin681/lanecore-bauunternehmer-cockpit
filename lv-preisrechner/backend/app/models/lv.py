@@ -18,10 +18,12 @@ def _now() -> datetime:
 
 
 class LV(Base):
-    __tablename__ = "lvs"
+    __tablename__ = "lvp_lvs"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
-    tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id"), nullable=False, index=True)
+    tenant_id: Mapped[str] = mapped_column(
+        ForeignKey("lvp_tenants.id"), nullable=False, index=True
+    )
 
     projekt_name: Mapped[str] = mapped_column(String(300), default="")
     auftraggeber: Mapped[str] = mapped_column(String(300), default="")

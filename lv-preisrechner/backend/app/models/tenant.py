@@ -18,7 +18,7 @@ def _now() -> datetime:
 
 
 class Tenant(Base):
-    __tablename__ = "tenants"
+    __tablename__ = "lvp_tenants"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
     name: Mapped[str] = mapped_column(String(200), nullable=False)

@@ -18,10 +18,12 @@ def _now() -> datetime:
 
 
 class PriceList(Base):
-    __tablename__ = "price_lists"
+    __tablename__ = "lvp_price_lists"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
-    tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id"), nullable=False, index=True)
+    tenant_id: Mapped[str] = mapped_column(
+        ForeignKey("lvp_tenants.id"), nullable=False, index=True
+    )
 
     haendler: Mapped[str] = mapped_column(String(200), nullable=False)
     niederlassung: Mapped[str] = mapped_column(String(200), default="")

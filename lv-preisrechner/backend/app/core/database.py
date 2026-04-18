@@ -10,7 +10,12 @@ from app.core.config import settings
 
 
 class Base(DeclarativeBase):
-    """Shared SQLAlchemy base for all ORM models."""
+    """Shared SQLAlchemy base for all ORM models.
+
+    Alle Tabellen werden mit Prefix `lvp_` angelegt (LV-Preisrechner),
+    um Kollisionen mit anderen Anwendungen in derselben Postgres-DB
+    zu vermeiden (z.B. geteilte Cockpit-DB).
+    """
 
 
 def _build_engine():

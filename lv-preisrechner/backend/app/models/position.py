@@ -13,10 +13,10 @@ def _uuid() -> str:
 
 
 class Position(Base):
-    __tablename__ = "positions"
+    __tablename__ = "lvp_positions"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
-    lv_id: Mapped[str] = mapped_column(ForeignKey("lvs.id"), nullable=False, index=True)
+    lv_id: Mapped[str] = mapped_column(ForeignKey("lvp_lvs.id"), nullable=False, index=True)
 
     reihenfolge: Mapped[int] = mapped_column(default=0)
 

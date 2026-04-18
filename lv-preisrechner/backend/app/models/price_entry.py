@@ -13,14 +13,14 @@ def _uuid() -> str:
 
 
 class PriceEntry(Base):
-    __tablename__ = "price_entries"
+    __tablename__ = "lvp_price_entries"
     __table_args__ = (
-        Index("ix_price_entries_list_dna", "price_list_id", "dna"),
+        Index("ix_lvp_price_entries_list_dna", "price_list_id", "dna"),
     )
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
     price_list_id: Mapped[str] = mapped_column(
-        ForeignKey("price_lists.id"), nullable=False, index=True
+        ForeignKey("lvp_price_lists.id"), nullable=False, index=True
     )
 
     art_nr: Mapped[str] = mapped_column(String(100), default="")
