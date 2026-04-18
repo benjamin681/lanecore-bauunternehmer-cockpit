@@ -10,14 +10,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Python-Deps zuerst (Layer-Caching)
+# Source + pyproject zusammen kopieren (pip install . braucht app/)
 COPY pyproject.toml ./
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir .
-
-# Source
 COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini ./
+
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir .
 
 # Render / Fly injecten PORT — fallback 8000
 ENV PORT=8000
