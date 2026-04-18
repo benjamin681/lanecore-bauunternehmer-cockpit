@@ -12,7 +12,13 @@ Dieser Kontext gilt für alle Claude-Code-Sessions in diesem Projekt.
 
 **Warum:** Massenermittlung aus Bauplänen dauert heute 4–8h manuell. Claude-API kann das in <5min automatisieren.
 
-**MVP-Fokus:** Säule 1 (Bauplan-Analyse) muss zu 100% korrekt sein. Ohne korrekte Massenermittlung kein profitables Angebot. Lieber langsam und präzise als schnell und falsch.
+**MVP-Fokus (aktualisiert 04/2026):** Nach Kundengespräch vom 17.04.2026 ist der sofortige Bedarf klar:
+- Harun's Vater bekommt LVs (Leistungsverzeichnisse) als PDF vom Auftraggeber
+- Er will seine Kemmler-Einkaufspreise dagegen matchen
+- Er will ein zu 100% ausgefülltes LV als PDF zurückbekommen
+- **Das neue MVP ist der LV-Preisrechner** — nicht Bauplan-Analyse, sondern LV-Bepreisung
+- LV-Preisrechner wird als **separates Projekt** gebaut (docs/architektur-entscheidung-lv-preisrechner.md)
+- Time-to-Revenue: ~1 Woche vs ~4 Wochen für Cockpit-Integration
 
 ---
 
@@ -140,3 +146,26 @@ Spezialisierte Agents in `.claude/agents/`:
 - Multi-Tenant (erst nach Pilot)
 - Eigene OCR (Claude Vision reicht)
 - Anbindung an DATEV / Buchhaltung
+
+---
+
+## LV-Preisrechner (Neues MVP — separates Projekt)
+
+Siehe `docs/lv-preisrechner-spec.md` für vollständige Spezifikation.
+
+**Kern-Flow:**
+1. Input: LV als PDF (Hauptfall), GAEB X83, oder Excel
+2. Claude extrahiert Positionen (OZ, Menge, Einheit, Kurztextbeschreibung)
+3. Matching: Leistungstext → Materialrezept → Kemmler-Preise
+4. EP-Kalkulation: Material + Lohn + Zuschläge (BGK/AGK/W+G)
+5. Output: Ausgefülltes Original-PDF mit EP und GP
+
+**Matching-Prinzip (Produkt-DNA):**
+- NICHT über Artikelnummern, sondern: Hersteller + Kategorie + Produktname + Abmessungen + Variante
+- Diese Kombination ist bei jedem Händler gleich — nur Artikelnummer und Preis unterscheiden sich
+
+**Bekannte Preisdaten:** `knowledge/kemmler-preise-042026.json`
+
+**Offene Fragen an Kunde:** `docs/offene-fragen-harun.md`
+
+**Proof of Concept:** `docs/proof-of-concept-ergebnisse.md` (Habau GmbH, 58 Seiten, 16/16 Positionen erfolgreich)

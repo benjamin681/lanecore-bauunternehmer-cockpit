@@ -1,0 +1,77 @@
+{
+  "haendler": "Kemmler Baustoffe & Fliesen",
+  "niederlassung": "Neu-Ulm",
+  "stand": "04/2026",
+  "notiz": "Produkt-DNA-Matching: Hersteller + Kategorie + Produktname + Abmessungen + Variante — NICHT Artikelnummer",
+  "preislisten": {
+    "liste_a": {
+      "gipskarton": {
+        "knauf_gkb_12_5mm_2000x1250": {"art_nr": "3530100012", "preis": 3.00, "einheit": "€/m²", "dna": "Knauf|GKB|Standard|12.5mm|2000x1250"},
+        "knauf_gkb_impr_12_5mm": {"art_nr": "3530100014", "preis": 4.50, "einheit": "€/m²", "dna": "Knauf|GKBi|Imprägniert|12.5mm|Standard"},
+        "knauf_feuerschutz_15mm": {"art_nr": "3530100027", "preis": 4.43, "einheit": "€/m²", "dna": "Knauf|GKF|Feuerschutz|15mm|Standard"},
+        "knauf_feuerschutz_piano_12_5mm": {"art_nr": "3530100028", "preis": 3.35, "einheit": "€/m²", "dna": "Knauf|GKF|Feuerschutz Piano|12.5mm|Standard"},
+        "knauf_gkb_impr_12_5mm_v2": {"art_nr": "3530100032", "preis": 4.50, "einheit": "€/m²", "dna": "Knauf|GKBi|Imprägniert|12.5mm|v2"},
+        "knauf_gkb_9_5mm": {"art_nr": "3530100036", "preis": 3.32, "einheit": "€/m²", "dna": "Knauf|GKB|Standard|9.5mm|Standard"},
+        "siniat_gkb_12_5mm": {"art_nr": "3530100100", "preis": 2.45, "einheit": "€/m²", "dna": "Siniat|GKB|Standard|12.5mm|Standard"},
+        "siniat_gkb_impr_12_5mm": {"art_nr": "3530100101", "preis": 3.78, "einheit": "€/m²", "dna": "Siniat|GKBi|Imprägniert|12.5mm|Standard"},
+        "siniat_feuerschutz_12_5mm": {"art_nr": "3530100126", "preis": 3.00, "einheit": "€/m²", "dna": "Siniat|GKF|Feuerschutz|12.5mm|Standard"},
+        "siniat_feuerschutz_impr_12_5mm": {"art_nr": "3530100130", "preis": 4.50, "einheit": "€/m²", "dna": "Siniat|GKFi|Feuerschutz Imprägniert|12.5mm|Standard"},
+        "knauf_diamant_12_5mm": {"art_nr": "3530250001", "preis": 6.45, "einheit": "€/m²", "dna": "Knauf|GKB|Diamant|12.5mm|Standard"},
+        "siniat_laplura_12_5mm": {"art_nr": "3530250012", "preis": 5.90, "einheit": "€/m²", "dna": "Siniat|GKB|LaPlura|12.5mm|Standard"},
+        "knauf_fireboard_15mm": {"art_nr": "3530350004", "preis": 17.25, "einheit": "€/m²", "dna": "Knauf|Fireboard|Hochleistungs-Brandschutz|15mm|Standard"},
+        "knauf_fireboard_20mm": {"art_nr": "3530350005", "preis": 17.90, "einheit": "€/m²", "dna": "Knauf|Fireboard|Hochleistungs-Brandschutz|20mm|Standard"},
+        "knauf_fireboard_25mm": {"art_nr": "3530350006", "preis": 19.40, "einheit": "€/m²", "dna": "Knauf|Fireboard|Hochleistungs-Brandschutz|25mm|Standard"},
+        "knauf_einmann_12_5mm_2600x600": {"art_nr": "3530150008", "preis": 3.25, "einheit": "€/m²", "dna": "Knauf|GKB|Einmannplatte|12.5mm|2600x600"},
+        "knauf_einmann_impr_12_5mm_2600x600": {"art_nr": "3530150010", "preis": 4.79, "einheit": "€/m²", "dna": "Knauf|GKBi|Einmannplatte Imprägniert|12.5mm|2600x600"},
+        "siniat_einmann_12_5mm": {"art_nr": "3530150044", "preis": 2.92, "einheit": "€/m²", "dna": "Siniat|GKB|Einmannplatte|12.5mm|Standard"},
+        "siniat_massiv_25mm_gkf": {"art_nr": "3530200035", "preis": 7.08, "einheit": "€/m²", "dna": "Siniat|GKF|Massivbauplatte|25mm|Standard"},
+        "siniat_massiv_20mm_gkf": {"art_nr": "3530200037", "preis": 6.90, "einheit": "€/m²", "dna": "Siniat|GKF|Massivbauplatte|20mm|Standard"},
+        "knauf_silentboard_12_5mm": {"art_nr": "3530550011", "preis": 15.65, "einheit": "€/m²", "dna": "Knauf|GKB|Silentboard|12.5mm|Standard"}
+      },
+      "daemmung": {
+        "rockwool_sonorock_40mm": {"art_nr": "3515100017", "preis": 2.84, "einheit": "€/m²", "dna": "Rockwool|Mineralwolle|Sonorock|40mm|Standard"},
+        "rockwool_sonorock_50mm": {"art_nr": "3515100018", "preis": 3.86, "einheit": "€/m²", "dna": "Rockwool|Mineralwolle|Sonorock|50mm|Standard"},
+        "rockwool_sonorock_60mm": {"art_nr": "3515100019", "preis": 4.61, "einheit": "€/m²", "dna": "Rockwool|Mineralwolle|Sonorock|60mm|Standard"},
+        "rockwool_sonorock_80mm": {"art_nr": "3515100020", "preis": 6.16, "einheit": "€/m²", "dna": "Rockwool|Mineralwolle|Sonorock|80mm|Standard"},
+        "knauf_thermolan_tp115_60mm": {"art_nr": "3515100102", "preis": 2.50, "einheit": "€/m²", "dna": "Knauf|Mineralwolle|Thermolan TP115|60mm|Standard"},
+        "knauf_thermolan_tp115_40mm": {"art_nr": "3515100109", "preis": 1.67, "einheit": "€/m²", "dna": "Knauf|Mineralwolle|Thermolan TP115|40mm|Standard"},
+        "knauf_thermolan_tp115_80mm": {"art_nr": "3515100124", "preis": 3.28, "einheit": "€/m²", "dna": "Knauf|Mineralwolle|Thermolan TP115|80mm|Standard"}
+      },
+      "schrauben": {
+        "gipsplattenschraube_3_5x25_500": {"art_nr": "3555100023", "preis": 21.07, "einheit": "€/Paket (500 Stk)", "dna": "Gipsplattenschraube|Schnellbau|3.5x25|500er Paket"},
+        "gipsplattenschraube_3_5x45_500": {"art_nr": "3555100023", "preis": 21.07, "einheit": "€/Paket (500 Stk)", "dna": "Gipsplattenschraube|Schnellbau|3.5x45|500er Paket"},
+        "gipsplattenschraube_3_9x25_1000_fein": {"art_nr": "3555100024", "preis": 12.39, "einheit": "€/Paket (1000 Stk)", "dna": "Gipsplattenschraube|Feingewinde|3.9x25|1000er Paket"},
+        "gipsplattenschraube_3_9x35_1000_fein": {"art_nr": "3555100025", "preis": 14.24, "einheit": "€/Paket (1000 Stk)", "dna": "Gipsplattenschraube|Feingewinde|3.9x35|1000er Paket"}
+      },
+      "spachtel": {
+        "knauf_multifinish_universal_25kg": {"art_nr": "3010300013", "preis": 1.36, "einheit": "€/kg", "dna": "Knauf|Spachtelmasse|Multifinish Universal|25kg|Standard"}
+      },
+      "revisionsklappen": {
+        "knauf_revo_12_5mm_200x200": {"art_nr": "3550100001", "preis": 29.66, "einheit": "€/Stk", "dna": "Knauf|Revisionsklappe|GKB|12.5mm|200x200"},
+        "knauf_revo_12_5mm_300x300": {"art_nr": "3550100002", "preis": 35.76, "einheit": "€/Stk", "dna": "Knauf|Revisionsklappe|GKB|12.5mm|300x300"},
+        "knauf_revo_12_5mm_400x400": {"art_nr": "3550100003", "preis": 43.77, "einheit": "€/Stk", "dna": "Knauf|Revisionsklappe|GKB|12.5mm|400x400"},
+        "knauf_revo_12_5mm_500x500": {"art_nr": "3550100004", "preis": 51.86, "einheit": "€/Stk", "dna": "Knauf|Revisionsklappe|GKB|12.5mm|500x500"},
+        "knauf_revo_12_5mm_600x600": {"art_nr": "3550100005", "preis": 59.93, "einheit": "€/Stk", "dna": "Knauf|Revisionsklappe|GKB|12.5mm|600x600"}
+      }
+    },
+    "liste_b": {
+      "notiz": "Liste B — Preise für größere Abnahmemengen / andere Konditionsklasse",
+      "gipskarton": {
+        "knauf_gkb_12_5mm_2000x1250": {"art_nr": "3530100012", "preis": 3.30, "einheit": "€/m²", "dna": "Knauf|GKB|Standard|12.5mm|2000x1250"},
+        "knauf_gkb_impr_12_5mm": {"art_nr": "3530100014", "preis": 4.80, "einheit": "€/m²", "dna": "Knauf|GKBi|Imprägniert|12.5mm|Standard"},
+        "knauf_feuerschutz_15mm": {"art_nr": "3530100027", "preis": 4.46, "einheit": "€/m²", "dna": "Knauf|GKF|Feuerschutz|15mm|Standard"},
+        "knauf_feuerschutz_piano_12_5mm": {"art_nr": "3530100028", "preis": 3.75, "einheit": "€/m²", "dna": "Knauf|GKF|Feuerschutz Piano|12.5mm|Standard"},
+        "siniat_gkb_12_5mm": {"art_nr": "3530100100", "preis": 3.10, "einheit": "€/m²", "dna": "Siniat|GKB|Standard|12.5mm|Standard"},
+        "siniat_feuerschutz_12_5mm": {"art_nr": "3530100126", "preis": 3.50, "einheit": "€/m²", "dna": "Siniat|GKF|Feuerschutz|12.5mm|Standard"},
+        "knauf_diamant_12_5mm": {"art_nr": "3530250001", "preis": 6.96, "einheit": "€/m²", "dna": "Knauf|GKB|Diamant|12.5mm|Standard"},
+        "siniat_laplura_12_5mm": {"art_nr": "3530250012", "preis": 6.50, "einheit": "€/m²", "dna": "Siniat|GKB|LaPlura|12.5mm|Standard"}
+      },
+      "daemmung": {
+        "rockwool_sonorock_40mm": {"art_nr": "3515100017", "preis": 3.05, "einheit": "€/m²", "dna": "Rockwool|Mineralwolle|Sonorock|40mm|Standard"},
+        "rockwool_sonorock_60mm": {"art_nr": "3515100019", "preis": 4.61, "einheit": "€/m²", "dna": "Rockwool|Mineralwolle|Sonorock|60mm|Standard"},
+        "rockwool_sonorock_80mm": {"art_nr": "3515100020", "preis": 6.16, "einheit": "€/m²", "dna": "Rockwool|Mineralwolle|Sonorock|80mm|Standard"},
+        "knauf_thermolan_tp115_60mm": {"art_nr": "3515100102", "preis": 3.13, "einheit": "€/m²", "dna": "Knauf|Mineralwolle|Thermolan TP115|60mm|Standard"}
+      }
+    }
+  }
+}
