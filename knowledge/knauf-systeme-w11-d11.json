@@ -1,0 +1,485 @@
+{
+  "quelle": "Knauf Detailblatt W11.de (01/2024) + D11.de (09/2023)",
+  "stand": "01/2024 (Wände) / 09/2023 (Decken)",
+  "hinweis": "Offizielle Planungsdaten — direkt aus Knauf-Technischen Datenblättern extrahiert. Nur für Metallständerwände im Innenbereich (DIN 4103-1).",
+
+  "wandsysteme": {
+
+    "W111": {
+      "bezeichnung": "Knauf Metallständerwand W111.de – Einfachständerwerk, einlagig beplankt",
+      "beschreibung": "1 Lage Gipsplatten je Seite auf einem Einfachständerwerk",
+      "max_wandhoehe_m": 10.65,
+      "max_rw_dB": 60.9,
+      "max_feuerwiderstand": "F90",
+      "unterkonstruktion": "Einfachständerwerk CW+UW",
+      "typische_cwprofile": ["CW50", "CW75", "CW100", "CW125", "CW150"],
+      "wanddicken_mm": {
+        "CW50": 75,
+        "CW75": 100,
+        "CW100": 125,
+        "CW125": 150,
+        "CW150": 175
+      },
+      "systemvarianten": [
+        {
+          "beplankung": "1x GKB 12,5mm je Seite",
+          "plattentyp": "Knauf Bauplatte",
+          "mindestdicke_mm": 12.5,
+          "gewicht_kgm2": 22,
+          "feuerwiderstand": "ohne",
+          "daemmung_brandschutz": "nicht erforderlich",
+          "rw_dB": {"CW50_40mm_daemm": 44.2, "CW75_60mm": 47.6, "CW100_80mm": 50.0}
+        },
+        {
+          "beplankung": "1x Diamant 12,5mm je Seite",
+          "plattentyp": "Knauf Diamant GKFI",
+          "mindestdicke_mm": 12.5,
+          "gewicht_kgm2": 41,
+          "feuerwiderstand": "F30",
+          "daemmung_brandschutz": "nicht erforderlich",
+          "rw_dB": {"CW50_40mm_daemm": 56.8, "CW75_60mm": 59.7, "CW100_80mm": 60.9}
+        },
+        {
+          "beplankung": "1x Massivbauplatte 25mm je Seite",
+          "plattentyp": "Siniat Massivbauplatte",
+          "mindestdicke_mm": 25,
+          "gewicht_kgm2": 48,
+          "feuerwiderstand": "F30",
+          "daemmung_brandschutz": "nicht erforderlich",
+          "rw_dB": {"CW75_40mm_daemm": 50.2, "CW100_60mm": 51.4, "CW125_80mm": 52.8}
+        },
+        {
+          "beplankung": "1x GKB 12,5mm je Seite",
+          "plattentyp": "Knauf Bauplatte",
+          "mindestdicke_mm": 12.5,
+          "gewicht_kgm2": 22,
+          "feuerwiderstand": "F90",
+          "daemmung_brandschutz": "Mineralwolle S min. 40mm, ≥50 kg/m³",
+          "rw_dB": {"CW50_40mm_daemm": 50.2, "CW75_60mm": 51.4, "CW100_80mm": 52.8}
+        }
+      ],
+      "lv_schluessel": ["W111", "einlagig", "Einfachständer", "1x beplankt", "einfach beplankt"]
+    },
+
+    "W112": {
+      "bezeichnung": "Knauf Metallständerwand W112.de – Einfachständerwerk, zweilagig beplankt",
+      "beschreibung": "2 Lagen Gipsplatten je Seite auf einem Einfachständerwerk. Häufigste Systemklasse in LVs.",
+      "max_wandhoehe_m": 12.0,
+      "max_rw_dB": 70.4,
+      "max_feuerwiderstand": "F90",
+      "unterkonstruktion": "Einfachständerwerk CW+UW",
+      "typische_cwprofile": ["CW50", "CW75", "CW100", "CW125", "CW150"],
+      "wanddicken_mm": {
+        "CW50": 100,
+        "CW75": 125,
+        "CW100": 150,
+        "CW125": 175,
+        "CW150": 200
+      },
+      "systemvarianten": [
+        {
+          "beplankung": "2x GKB 12,5mm je Seite",
+          "plattentyp": "Knauf Bauplatte",
+          "mindestdicke_mm": "2x12,5",
+          "gewicht_kgm2": 41,
+          "feuerwiderstand": "F30",
+          "daemmung_brandschutz": "nicht erforderlich",
+          "rw_dB": {
+            "CW50_40mm": 54.1, "CW75_60mm": 55.9, "CW100_80mm": 58.4
+          }
+        },
+        {
+          "beplankung": "2x GKF Piano 12,5mm je Seite",
+          "plattentyp": "Knauf Feuerschutzplatte Piano",
+          "mindestdicke_mm": "2x12,5",
+          "gewicht_kgm2": 48,
+          "feuerwiderstand": "F90",
+          "daemmung_brandschutz": "nicht erforderlich",
+          "rw_dB": {
+            "CW50_40mm": 56.4, "CW75_60mm": 57.2, "CW100_80mm": 59.8
+          }
+        },
+        {
+          "beplankung": "2x GKB 12,5mm je Seite (Standardvariante F90)",
+          "plattentyp": "Knauf Bauplatte",
+          "mindestdicke_mm": "2x12,5",
+          "gewicht_kgm2": 41,
+          "feuerwiderstand": "F90",
+          "daemmung_brandschutz": "nicht erforderlich",
+          "rw_dB": {
+            "CW50_40mm": 56.4, "CW75_60mm": 57.2, "CW100_80mm": 59.8
+          },
+          "hinweis": "F90 mit GKB nur per Erweiterung zum AbP"
+        },
+        {
+          "beplankung": "2x Diamant 12,5mm je Seite",
+          "plattentyp": "Knauf Diamant GKFI",
+          "mindestdicke_mm": "2x12,5",
+          "gewicht_kgm2": 78,
+          "feuerwiderstand": "F90",
+          "daemmung_brandschutz": "nicht erforderlich",
+          "rw_dB": {
+            "CW50_40mm": 67.5, "CW75_60mm": 69.6, "CW100_80mm": 70.4
+          }
+        },
+        {
+          "beplankung": "1x GKF 12,5mm + 1x GKB 12,5mm je Seite",
+          "plattentyp": "Mischbeplankung (Piano/GKF unten, GKB darüber)",
+          "mindestdicke_mm": "12,5+12,5",
+          "gewicht_kgm2": 52,
+          "feuerwiderstand": "F90",
+          "daemmung_brandschutz": "nicht erforderlich",
+          "rw_dB": {
+            "CW50_40mm": 59.0, "CW75_60mm": 59.7, "CW100_80mm": 63.0
+          }
+        }
+      ],
+      "materialrezept_standard": {
+        "system": "W112, GKB F30, CW75, Ständerachsabstand 625mm",
+        "pro_m2_wand": {
+          "CW75_profil_lfm": {"menge": 1.80, "beschreibung": "CW-Ständer, 625mm Achsabstand → 1,6 lfm/m² + Verschnitt"},
+          "UW75_profil_lfm": {"menge": 0.80, "beschreibung": "UW-Boden+Deckenanschluss (2x lfm/Wandhöhe ÷ Fläche)"},
+          "GKB_12_5mm_m2": {"menge": 4.20, "beschreibung": "2 Lagen × 2 Seiten × 1,05 m² (5% Verschnitt) = 4,2 m²"},
+          "schrauben_TN_3_5x25_stk": {"menge": 35, "beschreibung": "ca. 9 Schrauben/Platte, 2 Lagen"},
+          "fugenband_lfm": {"menge": 0.60, "beschreibung": "Anschluss Boden+Decke+Wand"},
+          "kleinmaterial_pauschal_eur": {"menge": 1.50, "beschreibung": "Dübel, Hänger, Estrichmasse"}
+        }
+      },
+      "lv_schluessel": ["W112", "zweilagig", "2-lagig", "Einfachständer", "W112.de"]
+    },
+
+    "W113": {
+      "bezeichnung": "Knauf Metallständerwand W113.de – Einfachständerwerk, dreilagig beplankt",
+      "beschreibung": "3 Lagen Gipsplatten je Seite. Für hohen Brandschutz und Schallschutz.",
+      "max_wandhoehe_m": 12.0,
+      "max_rw_dB": 71.6,
+      "max_feuerwiderstand": "F90",
+      "wanddicken_mm": {
+        "CW50": 125,
+        "CW75": 150,
+        "CW100": 175
+      },
+      "systemvarianten": [
+        {
+          "beplankung": "3x GKB 12,5mm je Seite",
+          "gewicht_kgm2": 61,
+          "feuerwiderstand": "F30",
+          "daemmung_brandschutz": "nicht erforderlich",
+          "rw_dB": {"CW50_40mm": 58.7, "CW75_60mm": 58.7, "CW100_80mm": 63.9}
+        },
+        {
+          "beplankung": "3x GKF Piano 12,5mm je Seite",
+          "gewicht_kgm2": 70,
+          "feuerwiderstand": "F90",
+          "daemmung_brandschutz": "nicht erforderlich",
+          "rw_dB": {"CW50_40mm": 61.0, "CW75_60mm": 61.1, "CW100_80mm": 64.5}
+        },
+        {
+          "beplankung": "3x Feuerschutzplatte 12,5mm je Seite",
+          "gewicht_kgm2": 82,
+          "feuerwiderstand": "F90",
+          "daemmung_brandschutz": "nicht erforderlich",
+          "rw_dB": {"CW50_40mm": 64.8, "CW75_60mm": 66.3, "CW100_80mm": 67.7}
+        },
+        {
+          "beplankung": "2x Diamant 12,5mm + 1x GKB 12,5mm je Seite",
+          "gewicht_kgm2": 104,
+          "feuerwiderstand": "F90",
+          "daemmung_brandschutz": "nicht erforderlich",
+          "rw_dB": {"CW50_40mm": 71.3, "CW75_60mm": 71.6, "CW100_80mm": 71.3}
+        }
+      ],
+      "lv_schluessel": ["W113", "dreilagig", "3-lagig", "Einfachständer"]
+    },
+
+    "W115": {
+      "bezeichnung": "Knauf Metallständerwand W115.de – Doppelständerwerk entkoppelt",
+      "beschreibung": "Zwei entkoppelte Ständerwerke je mit 2 Lagen Platten. Für Wohnungstrennwände mit erhöhtem Schallschutz.",
+      "max_wandhoehe_m": 9.70,
+      "max_rw_dB": 74.4,
+      "max_feuerwiderstand": "F90",
+      "unterkonstruktion": "Doppelständerwerk entkoppelt (2× CW+UW, auf getrennten UW-Schienen)",
+      "wanddicken_mm": {
+        "2xCW50": 155,
+        "2xCW75": 205,
+        "2xCW100": 255
+      },
+      "systemvarianten": [
+        {
+          "beplankung": "2x GKB 12,5mm je Seite",
+          "gewicht_kgm2": 44,
+          "feuerwiderstand": "F30",
+          "daemmung_brandschutz": "nicht erforderlich",
+          "daemmung_schallschutz": "Mineralwolle mind. 2x40mm empfohlen",
+          "rw_dB": {
+            "D155_daemm2x40": 64.7,
+            "D205_daemm2x60": 66.6,
+            "D255_daemm2x80": 67.6
+          }
+        },
+        {
+          "beplankung": "2x GKB 12,5mm je Seite",
+          "gewicht_kgm2": 50,
+          "feuerwiderstand": "F90",
+          "daemmung_brandschutz": "nicht erforderlich",
+          "rw_dB": {
+            "D155_daemm2x40": 67.3,
+            "D205_daemm2x60": 69.7,
+            "D255_daemm2x80": 71.9
+          }
+        },
+        {
+          "beplankung": "2x GKF 12,5mm je Seite",
+          "gewicht_kgm2": 59,
+          "feuerwiderstand": "F90",
+          "daemmung_brandschutz": "nicht erforderlich",
+          "rw_dB": {
+            "D155_daemm2x40": 69.7,
+            "D205_daemm2x60": 72.2,
+            "D255_daemm2x80": 74.4
+          }
+        },
+        {
+          "beplankung": "1x GKF 12,5mm + 1x GKB 12,5mm je Seite",
+          "gewicht_kgm2": 55,
+          "feuerwiderstand": "F90",
+          "rw_dB": {
+            "D155_daemm2x40": 68.0,
+            "D205_daemm2x60": 70.6,
+            "D255_daemm2x80": 73.2
+          }
+        },
+        {
+          "beplankung": "1x Diamant 12,5mm + 1x GKB 12,5mm je Seite",
+          "gewicht_kgm2": 70,
+          "feuerwiderstand": "F90",
+          "rw_dB": {"D155_daemm2x40": 74.0},
+          "hinweis": "plus-Variante"
+        }
+      ],
+      "lv_schluessel": ["W115", "Doppelständer", "Doppelständerwerk", "entkoppelt", "Wohnungstrennwand"]
+    },
+
+    "W115V": {
+      "bezeichnung": "Knauf Metallständerwand W115V.de – Doppelständerwerk mit Beplankung innen",
+      "beschreibung": "Grundwand (2x2 Lagen) + Vorsatzschale. Für Wohnungstrennwände mit max. Schallschutz und Einbruchhemmung RC2.",
+      "max_wandhoehe_m": 7.0,
+      "max_rw_dB": 82.5,
+      "max_feuerwiderstand": "F90",
+      "einbruchhemmung": "RC2 (mit Diamant Steel GKFI)",
+      "wanddicken_mm": {"typisch": "167,5 - 206 mm"},
+      "systemvarianten": [
+        {
+          "grundwand": "2x GKB 12,5mm je Seite",
+          "vorsatzschale": "1x Diamant 12,5mm",
+          "cw_grundwand": "CW50",
+          "cw_vorsatzschale": "CW50",
+          "gewicht_kgm2": 71,
+          "feuerwiderstand": "F90",
+          "gesamtwanddicke_mm": 192.5,
+          "daemmung": "2x 40+40mm Mineralwolle",
+          "rw_dB": 73.9
+        },
+        {
+          "grundwand": "2x GKB 12,5mm je Seite",
+          "vorsatzschale": "2x Diamant 12,5mm",
+          "cw_grundwand": "CW50",
+          "cw_vorsatzschale": "CW50",
+          "gewicht_kgm2": 84,
+          "feuerwiderstand": "F90",
+          "gesamtwanddicke_mm": 180,
+          "daemmung": "2x 40+40mm",
+          "rw_dB": 76.9
+        },
+        {
+          "grundwand": "2x Diamant Steel 12,5mm je Seite",
+          "vorsatzschale": "2x Diamant 12,5mm",
+          "cw_grundwand": "CW75",
+          "cw_vorsatzschale": "CW50",
+          "gewicht_kgm2": 118,
+          "feuerwiderstand": "F90",
+          "gesamtwanddicke_mm": 205,
+          "daemmung": "2x 60+40mm",
+          "rw_dB": 82.5,
+          "einbruchhemmung": "RC2"
+        }
+      ],
+      "lv_schluessel": ["W115V", "W115 V", "Doppelständer innen beplankt", "Grundwand Vorsatzschale"]
+    },
+
+    "W116": {
+      "bezeichnung": "Knauf Metallständerwand W116.de – Doppelständerwerk verlascht",
+      "beschreibung": "Verlascht (verbunden) auf Abstand stehendes Doppelständerwerk. Bevorzugt für Installationswände.",
+      "max_wandhoehe_m": 8.0,
+      "max_rw_dB": 63.5,
+      "max_feuerwiderstand": "F90",
+      "wanddicken_mm": {"min": 155, "typisch": "≥155mm (2xCW50)"},
+      "systemvarianten": [
+        {
+          "beplankung": "1x Massivbauplatte 25mm je Seite",
+          "gewicht_kgm2": 52,
+          "feuerwiderstand": "ohne",
+          "rw_dB": "keine Angabe (strukturell)"
+        },
+        {
+          "beplankung": "1x Diamant 18mm je Seite",
+          "gewicht_kgm2": 46,
+          "feuerwiderstand": "ohne",
+          "rw_dB": 56.0
+        },
+        {
+          "beplankung": "2x GKB 12,5mm je Seite",
+          "gewicht_kgm2": 45,
+          "feuerwiderstand": "F30",
+          "daemmung_brandschutz": "nicht erforderlich",
+          "rw_dB": 54.0
+        },
+        {
+          "beplankung": "2x GKF Piano 12,5mm je Seite",
+          "gewicht_kgm2": 52,
+          "feuerwiderstand": "F90",
+          "daemmung_brandschutz": "nicht erforderlich",
+          "rw_dB": 54.0
+        },
+        {
+          "beplankung": "2x Diamant 12,5mm je Seite",
+          "gewicht_kgm2": 60,
+          "feuerwiderstand": "F90",
+          "daemmung_brandschutz": "nicht erforderlich",
+          "rw_dB": 63.5
+        }
+      ],
+      "lv_schluessel": ["W116", "Doppelständer verlascht", "Installationswand", "verlascht"]
+    }
+  },
+
+  "deckensysteme": {
+
+    "D111": {
+      "bezeichnung": "Knauf Plattendecke D111.de – mit Holz-Unterkonstruktion",
+      "beschreibung": "Auf Grund- und Traglatten (50×30mm) geschraubte Gipsplatten. Einfachster Aufbau.",
+      "max_feuerwiderstand": "F30",
+      "unterkonstruktion": "Holzlatten 50×30mm (Grund- + Traglatten)",
+      "systemvarianten": [
+        {"beplankung": "1x GKB 12,5", "bemessungsgewicht_kgm2": 13.4, "max_traglatte_mm": 500, "feuerwiderstand": "ohne"},
+        {"beplankung": "1x GKF 12,5 (Piano)", "bemessungsgewicht_kgm2": 17.0, "max_traglatte_mm": 500, "feuerwiderstand": "ohne"},
+        {"beplankung": "1x Massivbauplatte 12,5", "bemessungsgewicht_kgm2": 22.9, "max_traglatte_mm": 400, "feuerwiderstand": "ohne"},
+        {"beplankung": "2x GKB 12,5", "bemessungsgewicht_kgm2": 22.8, "max_traglatte_mm": 500, "feuerwiderstand": "ohne"},
+        {"beplankung": "2x GKF 12,5 (Piano)", "bemessungsgewicht_kgm2": 30.0, "max_traglatte_mm": 500, "feuerwiderstand": "ohne"},
+        {"beplankung": "1x GKF + 1x GKB 12,5", "bemessungsgewicht_kgm2": 35.9, "max_traglatte_mm": 400, "feuerwiderstand": "ohne"},
+        {"beplankung": "2x GKB 12,5", "bemessungsgewicht_kgm2": 26.0, "max_traglatte_mm": 500, "feuerwiderstand": "F30"},
+        {"beplankung": "2x GKF 12,5 (Piano)", "bemessungsgewicht_kgm2": 30.0, "max_traglatte_mm": 500, "feuerwiderstand": "F30"},
+        {"beplankung": "2x Diamant 12,5", "bemessungsgewicht_kgm2": 41.3, "max_traglatte_mm": 400, "feuerwiderstand": "F30"},
+        {"beplankung": "1x 20mm Massivbau", "bemessungsgewicht_kgm2": 21.6, "max_traglatte_mm": 625, "feuerwiderstand": "F30", "hinweis": "Längsverlegung"}
+      ],
+      "lv_schluessel": ["D111", "Holz-UK", "Holzunterkonstruktion", "Plattendecke Holz"]
+    },
+
+    "D112": {
+      "bezeichnung": "Knauf Plattendecke D112.de – mit Metall-Unterkonstruktion",
+      "beschreibung": "Standard-Unterdecke mit CD 60/27-Profilen auf Grund- und Tragprofil. Häufigste Decke in LVs.",
+      "max_feuerwiderstand": "F90",
+      "unterkonstruktion": "CD 60/27 Grund- und Tragprofil (doppelter Profilrost) oder nur Tragprofil",
+      "max_achsabstand_tragprofil_mm": 500,
+      "systemvarianten_brandschutz_von_unten": [
+        {"beplankung": "1x GKB 12,5", "bemessungsgewicht_kgm2": 11.7, "max_tragprofil_mm": 500, "feuerwiderstand": "ohne"},
+        {"beplankung": "2x GKB 12,5", "bemessungsgewicht_kgm2": 21.1, "max_tragprofil_mm": 500, "feuerwiderstand": "ohne"},
+        {"beplankung": "2x GKB 12,5", "bemessungsgewicht_kgm2": 24.3, "max_tragprofil_mm": 500, "feuerwiderstand": "F30"},
+        {"beplankung": "2x GKF 12,5 (Piano)", "bemessungsgewicht_kgm2": 28.3, "max_tragprofil_mm": 500, "feuerwiderstand": "F30"},
+        {"beplankung": "2x Diamant 12,5", "bemessungsgewicht_kgm2": 39.4, "max_tragprofil_mm": 400, "feuerwiderstand": "F30"},
+        {"beplankung": "1x Massivbau 20mm", "bemessungsgewicht_kgm2": 19.9, "max_tragprofil_mm": 625, "feuerwiderstand": "F30"},
+        {"beplankung": "1x Fireboard 20mm + 1x GKF 12,5", "bemessungsgewicht_kgm2": 30.9, "max_tragprofil_mm": 500, "feuerwiderstand": "F60"},
+        {"beplankung": "1x Fireboard 25mm + 1x Fireboard 18mm", "bemessungsgewicht_kgm2": 40.1, "max_tragprofil_mm": 500, "feuerwiderstand": "F90"},
+        {"beplankung": "2x Fireboard 20mm", "bemessungsgewicht_kgm2": 37.5, "max_tragprofil_mm": 500, "feuerwiderstand": "F90"},
+        {"beplankung": "2x Fireboard 20mm (Variante)", "bemessungsgewicht_kgm2": 35.1, "max_tragprofil_mm": 500, "feuerwiderstand": "F90"}
+      ],
+      "systemvarianten_brandschutz_von_unten_und_oben": [
+        {"beplankung": "1x Diamant 15mm", "bemessungsgewicht_kgm2": 15.5, "max_tragprofil_mm": 500, "feuerwiderstand_unten": "–", "feuerwiderstand_oben": "F30", "daemmung": "Mineralwolle S 40mm"},
+        {"beplankung": "1x Siniat 15mm", "bemessungsgewicht_kgm2": 17.9, "max_tragprofil_mm": 500, "feuerwiderstand_unten": "–", "feuerwiderstand_oben": "F30"},
+        {"beplankung": "2x GKB 12,5", "bemessungsgewicht_kgm2": 24.3, "max_tragprofil_mm": 500, "feuerwiderstand": "F30/F30"},
+        {"beplankung": "2x GKF 12,5", "bemessungsgewicht_kgm2": 28.3, "max_tragprofil_mm": 500, "feuerwiderstand": "F30/F30"},
+        {"beplankung": "1x Fireboard 25mm + 1x 18mm", "bemessungsgewicht_kgm2": 40.1, "max_tragprofil_mm": 500, "feuerwiderstand": "F90/F90"},
+        {"beplankung": "2x Fireboard 20mm", "bemessungsgewicht_kgm2": 37.5, "max_tragprofil_mm": 500, "feuerwiderstand": "F90/F90"}
+      ],
+      "materialrezept_standard": {
+        "system": "D112, 1x GKB 12,5mm, ohne Brandschutz",
+        "pro_m2_decke": {
+          "CD_60_27_tragprofil_lfm": {"menge": 2.20, "beschreibung": "Tragprofil Achsabstand 500mm → 2,0 lfm/m² + Verschnitt 10%"},
+          "CD_60_27_grundprofil_lfm": {"menge": 1.10, "beschreibung": "Grundprofil Achsabstand ~900mm → 1,1 lfm/m²"},
+          "abhaenger_stk": {"menge": 1.20, "beschreibung": "ca. 1 Abhänger/m² (1000mm Abstand)"},
+          "GKB_12_5mm_m2": {"menge": 1.05, "beschreibung": "1x12,5mm, 5% Verschnitt"},
+          "schrauben_TN_3_5x25_stk": {"menge": 14, "beschreibung": "ca. 14/m² bei 500mm Achsabstand"},
+          "UD_profil_randprofil_lfm": {"menge": 0.40, "beschreibung": "Randanschluss ca. 0,4 lfm/m²"},
+          "kleinmaterial_pauschal_eur": {"menge": 1.20, "beschreibung": "Dübel, Federbügel, Verbinder"}
+        }
+      },
+      "lv_schluessel": ["D112", "abgehängte Decke", "Metall-UK", "CD-Profil", "Unterdecke", "GK-Decke", "Plattendecke Metall"]
+    },
+
+    "D113": {
+      "bezeichnung": "Knauf Plattendecke D113.de – mit Metall-Unterkonstruktion niveaugleich",
+      "beschreibung": "Niveaugleiche Verbindung von Grund- und Tragprofil (CD 60/27). Geringere Aufbauhöhe.",
+      "max_feuerwiderstand": "F90",
+      "unterkonstruktion": "CD 60/27 niveaugleich verbunden",
+      "hinweis": "Gleiche Plattenvarianten wie D112, aber geringere Aufbauhöhe möglich",
+      "bemessungsgewichte_identisch_mit": "D112",
+      "lv_schluessel": ["D113", "niveaugleich", "Plattendecke niveaugleich"]
+    },
+
+    "D116": {
+      "bezeichnung": "Knauf Plattendecke D116.de – mit Metall-Unterkonstruktion weitspannend",
+      "beschreibung": "Grundprofile UA 50 + Tragprofile CD 60/27. Für große Abhängeabstände und Installationsräume.",
+      "max_feuerwiderstand": "F90",
+      "unterkonstruktion": "UA 50 Grundprofil + CD 60/27 Tragprofil",
+      "besonderheit": "Abhängerabstände bis 2600mm möglich",
+      "systemvarianten": [
+        {"beplankung": "1x GKB 12,5", "bemessungsgewicht_kgm2": 14.5, "max_tragprofil_mm": 500, "feuerwiderstand": "ohne"},
+        {"beplankung": "2x GKB 12,5", "bemessungsgewicht_kgm2": 23.9, "max_tragprofil_mm": 500, "feuerwiderstand": "ohne"},
+        {"beplankung": "2x GKB 12,5", "bemessungsgewicht_kgm2": 27.1, "max_tragprofil_mm": 500, "feuerwiderstand": "F30"},
+        {"beplankung": "2x GKF 12,5", "bemessungsgewicht_kgm2": 31.1, "max_tragprofil_mm": 500, "feuerwiderstand": "F30"},
+        {"beplankung": "2x Diamant 12,5", "bemessungsgewicht_kgm2": 42.2, "max_tragprofil_mm": 400, "feuerwiderstand": "F30"},
+        {"beplankung": "1x Fireboard 20mm + 1x GKF 12,5", "bemessungsgewicht_kgm2": 33.7, "max_tragprofil_mm": 500, "feuerwiderstand": "F60"},
+        {"beplankung": "1x Fireboard 25mm + 1x 18mm", "bemessungsgewicht_kgm2": 43.0, "max_tragprofil_mm": 500, "feuerwiderstand": "F90"},
+        {"beplankung": "2x Fireboard 20mm", "bemessungsgewicht_kgm2": 40.3, "max_tragprofil_mm": 500, "feuerwiderstand": "F90"}
+      ],
+      "lv_schluessel": ["D116", "weitspannend", "Plattendecke weitspannend", "UA-Profil"]
+    }
+  },
+
+  "lv_matching_regeln": {
+    "beschreibung": "Regeln zur automatischen Zuordnung von LV-Leistungstext → Knauf-System",
+    "wand_erkennung": [
+      {"pattern": "W111", "system": "W111", "hinweis": "einlagig"},
+      {"pattern": "W112", "system": "W112", "hinweis": "zweilagig, häufigste Trennwand"},
+      {"pattern": "W113", "system": "W113", "hinweis": "dreilagig"},
+      {"pattern": "W115", "system": "W115", "hinweis": "Doppelständer entkoppelt, Wohnungstrennwand"},
+      {"pattern": "W116", "system": "W116", "hinweis": "Installationswand"},
+      {"pattern": ["einlagig", "1-lagig", "1x beplankt"], "system": "W111"},
+      {"pattern": ["zweilagig", "2-lagig", "2x beplankt"], "system": "W112"},
+      {"pattern": ["dreilagig", "3-lagig", "3x beplankt"], "system": "W113"},
+      {"pattern": ["Doppelständer", "Doppelständerwerk", "entkoppelt"], "system": "W115"},
+      {"pattern": ["Installationswand", "verlascht"], "system": "W116"}
+    ],
+    "platten_erkennung": [
+      {"pattern": ["GKB", "Bauplatte", "Standard"], "produkt": "Knauf GKB 12,5mm"},
+      {"pattern": ["GKF", "Feuerschutz", "F30", "F60", "F90"], "produkt": "Knauf GKF Piano 12,5mm"},
+      {"pattern": ["GKFi", "imprägniert", "Feucht"], "produkt": "Knauf GKBi 12,5mm"},
+      {"pattern": ["Diamant", "GKFI"], "produkt": "Knauf Diamant GKFI 12,5mm"},
+      {"pattern": ["Silentboard", "Schallschutz"], "produkt": "Knauf Silentboard 12,5mm"},
+      {"pattern": ["Fireboard"], "produkt": "Knauf Fireboard 15/20/25mm"}
+    ],
+    "feuerwiderstand_erkennung": [
+      {"pattern": ["F30", "REI30", "EI30"], "feuerwiderstand": "F30"},
+      {"pattern": ["F60", "REI60", "EI60"], "feuerwiderstand": "F60"},
+      {"pattern": ["F90", "REI90", "EI90", "feuerbeständig"], "feuerwiderstand": "F90"},
+      {"pattern": ["F120", "REI120"], "feuerwiderstand": "F120"}
+    ],
+    "profilbreite_aus_text": [
+      {"pattern": ["CW 50", "CW50", "50mm Profil"], "cw_breite": 50},
+      {"pattern": ["CW 75", "CW75", "75mm Profil"], "cw_breite": 75},
+      {"pattern": ["CW 100", "CW100", "100mm Profil"], "cw_breite": 100},
+      {"pattern": ["CW 125", "CW125"], "cw_breite": 125},
+      {"pattern": ["CW 150", "CW150"], "cw_breite": 150}
+    ]
+  }
+}
