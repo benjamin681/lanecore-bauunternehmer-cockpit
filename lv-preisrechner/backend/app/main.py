@@ -62,6 +62,22 @@ def health() -> dict:
     return {"status": "ok", "service": "lv-preisrechner", "version": "0.1.0"}
 
 
+@app.get("/api/v1/debug/db")
+def debug_db() -> dict:
+    """Zeigt Datenbank-Info (ohne Passwort) — hilft beim Debuggen von ENV-Issues."""
+    url = settings.database_url
+    # Passwort maskieren
+    import re
+
+    masked = re.sub(r"://([^:]+):([^@]+)@", r"://\1:***@", url)
+    return {
+        "database_url": masked,
+        "backend": "postgresql" if not settings.is_sqlite else "sqlite",
+        "anthropic_configured": bool(settings.anthropic_api_key),
+        "app_env": settings.app_env,
+    }
+
+
 app.include_router(auth_api.router, prefix="/api/v1")
 app.include_router(price_lists_api.router, prefix="/api/v1")
 app.include_router(lvs_api.router, prefix="/api/v1")

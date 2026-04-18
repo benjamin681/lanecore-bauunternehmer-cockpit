@@ -50,18 +50,18 @@ class Settings(BaseSettings):
 
     # --- Database ----------------------------------------------------------
     # In Produktion: DATABASE_URL per ENV (Postgres). Lokal: SQLite default.
-    database_url_override: str = Field(default="", validation_alias="DATABASE_URL")
     data_dir: Path = Path(__file__).resolve().parents[2] / "data"
     sqlite_filename: str = "lv_preisrechner.db"
 
     @property
     def database_url(self) -> str:
-        if self.database_url_override:
+        # Direkter ENV-Read statt pydantic-Alias (robuster in Produktion).
+        override = os.environ.get("DATABASE_URL", "").strip()
+        if override:
             # Render gibt postgres:// — SQLAlchemy erwartet postgresql://
-            url = self.database_url_override
-            if url.startswith("postgres://"):
-                url = url.replace("postgres://", "postgresql://", 1)
-            return url
+            if override.startswith("postgres://"):
+                override = override.replace("postgres://", "postgresql://", 1)
+            return override
         self.data_dir.mkdir(parents=True, exist_ok=True)
         return f"sqlite:///{self.data_dir / self.sqlite_filename}"
 
