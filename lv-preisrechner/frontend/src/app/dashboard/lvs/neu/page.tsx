@@ -33,7 +33,9 @@ export default function NeuesLvPage() {
       toast.success("LV verarbeitet");
       router.replace(`/dashboard/lvs/${final.target_id}`);
     } catch (e: any) {
-      toast.error(e?.detail || "Upload fehlgeschlagen");
+      const msg = e?.detail || e?.message || "Upload fehlgeschlagen";
+      toast.error(`Upload fehlgeschlagen: ${msg}`);
+      console.error("Upload error:", e);
     } finally {
       setBusy(false);
     }

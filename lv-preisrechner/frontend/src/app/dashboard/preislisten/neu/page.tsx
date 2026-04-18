@@ -52,7 +52,10 @@ export default function NeuePreislistePage() {
       toast.success("Preisliste verarbeitet");
       router.replace(`/dashboard/preislisten/${final.target_id}`);
     } catch (e: any) {
-      toast.error(e?.detail || "Upload fehlgeschlagen");
+      const msg = e?.detail || e?.message || "Upload fehlgeschlagen";
+      toast.error(`Upload fehlgeschlagen: ${msg}`);
+      // Extra-Log in Console, damit man auf Handy per Remote-Debugging sehen kann
+      console.error("Upload error:", e);
     } finally {
       setBusy(false);
     }

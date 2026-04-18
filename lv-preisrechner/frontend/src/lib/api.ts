@@ -32,9 +32,9 @@ export class ApiError extends Error {
   status: number;
   detail?: string;
   constructor(status: number, detail?: string) {
-    super(detail || `HTTP ${status}`);
+    super(detail ? `HTTP ${status}: ${detail}` : `HTTP ${status}`);
     this.status = status;
-    this.detail = detail;
+    this.detail = detail || `HTTP ${status}`;
   }
 }
 
@@ -51,11 +51,17 @@ export async function api<T = unknown>(path: string, opts: RequestOptions = {}):
     body = JSON.stringify(opts.body);
   }
 
-  const res = await fetch(`/api/v1${path}`, {
-    method: opts.method ?? "GET",
-    headers,
-    body,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`/api/v1${path}`, {
+      method: opts.method ?? "GET",
+      headers,
+      body,
+    });
+  } catch (networkErr: any) {
+    // Network-Error / CORS / Timeout — werfe mit klarer Meldung
+    throw new ApiError(0, `Netzwerk-Fehler: ${networkErr?.message || "Unbekannt"}`);
+  }
 
   if (!res.ok) {
     let detail = "";
