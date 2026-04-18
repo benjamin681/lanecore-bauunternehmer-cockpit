@@ -6,6 +6,7 @@ import { ArrowRight, FileStack, FolderOpen, Plus, TrendingUp } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { api, LV, PriceList } from "@/lib/api";
+import { fmtEur } from "@/lib/format";
 
 export default function DashboardHome() {
   const [lvs, setLvs] = useState<LV[]>([]);
@@ -193,7 +194,7 @@ function EmptyCard({ text }: { text: string }) {
   );
 }
 
-export function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; variant: "default" | "success" | "warning" | "info" }> =
     {
       uploaded: { label: "Hochgeladen", variant: "info" },
@@ -205,12 +206,4 @@ export function StatusBadge({ status }: { status: string }) {
     };
   const meta = map[status] || { label: status, variant: "default" as const };
   return <Badge variant={meta.variant}>{meta.label}</Badge>;
-}
-
-export function fmtEur(n: number): string {
-  return new Intl.NumberFormat("de-DE", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 2,
-  }).format(n);
 }
