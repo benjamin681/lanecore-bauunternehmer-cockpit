@@ -180,7 +180,7 @@ export type Job = {
   finished_at?: string | null;
 };
 
-/** Pollt einen Job bis er fertig ist. Ruft onProgress bei jedem Update. */
+/** Pollt einen Job bis er fertig ist. Retry bei Network-Errors. */
 export async function pollJob(
   jobId: string,
   opts: {
@@ -189,14 +189,25 @@ export async function pollJob(
     onProgress?: (j: Job) => void;
   } = {},
 ): Promise<Job> {
-  const interval = opts.intervalMs ?? 2000;
-  const timeout = opts.timeoutMs ?? 30 * 60 * 1000;
+  const interval = opts.intervalMs ?? 3000;
+  const timeout = opts.timeoutMs ?? 15 * 60 * 1000; // 15 Min
   const start = Date.now();
+  let consecutiveErrors = 0;
   while (Date.now() - start < timeout) {
-    const job = await api<Job>(`/jobs/${jobId}`);
-    opts.onProgress?.(job);
-    if (job.status === "done" || job.status === "error") return job;
+    try {
+      const job = await api<Job>(`/jobs/${jobId}`);
+      consecutiveErrors = 0;
+      opts.onProgress?.(job);
+      if (job.status === "done" || job.status === "error") return job;
+    } catch (e: any) {
+      consecutiveErrors += 1;
+      // 401 → Auth-Fehler, weitergeben
+      if (e?.status === 401) throw e;
+      // Bei > 5 Netz-Fehlern in Folge aufgeben
+      if (consecutiveErrors > 5) throw e;
+      // sonst weiter pollen (Netz wackelig / Mobile Screen-Off)
+    }
     await new Promise((r) => setTimeout(r, interval));
   }
-  throw new Error("Job-Timeout");
+  throw new ApiError(0, "Job läuft länger als erwartet — Seite neu laden und unter 'LVs' prüfen");
 }

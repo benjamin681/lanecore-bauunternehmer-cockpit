@@ -22,28 +22,34 @@ def _euro(value: float) -> str:
     return f"{value:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def generate_filled_pdf(lv: LV, tenant_firma: str) -> Path:
-    """Erzeuge ein neues PDF: Original + Anlage "Kalkulation"."""
-    original = Path(lv.original_pdf_pfad)
-    if not original.exists():
-        raise FileNotFoundError(f"Original-PDF nicht gefunden: {original}")
+def generate_filled_pdf_bytes(lv: LV, tenant_firma: str) -> bytes:
+    """Erzeugt ausgefülltes PDF als Bytes (wird in DB persistiert)."""
+    if not lv.original_pdf_bytes:
+        raise ValueError("Kein Original-PDF in DB gespeichert")
 
+    doc = fitz.open(stream=bytes(lv.original_pdf_bytes), filetype="pdf")
+    try:
+        _insert_deckblatt(doc, lv, tenant_firma)
+        _append_kalkulation(doc, lv)
+        import io
+
+        buf = io.BytesIO()
+        doc.save(buf, garbage=4, deflate=True)
+        log.info("pdf_generated", lv_id=lv.id, size=buf.tell())
+        return buf.getvalue()
+    finally:
+        doc.close()
+
+
+def generate_filled_pdf(lv: LV, tenant_firma: str) -> Path:
+    """Legacy: schreibt auf Disk. Bitte generate_filled_pdf_bytes nutzen."""
+    from io import BytesIO
+
+    data = generate_filled_pdf_bytes(lv, tenant_firma)
     out_dir = settings.upload_dir / "lvs" / lv.tenant_id / "ausgefuellt"
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{lv.id}_ausgefuellt.pdf"
-
-    # 1) Original einlesen
-    doc = fitz.open(original)
-
-    # 2) Deckblatt einfügen (neue Seite am Anfang)
-    _insert_deckblatt(doc, lv, tenant_firma)
-
-    # 3) Preis-Anlage anhängen
-    _append_kalkulation(doc, lv)
-
-    doc.save(str(out_path), garbage=4, deflate=True)
-    doc.close()
-    log.info("pdf_generated", path=str(out_path), lv_id=lv.id)
+    out_path.write_bytes(data)
     return out_path
 
 

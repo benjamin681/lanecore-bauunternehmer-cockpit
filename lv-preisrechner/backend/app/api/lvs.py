@@ -38,14 +38,13 @@ async def upload_lv_async(
         raise HTTPException(status_code=413, detail="PDF > 50 MB nicht erlaubt")
 
     sha = compute_sha256(pdf_bytes)
-    dest = settings.upload_dir / "lvs" / user.tenant_id
-    pdf_path = save_upload(pdf_bytes, dest, file.filename)
 
+    # PDF in DB speichern (persistent)
     lv = LV(
         tenant_id=user.tenant_id,
         original_dateiname=file.filename,
-        original_pdf_pfad=str(pdf_path),
         original_pdf_sha256=sha,
+        original_pdf_bytes=pdf_bytes,
         status="queued",
     )
     db.add(lv)
@@ -63,7 +62,6 @@ async def upload_lv_async(
         job_id=job.id,
         tenant_id=user.tenant_id,
         lv_id=lv.id,
-        pdf_bytes=pdf_bytes,
     )
     return JobOut.model_validate(job)
 
@@ -75,25 +73,34 @@ def retry_parse_lv(
     db: DbSession,
     background_tasks: BackgroundTasks,
 ) -> JobOut:
-    """Neustart des Parse-Jobs für ein LV, das in 'queued' oder 'error' hängt.
-
-    Liest das Original-PDF aus dem Upload-Ordner und startet den Background-Task neu.
-    """
-    from pathlib import Path
-
+    """Neustart des Parse-Jobs für ein LV, das in 'queued' oder 'error' hängt."""
+    from app.models.job import Job
     from app.models.position import Position
     from app.services.jobs import enqueue_job, run_parse_lv
 
     lv = db.query(LV).filter(LV.id == lv_id, LV.tenant_id == user.tenant_id).first()
     if not lv:
         raise HTTPException(status_code=404, detail="LV nicht gefunden")
-    if not lv.original_pdf_pfad:
-        raise HTTPException(status_code=400, detail="Kein Original-PDF gespeichert")
-    pdf_path = Path(lv.original_pdf_pfad)
-    if not pdf_path.exists():
-        raise HTTPException(status_code=404, detail="Original-PDF verloren (Disk)")
+    if not lv.original_pdf_bytes:
+        raise HTTPException(
+            status_code=400,
+            detail="Kein Original-PDF mehr vorhanden — bitte neu hochladen",
+        )
 
-    pdf_bytes = pdf_path.read_bytes()
+    active = (
+        db.query(Job)
+        .filter(
+            Job.target_id == lv.id,
+            Job.target_kind == "lv",
+            Job.status.in_(["queued", "running"]),
+        )
+        .first()
+    )
+    if active:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Job läuft bereits ({active.status}), bitte warten",
+        )
 
     # Alte Positionen löschen
     db.query(Position).filter(Position.lv_id == lv.id).delete()
@@ -110,8 +117,7 @@ def retry_parse_lv(
         target_id=lv.id, target_kind="lv",
     )
     background_tasks.add_task(
-        run_parse_lv, job_id=job.id, tenant_id=user.tenant_id,
-        lv_id=lv.id, pdf_bytes=pdf_bytes,
+        run_parse_lv, job_id=job.id, tenant_id=user.tenant_id, lv_id=lv.id,
     )
     return JobOut.model_validate(job)
 
@@ -213,22 +219,29 @@ def run_kalkulation(lv_id: str, user: CurrentUser, db: DbSession) -> LVDetail:
 
 @router.post("/{lv_id}/export", response_model=LVOut)
 def export_pdf(lv_id: str, user: CurrentUser, db: DbSession) -> LVOut:
-    """Erzeugt ausgefülltes PDF und legt den Pfad im LV ab."""
+    """Erzeugt ausgefülltes PDF und persistiert es in der DB."""
+    from app.services.pdf_filler import generate_filled_pdf_bytes
+
     lv = db.query(LV).filter(LV.id == lv_id, LV.tenant_id == user.tenant_id).first()
     if not lv:
         raise HTTPException(status_code=404, detail="LV nicht gefunden")
     if lv.status not in ("calculated", "exported"):
         raise HTTPException(
             status_code=400,
-            detail="LV muss erst kalkuliert werden (Status 'calculated').",
+            detail="LV muss erst kalkuliert werden.",
+        )
+    if not lv.original_pdf_bytes:
+        raise HTTPException(
+            status_code=400,
+            detail="Kein Original-PDF gespeichert. Bitte LV neu hochladen.",
         )
     tenant = db.get(Tenant, user.tenant_id)
     assert tenant is not None
     try:
-        path = generate_filled_pdf(lv, tenant.name)
+        pdf_bytes = generate_filled_pdf_bytes(lv, tenant.name)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"PDF-Erzeugung fehlgeschlagen: {e}") from e
-    lv.ausgefuelltes_pdf_pfad = str(path)
+        raise HTTPException(status_code=500, detail="PDF-Erzeugung fehlgeschlagen") from e
+    lv.ausgefuelltes_pdf_bytes = pdf_bytes
     lv.status = "exported"
     db.commit()
     db.refresh(lv)
@@ -236,16 +249,27 @@ def export_pdf(lv_id: str, user: CurrentUser, db: DbSession) -> LVOut:
 
 
 @router.get("/{lv_id}/download")
-def download_pdf(lv_id: str, user: CurrentUser, db: DbSession) -> FileResponse:
-    """Download des ausgefüllten LV-PDFs."""
+def download_pdf(lv_id: str, user: CurrentUser, db: DbSession):
+    """Download des ausgefüllten LV-PDFs aus DB."""
+    from fastapi.responses import Response
+
     lv = db.query(LV).filter(LV.id == lv_id, LV.tenant_id == user.tenant_id).first()
-    if not lv or not lv.ausgefuelltes_pdf_pfad:
+    if not lv or not lv.ausgefuelltes_pdf_bytes:
         raise HTTPException(status_code=404, detail="Kein ausgefülltes PDF vorhanden")
-    path = Path(lv.ausgefuelltes_pdf_pfad)
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="PDF-Datei fehlt auf Server")
-    filename = f"LV_mit_Preisen_{lv.projekt_name or lv.id[:8]}.pdf"
-    return FileResponse(path=path, media_type="application/pdf", filename=filename)
+    # RFC 6266 konform: ASCII-filename + UTF-8-filename*
+    import re
+    from urllib.parse import quote
+
+    raw = f"LV_mit_Preisen_{lv.projekt_name or lv.id[:8]}.pdf".replace(" ", "_")
+    ascii_name = re.sub(r"[^A-Za-z0-9._\-]", "_", raw)[:100] or "lv.pdf"
+    utf8_name = quote(raw, safe=".-_")
+    return Response(
+        content=bytes(lv.ausgefuelltes_pdf_bytes),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{utf8_name}"
+        },
+    )
 
 
 @router.delete("/{lv_id}", status_code=204)

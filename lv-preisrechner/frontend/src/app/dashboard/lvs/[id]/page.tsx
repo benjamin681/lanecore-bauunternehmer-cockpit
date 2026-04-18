@@ -46,6 +46,16 @@ export default function LvDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  // Auto-Poll solange LV noch verarbeitet wird
+  useEffect(() => {
+    if (!lv) return;
+    const inProgress = lv.status === "queued" || lv.status === "extracting";
+    if (!inProgress) return;
+    const timer = setInterval(() => load(), 3000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lv?.status]);
+
   async function savePosition(posId: string) {
     if (!edit) return;
     const body: Record<string, unknown> = {};

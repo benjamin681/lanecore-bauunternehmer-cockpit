@@ -35,7 +35,28 @@ log = structlog.get_logger()
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
     log.info("startup", env=settings.app_env)
-    init_db()
+
+    # Safety-Check: kein Default-SECRET in Produktion
+    if settings.app_env == "production" and "insecure-change" in settings.secret_key:
+        raise RuntimeError(
+            "SECRET_KEY ist nicht gesetzt! Bitte ENV SECRET_KEY in Render setzen."
+        )
+
+    # Alembic statt init_db — Migrationen laufen im Dockerfile beim Startup
+    # init_db nur als Fallback für lokale Entwicklung ohne alembic
+    if settings.app_env != "production":
+        init_db()
+
+    # Zombie-Jobs aufräumen (überlebte keinen Restart)
+    try:
+        from app.services.jobs import cleanup_zombie_jobs
+
+        n = cleanup_zombie_jobs(max_age_minutes=15)
+        if n:
+            log.info("zombies_cleaned", count=n)
+    except Exception as e:  # noqa: BLE001
+        log.warning("zombie_cleanup_failed", error=str(e))
+
     yield
     log.info("shutdown")
 

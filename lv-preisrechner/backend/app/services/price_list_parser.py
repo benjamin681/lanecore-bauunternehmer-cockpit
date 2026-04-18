@@ -117,8 +117,6 @@ def parse_and_store(
     from app.core.config import settings
 
     sha = compute_sha256(pdf_bytes)
-    dest = settings.upload_dir / "price_lists" / tenant_id
-    pdf_path = save_upload(pdf_bytes, dest, original_dateiname)
 
     pl = PriceList(
         tenant_id=tenant_id,
@@ -126,8 +124,8 @@ def parse_and_store(
         niederlassung=niederlassung,
         stand_monat=stand_monat,
         original_dateiname=original_dateiname,
-        original_pdf_pfad=str(pdf_path),
         original_pdf_sha256=sha,
+        original_pdf_bytes=pdf_bytes,
         status="parsing",
     )
     db.add(pl)

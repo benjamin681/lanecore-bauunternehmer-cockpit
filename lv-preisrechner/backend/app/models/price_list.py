@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, LargeBinary, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -30,8 +30,10 @@ class PriceList(Base):
     stand_monat: Mapped[str] = mapped_column(String(20), default="")
 
     original_dateiname: Mapped[str] = mapped_column(String(500), default="")
-    original_pdf_pfad: Mapped[str] = mapped_column(String(500), default="")
+    original_pdf_pfad: Mapped[str] = mapped_column(String(500), default="")  # deprecated, PDF jetzt in DB
     original_pdf_sha256: Mapped[str] = mapped_column(String(64), default="")
+    # Persistente PDF-Speicherung in DB (Render Free Tier hat ephemeres FS)
+    original_pdf_bytes: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, default=None)
 
     # "parsing" | "review" | "aktiv" | "archiviert"
     status: Mapped[str] = mapped_column(String(20), default="parsing")

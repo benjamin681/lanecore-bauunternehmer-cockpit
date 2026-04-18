@@ -40,18 +40,16 @@ async def upload_price_list_async(
         raise HTTPException(status_code=413, detail="PDF > 50 MB nicht erlaubt")
 
     sha = compute_sha256(pdf_bytes)
-    dest = settings.upload_dir / "price_lists" / user.tenant_id
-    pdf_path = save_upload(pdf_bytes, dest, file.filename)
 
-    # PriceList-Shell anlegen, Einträge kommen vom Job
+    # PDF in DB speichern (persistent, ueberlebt Render-Redeploys)
     pl = PriceList(
         tenant_id=user.tenant_id,
         haendler=haendler,
         niederlassung=niederlassung,
         stand_monat=stand_monat,
         original_dateiname=file.filename,
-        original_pdf_pfad=str(pdf_path),
         original_pdf_sha256=sha,
+        original_pdf_bytes=pdf_bytes,
         status="queued",
     )
     db.add(pl)
@@ -65,12 +63,12 @@ async def upload_price_list_async(
         target_kind="price_list",
     )
 
+    # Background-Task liest pdf_bytes aus DB (nicht mehr im Parameter halten)
     background_tasks.add_task(
         run_parse_price_list,
         job_id=job.id,
         tenant_id=user.tenant_id,
         price_list_id=pl.id,
-        pdf_bytes=pdf_bytes,
     )
     return JobOut.model_validate(job)
 
@@ -83,8 +81,7 @@ def retry_parse_price_list(
     background_tasks: BackgroundTasks,
 ) -> JobOut:
     """Neustart des Parse-Jobs für eine Preisliste, die in 'queued' oder 'error' hängt."""
-    from pathlib import Path
-
+    from app.models.job import Job
     from app.services.jobs import enqueue_job, run_parse_price_list
 
     pl = (
@@ -94,13 +91,27 @@ def retry_parse_price_list(
     )
     if not pl:
         raise HTTPException(status_code=404, detail="Preisliste nicht gefunden")
-    if not pl.original_pdf_pfad:
-        raise HTTPException(status_code=400, detail="Kein Original-PDF gespeichert")
-    pdf_path = Path(pl.original_pdf_pfad)
-    if not pdf_path.exists():
-        raise HTTPException(status_code=404, detail="Original-PDF verloren (Disk)")
+    if not pl.original_pdf_bytes:
+        raise HTTPException(
+            status_code=400,
+            detail="Kein Original-PDF mehr vorhanden — bitte neu hochladen",
+        )
 
-    pdf_bytes = pdf_path.read_bytes()
+    # Nicht retry'en wenn schon ein Job aktiv ist
+    active = (
+        db.query(Job)
+        .filter(
+            Job.target_id == pl.id,
+            Job.target_kind == "price_list",
+            Job.status.in_(["queued", "running"]),
+        )
+        .first()
+    )
+    if active:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Job läuft bereits ({active.status}), bitte warten",
+        )
 
     # Alte Einträge löschen
     db.query(PriceEntry).filter(PriceEntry.price_list_id == pl.id).delete()
@@ -118,7 +129,6 @@ def retry_parse_price_list(
         job_id=job.id,
         tenant_id=user.tenant_id,
         price_list_id=pl.id,
-        pdf_bytes=pdf_bytes,
     )
     return JobOut.model_validate(job)
 

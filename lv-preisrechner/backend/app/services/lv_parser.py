@@ -90,14 +90,12 @@ def parse_and_store(
     original_dateiname: str,
 ) -> LV:
     sha = compute_sha256(pdf_bytes)
-    dest = settings.upload_dir / "lvs" / tenant_id
-    pdf_path = save_upload(pdf_bytes, dest, original_dateiname)
 
     lv = LV(
         tenant_id=tenant_id,
         original_dateiname=original_dateiname,
-        original_pdf_pfad=str(pdf_path),
         original_pdf_sha256=sha,
+        original_pdf_bytes=pdf_bytes,
         status="extracting",
     )
     db.add(lv)

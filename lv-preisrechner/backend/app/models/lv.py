@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, LargeBinary, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -29,9 +29,12 @@ class LV(Base):
     auftraggeber: Mapped[str] = mapped_column(String(300), default="")
 
     original_dateiname: Mapped[str] = mapped_column(String(500), default="")
-    original_pdf_pfad: Mapped[str] = mapped_column(String(500), default="")
+    original_pdf_pfad: Mapped[str] = mapped_column(String(500), default="")  # deprecated
     original_pdf_sha256: Mapped[str] = mapped_column(String(64), default="")
-    ausgefuelltes_pdf_pfad: Mapped[str] = mapped_column(String(500), default="")
+    ausgefuelltes_pdf_pfad: Mapped[str] = mapped_column(String(500), default="")  # deprecated
+    # Persistente PDFs in DB (Render Free Tier hat ephemeres FS)
+    original_pdf_bytes: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, default=None)
+    ausgefuelltes_pdf_bytes: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, default=None)
 
     # "uploaded" | "extracting" | "review_needed" | "calculated" | "exported"
     status: Mapped[str] = mapped_column(String(30), default="uploaded")

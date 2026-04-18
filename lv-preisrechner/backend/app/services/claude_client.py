@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from typing import Any
 
 import structlog
-from anthropic import Anthropic
+from anthropic import Anthropic, APIStatusError
 
 from app.core.config import settings
 
@@ -69,7 +70,11 @@ class ClaudeClient:
     def __init__(self) -> None:
         if not settings.anthropic_api_key:
             log.warning("anthropic_api_key_not_set")
-        self._client = Anthropic(api_key=settings.anthropic_api_key or "sk-dummy")
+        # 10-Min-Timeout pro Call (Vision kann langsam sein)
+        self._client = Anthropic(
+            api_key=settings.anthropic_api_key or "sk-dummy",
+            timeout=600.0,
+        )
 
     def extract_json(
         self,
@@ -103,16 +108,36 @@ class ClaudeClient:
         if not content_blocks:
             content_blocks = [{"type": "text", "text": "Bitte antworte mit JSON."}]
 
-        try:
-            msg = self._client.messages.create(
-                model=model,
-                max_tokens=settings.claude_max_tokens,
-                system=system,
-                messages=[{"role": "user", "content": content_blocks}],
-            )
-        except Exception as exc:
-            log.error("claude_request_failed", model=model, error=str(exc))
-            raise
+        # Retry bei 429/529 (Rate-Limit, Overloaded) mit exponential backoff
+        last_err = None
+        for attempt in range(3):
+            try:
+                msg = self._client.messages.create(
+                    model=model,
+                    max_tokens=settings.claude_max_tokens,
+                    system=system,
+                    messages=[{"role": "user", "content": content_blocks}],
+                )
+                break
+            except APIStatusError as exc:
+                last_err = exc
+                if exc.status_code in (429, 529, 503) and attempt < 2:
+                    backoff = 2 ** attempt * 5  # 5s, 10s
+                    log.warning(
+                        "claude_retry",
+                        attempt=attempt + 1,
+                        status=exc.status_code,
+                        backoff_s=backoff,
+                    )
+                    time.sleep(backoff)
+                    continue
+                log.error("claude_request_failed", model=model, status=exc.status_code, error=str(exc))
+                raise
+            except Exception as exc:
+                log.error("claude_request_failed", model=model, error=str(exc))
+                raise
+        else:
+            raise last_err if last_err else RuntimeError("claude retry exhausted")
 
         # Claude gibt JSON im Text zurück
         text_blocks = [b.text for b in msg.content if b.type == "text"]

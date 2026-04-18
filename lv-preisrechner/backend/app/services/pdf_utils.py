@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import base64
+import gc
 import hashlib
+from collections.abc import Iterator
 from io import BytesIO
 from pathlib import Path
 
@@ -65,6 +67,54 @@ def pdf_to_page_images(
                 total=doc.page_count,
                 processed=max_pages,
             )
+        return blocks
+    finally:
+        doc.close()
+
+
+def pdf_total_pages(pdf_bytes: bytes, max_pages: int = 80) -> int:
+    """Schneller Pagecount ohne Rendering."""
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    try:
+        return min(doc.page_count, max_pages)
+    finally:
+        doc.close()
+
+
+def pdf_batch_images(
+    pdf_bytes: bytes,
+    *,
+    batch_start: int,
+    batch_size: int,
+    dpi: int = 200,
+    max_pixels: int = 1800,
+) -> list[dict]:
+    """Rendert nur einen Seiten-Batch on-demand (spart RAM bei großen PDFs)."""
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    try:
+        total = doc.page_count
+        end = min(batch_start + batch_size, total)
+        blocks: list[dict] = []
+        for i in range(batch_start, end):
+            page = doc.load_page(i)
+            scale = dpi / 72.0
+            mat = fitz.Matrix(scale, scale)
+            pix = page.get_pixmap(matrix=mat, alpha=False)
+            if max(pix.width, pix.height) > max_pixels:
+                ratio = max_pixels / max(pix.width, pix.height)
+                mat = fitz.Matrix(scale * ratio, scale * ratio)
+                pix = page.get_pixmap(matrix=mat, alpha=False)
+            png_bytes = pix.tobytes("png")
+            blocks.append({
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": "image/png",
+                    "data": base64.b64encode(png_bytes).decode("ascii"),
+                },
+            })
+            del pix, png_bytes
+        gc.collect()
         return blocks
     finally:
         doc.close()

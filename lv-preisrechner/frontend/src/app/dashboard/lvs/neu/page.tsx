@@ -25,13 +25,9 @@ export default function NeuesLvPage() {
     try {
       const j = await api<Job>("/lvs/upload-async", { method: "POST", form });
       setJob(j);
-      const final = await pollJob(j.id, { onProgress: (u) => setJob(u) });
-      if (final.status === "error") {
-        toast.error(final.error_message || "Parsing fehlgeschlagen");
-        return;
-      }
-      toast.success("LV verarbeitet");
-      router.replace(`/dashboard/lvs/${final.target_id}`);
+      toast.success("Upload ok — Parsing läuft im Hintergrund");
+      // Sofort zum LV-Detail redirect — Polling läuft dort weiter
+      router.replace(`/dashboard/lvs/${j.target_id}`);
     } catch (e: any) {
       const msg = e?.detail || e?.message || "Upload fehlgeschlagen";
       toast.error(`Upload fehlgeschlagen: ${msg}`);

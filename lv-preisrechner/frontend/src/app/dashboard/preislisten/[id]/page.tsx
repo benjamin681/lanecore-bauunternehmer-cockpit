@@ -38,6 +38,16 @@ export default function PreislisteDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  // Auto-Poll solange Preisliste verarbeitet wird
+  useEffect(() => {
+    if (!pl) return;
+    const inProgress = pl.status === "queued" || pl.status === "parsing";
+    if (!inProgress) return;
+    const timer = setInterval(() => load(), 3000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pl?.status]);
+
   async function activate() {
     try {
       await api(`/price-lists/${id}/activate`, { method: "POST" });

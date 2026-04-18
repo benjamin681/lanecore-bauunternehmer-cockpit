@@ -1,18 +1,15 @@
 """Background-Job-Ausführung: FastAPI BackgroundTasks mit DB-State.
 
-Strategie: FastAPI BackgroundTasks (in-process, kein externer Worker nötig für MVP).
-Jobs laufen nach dem Request-Response im selben Prozess. Bei Scale-Up: Upgrade
-auf RQ/Celery ohne API-Änderung am Job-Endpoint.
-
-Jede Job-Funktion
-- öffnet eine eigene DB-Session (NICHT die Request-Session)
-- updated Job-Row mit Status/Progress
-- fängt alle Exceptions und schreibt error_message
+Robustheitsmerkmale:
+- Jobs haben Status queued/running/done/error und einen Recovery-Mechanismus
+- PDFs werden aus DB geladen (persistent, überlebt Container-Neustart)
+- Bei Job-Error wird das Ziel-Objekt (LV/PriceList) auch auf "error" gesetzt
+- Zombie-Cleanup via cleanup_zombie_jobs() beim Startup
 """
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Callable
 
 import structlog
@@ -36,7 +33,7 @@ def enqueue_job(
     target_id: str = "",
     target_kind: str = "",
 ) -> Job:
-    """Legt einen neuen Job in der DB an (Status 'queued')."""
+    """Legt einen neuen Job an (Status 'queued'). Commit ist Aufgabe des Callers."""
     job = Job(
         tenant_id=tenant_id,
         kind=kind,
@@ -51,7 +48,7 @@ def enqueue_job(
 
 
 def _update(job_id: str, **updates) -> None:
-    """Aktualisiert Job-Status in eigener Session (für Background-Worker)."""
+    """Aktualisiert Job-Status in eigener Session."""
     with SessionLocal() as db:
         job = db.get(Job, job_id)
         if not job:
@@ -61,12 +58,30 @@ def _update(job_id: str, **updates) -> None:
         db.commit()
 
 
-def run_job(job_id: str, fn: Callable[[Session, Job], None]) -> None:
-    """Führt `fn` im Hintergrund aus, mit vollständigem Status-Tracking.
+def _mark_target_error(job: Job, error_message: str) -> None:
+    """Bei Job-Fehler: das Ziel-Objekt (LV/PriceList) auch auf 'error' setzen,
+    damit UI nicht auf 'parsing'/'extracting' hängen bleibt."""
+    if not job.target_id or not job.target_kind:
+        return
+    with SessionLocal() as db:
+        if job.target_kind == "lv":
+            from app.models.lv import LV
 
-    fn(db, job) bekommt eine frische DB-Session UND das Job-Objekt, um z.B. progress
-    auf dem Job zu setzen.
-    """
+            obj = db.get(LV, job.target_id)
+            if obj and obj.status in ("queued", "extracting"):
+                obj.status = "error"
+                db.commit()
+        elif job.target_kind == "price_list":
+            from app.models.price_list import PriceList
+
+            obj = db.get(PriceList, job.target_id)
+            if obj and obj.status in ("queued", "parsing"):
+                obj.status = "error"
+                db.commit()
+
+
+def run_job(job_id: str, fn: Callable[[Session, Job], None]) -> None:
+    """Führt fn im Hintergrund mit vollem Status-Tracking aus."""
     _update(job_id, status="running", started_at=_now(), progress=5)
     try:
         with SessionLocal() as db:
@@ -74,18 +89,61 @@ def run_job(job_id: str, fn: Callable[[Session, Job], None]) -> None:
             if not job:
                 log.error("job_not_found", job_id=job_id)
                 return
-            fn(db, job)
-            db.commit()
+            try:
+                fn(db, job)
+                db.commit()
+            except Exception:
+                db.rollback()
+                raise
         _update(job_id, status="done", finished_at=_now(), progress=100)
         log.info("job_done", job_id=job_id)
     except Exception as exc:  # noqa: BLE001
         log.exception("job_failed", job_id=job_id, error=str(exc))
+        msg = str(exc)[:2000]
+        # Anthropic-Fehler lesbar machen
+        if "invalid_request_error" in msg.lower():
+            msg = f"Claude-API-Fehler: {msg[:500]}"
+        elif "rate_limit" in msg.lower() or "429" in msg:
+            msg = "Claude-API-Rate-Limit erreicht. Bitte in 1 Minute erneut versuchen."
+        elif "overloaded" in msg.lower() or "529" in msg:
+            msg = "Claude-API überlastet. Bitte erneut versuchen."
         _update(
             job_id,
             status="error",
             finished_at=_now(),
-            error_message=str(exc)[:2000],
+            error_message=msg,
         )
+        # Ziel-Objekt auch auf error setzen
+        with SessionLocal() as db:
+            job = db.get(Job, job_id)
+            if job:
+                _mark_target_error(job, msg)
+
+
+def cleanup_zombie_jobs(max_age_minutes: int = 15) -> int:
+    """Bei Startup: Jobs, die länger als max_age in 'running'/'queued' hängen,
+    werden als 'error' markiert. Grund: Container-Restart killed Tasks."""
+    cutoff = _now() - timedelta(minutes=max_age_minutes)
+    count = 0
+    with SessionLocal() as db:
+        zombies = (
+            db.query(Job)
+            .filter(
+                Job.status.in_(["queued", "running"]),
+                Job.created_at < cutoff,
+            )
+            .all()
+        )
+        for job in zombies:
+            job.status = "error"
+            job.finished_at = _now()
+            job.error_message = "Task wurde vom Server abgebrochen (Timeout/Neustart). Bitte erneut starten."
+            count += 1
+            _mark_target_error(job, job.error_message)
+        db.commit()
+    if count:
+        log.info("cleanup_zombie_jobs", count=count)
+    return count
 
 
 # --- Konkrete Job-Handler --------------------------------------------------
@@ -93,37 +151,41 @@ def run_parse_price_list(
     job_id: str,
     tenant_id: str,
     price_list_id: str,
-    pdf_bytes: bytes,
 ) -> None:
-    """Background: Parse Preisliste → PriceList-Status 'review'."""
+    """Background: Parse Preisliste. Lädt PDF-Bytes aus DB."""
+    from app.core.config import settings as _settings
+    from app.models.price_entry import PriceEntry
     from app.models.price_list import PriceList
+    from app.services.claude_client import claude
+    from app.services.pdf_utils import pdf_batch_images, pdf_total_pages
     from app.services.price_list_parser import (
         SYSTEM_PROMPT,
         _normalize_to_base,
         build_dna,
     )
-    from app.services.claude_client import claude
-    from app.services.pdf_utils import pdf_to_page_images
-    from app.core.config import settings as _settings
-    from app.models.price_entry import PriceEntry
 
     def _runner(db: Session, job: Job) -> None:
         pl = db.get(PriceList, price_list_id)
         if not pl:
             raise ValueError("PriceList verschwunden")
+        if not pl.original_pdf_bytes:
+            raise ValueError("Kein Original-PDF in DB gespeichert")
         pl.status = "parsing"
         db.flush()
 
-        images = pdf_to_page_images(pdf_bytes, dpi=200, max_pages=80)
+        pdf_bytes = bytes(pl.original_pdf_bytes)
+
+        total_pages = pdf_total_pages(pdf_bytes, max_pages=80)
         batch_size = max(1, _settings.claude_pages_per_batch)
-        total_batches = max(1, (len(images) + batch_size - 1) // batch_size)
+        total_batches = max(1, (total_pages + batch_size - 1) // batch_size)
 
         seen_dna: set[str] = set()
         unsicher = 0
         total_eintraege = 0
 
-        for bi, start in enumerate(range(0, len(images), batch_size)):
-            batch = images[start : start + batch_size]
+        for bi, start in enumerate(range(0, total_pages, batch_size)):
+            # Streaming: nur dieser Batch im RAM, danach GC
+            batch = pdf_batch_images(pdf_bytes, batch_start=start, batch_size=batch_size)
             progress = int(10 + (bi / total_batches) * 85)
             _update(
                 job.id,
@@ -131,9 +193,12 @@ def run_parse_price_list(
                 message=f"Batch {bi + 1}/{total_batches} (Seiten {start + 1}-{start + len(batch)})",
             )
             parsed, _model = claude.extract_json(system=SYSTEM_PROMPT, images=batch)
+            # Batch aus RAM entfernen nach Claude-Call
+            del batch
             for row in parsed.get("eintraege", []):
                 dna_key = "|".join(
-                    str(row.get(k, "")) for k in (
+                    str(row.get(k, ""))
+                    for k in (
                         "hersteller", "kategorie", "produktname", "abmessungen", "variante"
                     )
                 )
@@ -186,32 +251,35 @@ def run_parse_lv(
     job_id: str,
     tenant_id: str,
     lv_id: str,
-    pdf_bytes: bytes,
 ) -> None:
+    """Background: Parse LV. Lädt PDF-Bytes aus DB."""
     from app.core.config import settings as _settings
     from app.models.lv import LV
     from app.models.position import Position
     from app.services.claude_client import claude
     from app.services.lv_parser import SYSTEM_PROMPT
-    from app.services.pdf_utils import pdf_to_page_images
+    from app.services.pdf_utils import pdf_batch_images, pdf_total_pages
 
     def _runner(db: Session, job: Job) -> None:
         lv = db.get(LV, lv_id)
         if not lv:
             raise ValueError("LV verschwunden")
+        if not lv.original_pdf_bytes:
+            raise ValueError("Kein Original-PDF in DB gespeichert")
         lv.status = "extracting"
         db.flush()
 
-        images = pdf_to_page_images(pdf_bytes, dpi=200, max_pages=80)
+        pdf_bytes = bytes(lv.original_pdf_bytes)
+        total_pages = pdf_total_pages(pdf_bytes, max_pages=80)
         batch_size = max(1, _settings.claude_pages_per_batch)
-        total_batches = max(1, (len(images) + batch_size - 1) // batch_size)
+        total_batches = max(1, (total_pages + batch_size - 1) // batch_size)
 
         positionen: list[dict] = []
         projekt_name = ""
         auftraggeber = ""
 
-        for bi, start in enumerate(range(0, len(images), batch_size)):
-            batch = images[start : start + batch_size]
+        for bi, start in enumerate(range(0, total_pages, batch_size)):
+            batch = pdf_batch_images(pdf_bytes, batch_start=start, batch_size=batch_size)
             progress = int(10 + (bi / total_batches) * 85)
             _update(
                 job.id,
@@ -219,6 +287,7 @@ def run_parse_lv(
                 message=f"Batch {bi + 1}/{total_batches} (Seiten {start + 1}-{start + len(batch)})",
             )
             parsed, _model = claude.extract_json(system=SYSTEM_PROMPT, images=batch)
+            del batch
             if not projekt_name:
                 projekt_name = str(parsed.get("projekt_name", ""))
             if not auftraggeber:

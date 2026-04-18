@@ -35,22 +35,14 @@ export default function NeuePreislistePage() {
     form.set("stand_monat", stand.trim());
     setBusy(true);
     try {
-      // 1. Job starten
       const j = await api<Job>("/price-lists/upload-async", {
         method: "POST",
         form,
       });
       setJob(j);
-      // 2. Pollen bis fertig
-      const final = await pollJob(j.id, {
-        onProgress: (u) => setJob(u),
-      });
-      if (final.status === "error") {
-        toast.error(final.error_message || "Parsing fehlgeschlagen");
-        return;
-      }
-      toast.success("Preisliste verarbeitet");
-      router.replace(`/dashboard/preislisten/${final.target_id}`);
+      toast.success("Upload ok — Parsing läuft im Hintergrund");
+      // Sofort zum Preislisten-Detail
+      router.replace(`/dashboard/preislisten/${j.target_id}`);
     } catch (e: any) {
       const msg = e?.detail || e?.message || "Upload fehlgeschlagen";
       toast.error(`Upload fehlgeschlagen: ${msg}`);
