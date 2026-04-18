@@ -1,0 +1,68 @@
+"""LV-Preisrechner — FastAPI Entry Point."""
+
+# Load .env BEFORE importing settings, sonst wird ANTHROPIC_API_KEY nicht gefunden
+from pathlib import Path as _Path
+try:
+    from dotenv import load_dotenv as _load_dotenv
+
+    _load_dotenv(_Path(__file__).resolve().parents[1] / ".env", override=False)
+except ImportError:
+    pass
+
+from contextlib import asynccontextmanager
+
+import structlog
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api import auth as auth_api
+from app.api import jobs as jobs_api
+from app.api import lvs as lvs_api
+from app.api import price_lists as price_lists_api
+from app.core.config import settings
+from app.core.database import init_db
+
+structlog.configure(
+    processors=[
+        structlog.processors.add_log_level,
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.JSONRenderer(),
+    ],
+)
+log = structlog.get_logger()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
+    log.info("startup", env=settings.app_env)
+    init_db()
+    yield
+    log.info("shutdown")
+
+
+app = FastAPI(
+    title="LV-Preisrechner API",
+    description="Upload LV → DNA-Matching gegen Kunden-Preisliste → ausgefülltes PDF",
+    version="0.1.0",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_origin_regex=settings.cors_origin_regex or None,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/api/v1/health")
+def health() -> dict:
+    return {"status": "ok", "service": "lv-preisrechner", "version": "0.1.0"}
+
+
+app.include_router(auth_api.router, prefix="/api/v1")
+app.include_router(price_lists_api.router, prefix="/api/v1")
+app.include_router(lvs_api.router, prefix="/api/v1")
+app.include_router(jobs_api.router, prefix="/api/v1")

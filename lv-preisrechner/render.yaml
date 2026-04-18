@@ -1,0 +1,44 @@
+# Render.com Blueprint — LV-Preisrechner Backend + Postgres
+#
+# Deploy:
+#   1. Repo bei Render verbinden (Dashboard → New → Blueprint)
+#   2. Blueprint-Pfad: lv-preisrechner/render.yaml
+#   3. ANTHROPIC_API_KEY + SECRET_KEY im Dashboard setzen
+#   4. CORS_ORIGINS nach Vercel-Deploy aktualisieren (s.u.)
+#
+# Kosten: Free-Tier Backend (kaltstart ~60s nach 15min Idle) + Postgres Free (90 Tage)
+# Prod-Upgrade: Starter ($7/Mo Backend + $7/Mo DB)
+
+databases:
+  - name: lv-preisrechner-db
+    plan: free
+    region: frankfurt
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: lv-preisrechner-backend
+    runtime: docker
+    dockerfilePath: ./lv-preisrechner/backend/Dockerfile
+    dockerContext: ./lv-preisrechner/backend
+    plan: free
+    region: frankfurt
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lv-preisrechner-db
+          property: connectionString
+      - key: ANTHROPIC_API_KEY
+        sync: false  # manuell im Render-Dashboard setzen
+      - key: SECRET_KEY
+        generateValue: true  # Render erzeugt zufällig
+      - key: CLAUDE_MODEL_PRIMARY
+        value: claude-sonnet-4-6
+      - key: CLAUDE_MODEL_FALLBACK
+        value: claude-opus-4-6
+      - key: CORS_ORIGINS
+        # Nach Vercel-Deploy: auf die echte URL setzen (JSON-Array)
+        value: '["https://lv-preisrechner.vercel.app","http://localhost:3100"]'

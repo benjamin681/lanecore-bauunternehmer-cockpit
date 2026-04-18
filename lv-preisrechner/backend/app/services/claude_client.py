@@ -1,0 +1,146 @@
+"""Gemeinsamer Anthropic-Client mit Sonnet-Primary + Opus-Fallback bei niedriger Konfidenz."""
+
+from __future__ import annotations
+
+import json
+import re
+from typing import Any
+
+import structlog
+from anthropic import Anthropic
+
+from app.core.config import settings
+
+log = structlog.get_logger()
+
+
+def _recover_truncated_array(raw: str, array_key: str) -> dict[str, Any] | None:
+    """Rettet Einträge aus abgeschnittenem JSON mit Top-Level-Array.
+
+    Strategie: finde letzte vollständige Objekt-Klammer im Array, schließe künstlich.
+    """
+    # Finde Position von "<array_key>": [
+    m = re.search(rf'"{array_key}"\s*:\s*\[', raw)
+    if not m:
+        return None
+    start = m.end()
+    # Walk: zähle Klammern, notiere Positionen nach jedem Objekt-Ende auf Top-Level (depth == 1)
+    depth = 1  # wir sind bereits im Array
+    in_str = False
+    escape = False
+    last_good_end = -1
+    i = start
+    while i < len(raw):
+        c = raw[i]
+        if in_str:
+            if escape:
+                escape = False
+            elif c == "\\":
+                escape = True
+            elif c == '"':
+                in_str = False
+        else:
+            if c == '"':
+                in_str = True
+            elif c == "{" or c == "[":
+                depth += 1
+            elif c == "}" or c == "]":
+                depth -= 1
+                if depth == 1 and c == "}":
+                    # Vollständiges Objekt im Array abgeschlossen
+                    last_good_end = i
+                if depth == 0:
+                    # Array komplett — normaler JSON-Parse sollte ohnehin klappen
+                    last_good_end = i
+                    break
+        i += 1
+    if last_good_end < 0:
+        return None
+    recovered = raw[: last_good_end + 1] + "]}"
+    try:
+        return json.loads(recovered)
+    except json.JSONDecodeError:
+        return None
+
+
+class ClaudeClient:
+    """Wrapper um Anthropic-SDK mit Modell-Fallback-Logik."""
+
+    def __init__(self) -> None:
+        if not settings.anthropic_api_key:
+            log.warning("anthropic_api_key_not_set")
+        self._client = Anthropic(api_key=settings.anthropic_api_key or "sk-dummy")
+
+    def extract_json(
+        self,
+        *,
+        system: str,
+        user_text: str | None = None,
+        images: list[dict] | None = None,
+        force_fallback: bool = False,
+    ) -> tuple[dict[str, Any], str]:
+        """
+        Schickt den Prompt an Claude, erwartet JSON im Response.
+
+        Args:
+            system: System-Prompt
+            user_text: User-Text (optional)
+            images: Liste Claude-kompatibler Image-Blöcke (base64 oder url)
+            force_fallback: Nutze direkt Opus statt Sonnet
+
+        Returns:
+            (parsed_json, model_used)
+        """
+        model = (
+            settings.claude_model_fallback if force_fallback else settings.claude_model_primary
+        )
+
+        content_blocks: list[dict] = []
+        if images:
+            content_blocks.extend(images)
+        if user_text:
+            content_blocks.append({"type": "text", "text": user_text})
+        if not content_blocks:
+            content_blocks = [{"type": "text", "text": "Bitte antworte mit JSON."}]
+
+        try:
+            msg = self._client.messages.create(
+                model=model,
+                max_tokens=settings.claude_max_tokens,
+                system=system,
+                messages=[{"role": "user", "content": content_blocks}],
+            )
+        except Exception as exc:
+            log.error("claude_request_failed", model=model, error=str(exc))
+            raise
+
+        # Claude gibt JSON im Text zurück
+        text_blocks = [b.text for b in msg.content if b.type == "text"]
+        raw = "\n".join(text_blocks).strip()
+
+        # Robustes JSON-Parsing: Code-Fence entfernen
+        if raw.startswith("```"):
+            raw = raw.split("```", 2)[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.rsplit("```", 1)[0].strip()
+
+        try:
+            return json.loads(raw), model
+        except json.JSONDecodeError as exc:
+            # Versuch: truncated Top-Level-Array retten
+            for key in ("eintraege", "positionen"):
+                recovered = _recover_truncated_array(raw, key)
+                if recovered is not None:
+                    log.warning(
+                        "claude_json_recovered",
+                        key=key,
+                        count=len(recovered.get(key, [])),
+                        original_error=str(exc),
+                    )
+                    return recovered, model
+            log.error("claude_json_parse_failed", error=str(exc), raw=raw[:500])
+            raise ValueError(f"Claude gab kein gültiges JSON: {exc}") from exc
+
+
+claude = ClaudeClient()

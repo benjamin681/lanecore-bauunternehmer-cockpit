@@ -1,0 +1,144 @@
+{
+  "meta": {
+    "quelle": "Habau GmbH — Leistungsverzeichnis Trockenbau & Schreinerarbeiten",
+    "projekt": "Verwaltungsgebäude Koblenz Löhr&Becker (17951-VK)",
+    "datum_lv": "2018-07-12",
+    "datum_verarbeitet": "2026-04-18",
+    "zweck": "Trainings- und Validierungs-Datensatz für LV-Preisrechner — echte KMU-LV mit allen typischen Trockenbau-Positionen",
+    "struktur": "Titel 600 (LV) > Titel 610/620/625/670 > Untertitel 620.621/620.622 > Positionen",
+    "anzahl_positionen": 76,
+    "woerter_typisch": ["W112", "W115", "W116", "W135", "GKB", "GKF", "GKFi", "Diamant", "Vorsatzschale", "Rasterdecke", "OWA", "Revisionsklappe", "Türaussparung", "Zulage", "Bedarfsposition", "Abkofferung", "Deckenschürze"]
+  },
+  "titel_610_innenwaende": {
+    "610_1": {"system": "W112", "variante": "GKF F30", "wanddicke_mm": 100, "uk": "CW 50 / UW 50", "beplankung": "beidseitig 1-lagig 12.5mm GKF", "daemmung_mm": 40, "rw_db": 41, "feuer": "F30", "lage": "EG-2.OG, KG", "menge": 1895, "einheit": "m²", "ausfuehrung": "Q3", "din": ["DIN 18183", "DIN 18182/Teil-1", "DIN 18180", "DIN 18181", "DIN 4102-2", "DIN 4109", "DIN 13162"]},
+    "610_2": {"system": "W112", "variante": "GKF F30", "wanddicke_mm": 100, "uk": "CW 50 / UW 50", "beplankung": "beidseitig 1-lagig 12.5mm GKF", "daemmung_mm": 40, "rw_db": 41, "feuer": "F30", "lage": "Luftraum EG/1.OG", "menge": 38.5, "einheit": "m²", "note": "wie 610.1 jedoch Arbeitshöhe bis ca. 7,00m"},
+    "610_3": {"system": "W112", "variante": "GKF F90", "wanddicke_mm": 125, "uk": "CW 75 / UW 75", "beplankung": "beidseitig 2-lagig 12.5mm GKF", "daemmung_mm": 60, "rw_db": 53, "feuer": "F90", "lage": "EG-2.OG", "menge": 69, "einheit": "m²"},
+    "610_4": {"system": "W112", "variante": "GKF F60", "wanddicke_mm": 125, "uk": "CW 75 / UW 75", "beplankung": "beidseitig 2-lagig 12.5mm GKF", "daemmung_mm": 60, "rw_db": 52, "feuer": "F60", "lage": "EG-2.OG", "menge": 251.5, "einheit": "m²"},
+    "610_5": {"system": "W112", "variante": "GKB Schallschutz", "wanddicke_mm": 125, "uk": "CW 75 / UW 75", "beplankung": "beidseitig 2-lagig 12.5mm GKB", "daemmung_mm": 60, "rw_db": 52, "feuer": ">F60", "lage": "Luftraum EG/1.OG", "menge": 33, "einheit": "m²", "note": "Arbeitshöhe bis ca. 7,00m"},
+    "610_6": {"system": "W135", "variante": "GKF F60 A+M mit Stahlblecheinlage", "wanddicke_mm": 126, "uk": "CW 75 / UW 75", "beplankung": "beidseitig 2-lagig GKF 12.5mm + Stahlblecheinlage d=0,5mm", "daemmung_mm": 60, "rw_db": 55, "feuer": "F60 A+M", "lage": "EG-2.OG", "menge": 105.5, "einheit": "m²", "besonderheit": "Einbruchhemmung/Sicherheit durch Stahlblech"},
+    "610_7": {"system": "W112", "variante": "GKB F30", "wanddicke_mm": 150, "uk": "CW 100 / UW 100", "beplankung": "beidseitig 2-lagig 12.5mm GKB", "daemmung_mm": 80, "rw_db": 53, "feuer": "F30", "lage": "EG-2.OG", "menge": 63.5, "einheit": "m²", "oberflaeche_besonderheit": "für Wandfliesenbelag in Dünnbett geeignet"},
+    "610_8": {"system": "W112", "variante": "Diamant F30", "wanddicke_mm": 125, "uk": "MW 75 / UW 75", "beplankung": "beidseitig 2-lagig 12.5mm Diamant", "daemmung_mm": 60, "rw_db": 60, "feuer": "F30", "lage": "EG-2.OG", "menge": 1, "einheit": "m²", "note": "Bedarfsposition, Nur EP"},
+    "610_9": {"system": "W116", "variante": "Installationswand Doppelständer", "wanddicke_mm": 250, "uk": "2x CW 75 / 2x UW 75", "beplankung": "beidseitig 2-lagig 12.5mm GKB", "daemmung_mm": "2x 60", "rw_db": 52, "feuer": "F30", "lage": "EG-2.OG", "menge": 16.5, "einheit": "m²"},
+    "610_10": {"system": "W116", "variante": "Installationswand Doppelständer breit", "wanddicke_mm": 400, "menge": 60, "einheit": "m²", "note": "wie 610.9 jedoch Wanddicke ca. 40cm"},
+    "610_11": {"system": "W115", "variante": "Doppelständer GKB", "wanddicke_mm": 250, "uk": "2x CW 75 / 2x UW 75", "beplankung": "beidseitig 2-lagig 12.5mm GKB", "daemmung_mm": "2x 60", "rw_db": 52, "feuer": "F30", "lage": "1.OG", "menge": 9.5, "einheit": "m²", "oberflaeche_besonderheit": "Wandfliesen im Dünnbett"},
+    "610_12": {"system": "Vorsatzschale", "variante": "freistehend GKBi Installationswand raumhoch", "wanddicke_mm": "200-250", "beplankung": "2-lagig 12.5mm GKBi", "daemmung_mm": 40, "rw_db": 50, "lage": "KG", "menge": 18, "einheit": "m²", "oberflaeche_besonderheit": "Nassraum — Wandfliesen geeignet", "din": ["DIN 4103-1", "DIN 18182-1", "DIN 18180"]},
+    "610_13": {"system": "Vorsatzschale", "variante": "raumhoch 15-20cm", "wanddicke_mm": "150-200", "menge": 68.5, "einheit": "m²", "note": "wie 610.12 jedoch Wanddicke ca. 15-20cm, Lage EG-2.OG"},
+    "610_14": {"system": "Vorsatzschale", "variante": "H=1.40m mit horizontalem Abschluss", "hoehe_m": 1.4, "menge": 5.5, "einheit": "m²", "note": "wie 610.12 jedoch niedrig"},
+    "610_15": {"system": "Vorsatzschale", "variante": "GKB raumhoch", "wanddicke_mm": 100, "beplankung": "2-lagig 12.5mm GKB", "daemmung_mm": 40, "rw_db": 50, "menge": 50, "einheit": "m²", "oberflaeche_besonderheit": "Wandfliesen im Dünnbett"},
+    "610_16": {"system": "Vorsatzschale", "variante": "GKB raumhoch 15-20cm", "wanddicke_mm": "150-200", "menge": 40, "einheit": "m²"},
+    "610_17": {"system": "Türaussparung", "variante": "F30 in W112 d=125-150mm", "groesse_bxh": "0.885-1.01 x 2.80m", "menge": 6, "einheit": "Stk", "leistung": "Einmessen, anlegen, herstellen mit Sturzprofil, UA/100-Profilen, Türpfosten-Steckwinkel"},
+    "610_18": {"system": "Türaussparung", "variante": "F60 in W112 d=125mm", "groesse_bxh": "1.01-1.30 x 2.135m", "menge": 2, "einheit": "Stk"},
+    "610_19": {"system": "Türaussparung", "variante": "F60 in W112 d=125mm", "groesse_bxh": "1.30 x 2.135m", "menge": 6, "einheit": "Stk"},
+    "610_20": {"system": "Türaussparung", "variante": "F60 A+M in W112 d=125mm mit Stahlblecheinlage", "groesse_bxh": "1.135 x 2.135m", "menge": 4, "einheit": "Stk"},
+    "610_21": {"system": "Türaussparung", "variante": "F60 A+M", "groesse_bxh": "1.30 x 2.135m", "menge": 1, "einheit": "Stk"},
+    "610_22": {"system": "Türaussparung", "variante": "F60 A+M", "groesse_bxh": "2.01 x 2.135m", "menge": 3, "einheit": "Stk"},
+    "610_23": {"system": "Türaussparung", "variante": "ohne Brandschutz in GK-Wand", "groesse_bxh": "1.01 x 2.80m", "raumhoehe_m": 3.4, "menge": 40, "einheit": "Stk", "lage": "alle Geschosse"},
+    "610_24": {"system": "Türaussparung", "variante": "ohne Brandschutz", "groesse_bxh": "1.01 x 2.135m", "menge": 32, "einheit": "Stk"},
+    "610_25": {"system": "Türaussparung", "variante": "für Stahltüren", "menge": 5, "einheit": "Stk", "lage": "KG"},
+    "610_26": {"system": "Türaussparung", "variante": "F90 für Stahltüren T30/RS", "wanddicke_mm": 150, "menge": 2, "einheit": "Stk", "lage": "KG"},
+    "610_27": {"system": "Wandende", "variante": "W112 F30 freistehend", "wanddicke_mm": "125-150", "hoehe_m": 3.5, "menge": 20, "einheit": "Stk", "leistung": "Zulage für verzinkte UA-Aussteifungsprofile"},
+    "610_28": {"system": "Ecke", "variante": "W112 90°", "menge": 15, "einheit": "Stk", "leistung": "Zulage ALU-Eckschiene flächenbündig"},
+    "610_29": {"system": "Abkofferung", "variante": "L-Form 2-seitig", "abwicklung_cm": "50-70", "bauhoehe_m": 3.5, "menge": 15, "einheit": "Stk", "leistung": "Verkleidung Installationen/Fallrohre, UW/CW, 2x12.5mm GKB, Mineralfaser 40mm"},
+    "610_30": {"system": "Abkofferung", "variante": "U-Form 3-seitig", "abwicklung_cm": "30/220/30", "bauhoehe_m": 3.5, "menge": 3, "einheit": "Stk"},
+    "610_31": {"system": "Deckenschürze", "variante": "F30 senkrecht", "wanddicke_mm": 125, "hoehe_abschottung_cm": "35-45", "arbeitshoehe_m": 3.5, "menge": 19.5, "einheit": "m", "leistung": "Beplankung je Seite 2x 12.5mm GKB, Mineralwolle 60mm TI 140 T"},
+    "610_32": {"system": "Deckenschürze", "variante": "F30 Zulage Arbeitshöhe", "arbeitshoehe_m": 7, "menge": 5.5, "einheit": "m"},
+    "610_33": {"system": "Deckenschürze", "variante": "F60 A+M", "wanddicke_mm": 126, "menge": 12.5, "einheit": "m", "leistung": "Beplankung je Seite 2x 12.5mm GKF + Stahlblecheinlage d=0,5mm je Seite"},
+    "610_34": {"system": "Zulage", "variante": "GKBi (imprägniert) bei 2 Lagen", "plattentyp": "GKBi DIN 18180 / H2 DIN EN 520", "menge": 50, "einheit": "m²"},
+    "610_35": {"system": "Eckschiene", "variante": "ALU", "menge": 1, "einheit": "m", "note": "Bedarfsposition"},
+    "610_36": {"system": "Eckschiene", "variante": "verzinkt", "menge": 1, "einheit": "m", "note": "Bedarfsposition"},
+    "610_37": {"system": "Traverse", "variante": "Knauf W234 Stahlblech 0.75mm + Gipsfasereinlage 18mm", "lastaufnahme_kN_pro_m": 1.5, "menge": 1, "einheit": "Stk", "note": "Bedarfsposition"},
+    "610_38": {"system": "Traverse", "variante": "Mehrschichtholzplatte W234", "menge": 55, "einheit": "Stk"},
+    "610_39": {"system": "UA-Profil", "variante": "UA/100 verzinkt verstärkt", "menge": 190, "einheit": "m", "zweck": "Befestigung WC-Tragständer, Hängeschränke"},
+    "610_40": {"system": "Anschluss", "variante": "Gleitender Deckenanschluss Wand/Decke", "arbeitshoehe_m": 3.5, "menge": 1, "einheit": "m", "ausfuehrung": "Knauf Detailblatt W112-VO2", "note": "Bedarfsposition"},
+    "610_41": {"system": "Trockenputz", "variante": "GKB 12.5mm Dünnbett", "einbauhoehe_m": 3, "menge": 1, "einheit": "m²", "note": "Bedarfsposition"},
+    "610_42": {"system": "Aussparung", "variante": "rechteckig F30 für BSV/Installation", "groesse_cm": "bis 25x25", "menge": 15, "einheit": "Stk"},
+    "610_43": {"system": "Aussparung", "variante": "rechteckig F90", "wanddicke_mm": 150, "groesse_cm": "bis 25x25", "menge": 6, "einheit": "Stk"},
+    "610_44": {"system": "Aussparung", "variante": "rechteckig F60", "wanddicke_mm": 125, "groesse_cm": "bis 60x15", "menge": 8, "einheit": "Stk"},
+    "610_45": {"system": "Revisionsklappe", "variante": "Knauf Alu Top 60x60", "menge": 4, "einheit": "Stk"},
+    "610_46": {"system": "Revisionsklappe", "variante": "Knauf Alu Top 40x40", "menge": 4, "einheit": "Stk"},
+    "610_47": {"system": "Installationsloch", "variante": "rund DN bis 125mm", "zweck": "Sanitär WC/Waschbecken/Hängetoiletten in Vorsatzschale", "menge": 80, "einheit": "Stk"},
+    "610_48": {"system": "Fugenversiegelung", "variante": "Acryl 10-12mm", "din": "DIN 18183", "menge": 800, "einheit": "lfdm"},
+    "610_49": {"system": "Aussparung", "variante": "rechteckig für Heizkreisverteiler in W112 F30 d=150mm", "groesse_cm": "bis 100x60", "menge": 9, "einheit": "Stk"},
+    "610_50": {"system": "Aussparung", "variante": "rund Durchmesser bis 125mm", "menge": 20, "einheit": "Stk"}
+  },
+  "titel_620_decken": {
+    "untertitel_620_621_abgehaengte_mf_rasterdecke": {
+      "620_621_1": {"system": "OWA Bolero", "variante": "MF-Rasterdecke 625x1250mm Einlegesystem S3 weiß", "dicke_mm": 15, "arbeitshoehe_m": 3.4, "abhaengung_cm": 50, "einbauhoehe_m": 2.9, "baustoffklasse": "A2", "schallabsorption": 0.85, "lage": "EG-2.OG", "menge": 1535, "einheit": "m²", "befestigung": "Stahlbetondecke"},
+      "620_621_2": {"system": "OWA Sinfonia", "variante": "MF-Rasterdecke 625x1250mm", "menge": 1535, "einheit": "m²", "note": "Bedarfsposition — Alternative zu Bolero, Nur EP"},
+      "620_621_3": {"system": "MF-Zulage", "variante": "Arbeitshöhe bis 7,04m, Abhängung bis 44cm", "einbauhoehe_m": 6.6, "lage": "Treppenhaus 2/2.OG", "menge": 13, "einheit": "m²"},
+      "620_621_4": {"system": "GK-Schürze", "variante": "vierseitig, Schachtverkleidung bis Unterkante Dachlichtkuppel", "abmessung_cm": "100x150", "hoehe_cm": 80, "arbeitshoehe_m": 7.04, "menge": 1, "einheit": "Stk"},
+      "620_621_5": {"system": "OWA Bolero", "variante": "625x625mm", "menge": 235, "einheit": "m²", "lage": "KG-2.OG"},
+      "620_621_6": {"system": "OWA Sinfonia", "variante": "625x625mm", "menge": 235, "einheit": "m²", "note": "Bedarfsposition, Nur EP"},
+      "620_621_7": {"system": "Deckenausschnitt", "variante": "rund/eckig DN 100 für Einbaustrahler", "menge": 110, "einheit": "Stk"},
+      "620_621_8": {"system": "Deckenausschnitt", "variante": "DN 150", "menge": 15, "einheit": "Stk"},
+      "620_621_9": {"system": "Verstärkung", "variante": "für Rasterleuchten/Klimageräte", "menge": 290, "einheit": "Stk"},
+      "620_621_10": {"system": "Fugenversiegelung", "menge": 800, "einheit": "m"}
+    },
+    "untertitel_620_622_abhangdecken_gk": {
+      "620_622_1": {"system": "D112", "variante": "GK-Unterdecke abgehängt CD, 1x 12.5mm GKB", "arbeitshoehe_m": 3.4, "abhaengung_cm": 50, "einbauhoehe_m": 2.9, "oberflaeche": "Q3", "din": ["DIN 18182/Teil 1", "DIN 18182"], "menge": 620, "einheit": "m²", "lage": "EG-2.OG", "befestigung": "Stahltrapezblech"},
+      "620_622_2": {"system": "Zulage", "variante": "Arbeitshöhe bis 7,02m, Abhängung bis 42cm", "einbauhoehe_m": 6.6, "menge": 55, "einheit": "m²", "lage": "EG/Luftraum"},
+      "620_622_3": {"system": "Dehnungsfuge", "variante": "in GK-Decke", "menge": 35, "einheit": "m"},
+      "620_622_4": {"system": "Gleitender Anschluss", "variante": "D112.de-D7 Wand/Decke, Profil UD 28/27 schwarz, Abstand 10mm", "menge": 510, "einheit": "m"},
+      "620_622_5": {"system": "GK-Schürze", "variante": "vierseitig", "abmessung_cm": "100x150", "hoehe_cm": 80, "arbeitshoehe_m": 7.04, "menge": 1, "einheit": "Stk", "lage": "Treppenhaus 1/3.OG"},
+      "620_622_6": {"system": "GK-Deckenschürze", "variante": "Deckenstirnverkleidung Galerie, CD-Deckenprofile 1-lagig GKB", "stirnhoehe_cm": 70, "menge": 11, "einheit": "m", "lage": "EG"},
+      "620_622_7": {"system": "Deckenausschnitt", "variante": "rund/eckig DN 100", "menge": 150, "einheit": "Stk"},
+      "620_622_8": {"system": "Deckenausschnitt", "variante": "DN 150", "menge": 15, "einheit": "Stk"},
+      "620_622_9": {"system": "Revisionsklappe", "variante": "Knauf Alu Top 40x40", "menge": 8, "einheit": "Stk"},
+      "620_622_10": {"system": "Revisionsklappe", "variante": "Knauf Alu Top 60x60", "menge": 1, "einheit": "Stk", "note": "Bedarfsposition, Nur EP"},
+      "620_622_11": {"system": "Fugenversiegelung", "menge": 350, "einheit": "m"}
+    }
+  },
+  "titel_625_wc_trennwaende": {
+    "625_1": {"system": "WC-Trennwand/Türanlage", "baulaenge_m": 3.465, "bauhoehe_mm": 2015, "fussluft_mm": 150, "tueren": 3, "mittelwaende": 2, "mittelwand_baulaenge_m": 1.47, "menge": 3, "einheit": "Stk", "lage": "EG-2.OG"},
+    "625_2": {"system": "WC-Trennwand/Türanlage", "baulaenge_m": 2.35, "tueren": 2, "mittelwaende": 2, "menge": 3, "einheit": "Stk"},
+    "625_3": {"system": "WC-Trennwand/Türanlage", "baulaenge_m": 1.10, "tueren": 1, "menge": 2, "einheit": "Stk", "lage": "KG"},
+    "625_4": {"system": "WC-Schamwand", "variante": "zwischen Urinalen, auskragend 60cm", "menge": 1, "einheit": "Stk", "note": "Bedarfsposition"},
+    "625_5": {"system": "Wandhaken", "menge": 17, "einheit": "Stk"},
+    "625_6": {"system": "Wand/Türstopper", "menge": 17, "einheit": "Stk"}
+  },
+  "titel_670_regiearbeiten": {
+    "670_1": {"leistung": "Facharbeiterstunden zum Nachweis", "menge": 25, "einheit": "Std"},
+    "670_2": {"leistung": "Helferstunden zum Nachweis", "menge": 25, "einheit": "Std"}
+  },
+  "matching_hinweise_fuer_ki": {
+    "system_erkennung": {
+      "W112": ["W112", "Einfachständerwand", "1-lagig", "Einfachständer"],
+      "W115": ["W115", "2-lagig", "erhöhter Schallschutz", "2-fach"],
+      "W116": ["W116", "Doppelständer", "Installationswand"],
+      "W135": ["W135", "Stahlblecheinlage", "einbruchhemmend", "A+M"],
+      "Vorsatzschale": ["Vorsatzschale", "freistehend", "DIN 4103-1"],
+      "D112": ["D112", "GK-Unterdecke", "abgehängt", "CD-Profil"],
+      "OWA": ["OWA", "Rasterdecke", "Bolero", "Sinfonia", "Einlegesystem", "Mineralfaser-Decke", "MF-Decke"]
+    },
+    "plattentyp_erkennung": {
+      "GKB": ["GKB", "Gipskarton-Bauplatte", "DIN 18180"],
+      "GKF": ["GKF", "Feuerschutzplatte", "Gipskarton-Feuerschutz"],
+      "GKFi": ["GKFi", "Feuerschutz imprägniert", "Nassraum"],
+      "GKBi": ["GKBi", "imprägniert", "Imprägnierung", "H2", "DIN EN 520"],
+      "Diamant": ["Diamant", "Hartgipsplatte"]
+    },
+    "feuerwiderstand_erkennung": {
+      "F30": ["F30", "DIN 4102-2 F30"],
+      "F60": ["F60", "DIN 4102-2 F60"],
+      "F60 A+M": ["F60 A+M", "A+M", "Stahlblecheinlage", "einbruchhemmend"],
+      "F90": ["F90", "DIN 4102-2 F90"]
+    },
+    "schalldaemmmass_erkennung": {
+      "pattern": "Rw,R [0-9]+ dB oder Rw >= [0-9]+ dB",
+      "einheit": "dB",
+      "din": "DIN 4109"
+    },
+    "menge_einheiten": ["m²", "m", "lfdm", "Stk", "Std"],
+    "haeufige_zulagen": ["Arbeitshöhe >3.5m", "Wandende freistehend", "90° Ecke ALU", "GKBi bei 2-lagig", "Türaussparung", "Revisionsklappe", "Abkofferung L/U-Form"]
+  },
+  "gp_gesamt_hochrechnung": {
+    "titel_610_innenwaende_netto_eur_geschaetzt": 156000,
+    "titel_620_decken_netto_eur_geschaetzt": 95000,
+    "titel_625_wc_trennwaende_netto_eur_geschaetzt": 18000,
+    "titel_670_regiearbeiten_netto_eur_geschaetzt": 3000,
+    "angebotssumme_netto_geschaetzt": 272000,
+    "mwst_19_prozent": 51680,
+    "angebotssumme_brutto_geschaetzt": 323680,
+    "note": "Schätzung basierend auf typischen Marktpreisen 2026 + Kemmler-Preisliste A. Zur Validierung gegen echte Kalkulation Harun's Vater."
+  }
+}

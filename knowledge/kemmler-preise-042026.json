@@ -1,7 +1,9 @@
 {
+  "_WARNUNG": "TESTDATEN — NICHT FÜR PRODUKTIVBETRIEB. Siehe docs/architektur-entscheidung-preisliste-upload.md (ADR-007). Jeder Kunde lädt seine eigene Preisliste hoch; diese Datei dient ausschließlich als Test-Fixture für Parser- und Matcher-Tests.",
   "haendler": "Kemmler Baustoffe & Fliesen",
   "niederlassung": "Neu-Ulm",
   "stand": "04/2026",
+  "verwendung": "Test-Fixture (siehe ADR-007)",
   "notiz": "Produkt-DNA-Matching: Hersteller + Kategorie + Produktname + Abmessungen + Variante — NICHT Artikelnummer",
   "preislisten": {
     "liste_a": {

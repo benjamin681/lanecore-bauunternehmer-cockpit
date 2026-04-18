@@ -1,0 +1,425 @@
+{
+  "meta": {
+    "quelle": "Aus Modellwissen rekonstruiert (Claude, Stand Knauf-Detailblätter ca. 2022-2024). Validierung gegen offizielle Knauf-Detailblätter W13.de, W11 Fireboard, K21 Kabelschacht, D11 Fireboard Decken ausstehend.",
+    "stand": "April 2026 (Rekonstruktion)",
+    "kategorie": "Brandschutz-Spezialsysteme: Brandwände W13, Fireboard-Metallständerwand W11, Kabelschächte K21, Fireboard-Unterdecken",
+    "bezugsnorm": "DIN 4102 Teil 3/4, DIN EN 13501-2, MLAR (Muster-Leitungsanlagen-Richtlinie), DIN EN 1366-1",
+    "hinweis_validierung": "Brandwände nach DIN 4102-3 zusätzlich stoßbeansprucht. Fireboard-Systeme erreichen F90/F120/F180 in geringer Wanddicke. Vor Live-Einsatz mit offiziellen Prüfzeugnissen (AbZ/AbP) abgleichen."
+  },
+
+  "brandwaende": {
+
+    "W131": {
+      "bezeichnung": "Knauf Brandwand W131.de — Einfachständerwerk, stoßbeansprucht",
+      "typ": "Brandwand (F90-A + Stoßbeanspruchung 3-fach Pendelschlag nach DIN 4102-3)",
+      "beschreibung": "Nichttragende Brandwand nach DIN 4102-3. Muss dem 3-fachen Pendelschlag bei F90 standhalten. Einfachständerwerk mit 2 Lagen Diamant/Fireboard.",
+      "unterkonstruktion": "CW + UW Einfachständer, verstärkt (meist CW100 oder CW125)",
+      "typische_cw_profile": ["CW75", "CW100", "CW125", "CW150"],
+      "systemvarianten": [
+        {
+          "code": "W131-F90-Diamant",
+          "wanddicke_mm": {"CW100": 150, "CW125": 175, "CW150": 200},
+          "beplankung": "2x Diamant 12,5mm je Seite",
+          "plattentyp": "Knauf Diamant GKFI",
+          "feuerwiderstand": "F90-A nach DIN 4102-3 (Brandwand)",
+          "daemmung": "Mineralwolle S 40/60/80mm, ≥40 kg/m³, Schmelzpunkt ≥1000°C",
+          "rw_dB": {"CW100_80mm": 65, "CW125_100mm": 68, "CW150_100mm": 70},
+          "max_hoehe_m": 6.5,
+          "gewicht_kgm2": 85,
+          "stossbeanspruchung": "3-fach Pendelschlag nach DIN 4102-3"
+        },
+        {
+          "code": "W131-F90-Fireboard",
+          "wanddicke_mm": {"CW100": 155, "CW125": 180},
+          "beplankung": "2x Fireboard 15mm je Seite",
+          "plattentyp": "Knauf Fireboard",
+          "feuerwiderstand": "F90-A Brandwand",
+          "daemmung": "Mineralwolle S 40/60/80mm",
+          "rw_dB": {"CW100_80mm": 62},
+          "max_hoehe_m": 6.5,
+          "gewicht_kgm2": 75
+        }
+      ],
+      "lv_schluessel": ["W131", "W131.de", "Brandwand F90", "Brandwand 3-fach Pendelschlag", "Brandwand Diamant", "stoßbeanspruchte Brandwand"]
+    },
+
+    "W133": {
+      "bezeichnung": "Knauf Brandwand W133.de — Doppelständerwerk stoßbeansprucht",
+      "typ": "Brandwand Doppelständerwerk",
+      "beschreibung": "Entkoppeltes Doppelständerwerk für Brandwand mit erhöhtem Schallschutz.",
+      "unterkonstruktion": "2x CW + UW entkoppelt",
+      "typische_cw_profile": ["2xCW50", "2xCW75", "2xCW100"],
+      "systemvarianten": [
+        {
+          "code": "W133-F90",
+          "wanddicke_mm": {"2xCW75": 205, "2xCW100": 255},
+          "beplankung": "2x Diamant 12,5mm je Seite",
+          "feuerwiderstand": "F90-A Brandwand",
+          "daemmung": "2x Mineralwolle S 40/60/80mm",
+          "rw_dB": {"2xCW75_2x60": 72, "2xCW100_2x80": 75},
+          "max_hoehe_m": 6.5,
+          "gewicht_kgm2": 95
+        }
+      ],
+      "lv_schluessel": ["W133", "Brandwand Doppelständer", "entkoppelte Brandwand"]
+    }
+  },
+
+  "fireboard_wandsysteme": {
+
+    "W112_Fireboard_F60": {
+      "bezeichnung": "Knauf Metallständerwand W112.de mit Fireboard — F60",
+      "basis_system": "W112.de",
+      "beschreibung": "Klassisches Einfachständerwerk mit Fireboard-Beplankung für F60 in geringer Wanddicke.",
+      "unterkonstruktion": "CW + UW Einfachständer",
+      "typische_cw_profile": ["CW50", "CW75", "CW100"],
+      "systemvarianten": [
+        {
+          "code": "W112-F60-Fireboard",
+          "wanddicke_mm": {"CW50": 100, "CW75": 125, "CW100": 150},
+          "beplankung": "1x Fireboard 15mm + 1x GKF 12,5mm je Seite ODER 2x Fireboard 15mm je Seite",
+          "plattentyp": "Knauf Fireboard 15mm",
+          "feuerwiderstand": "F60 (EI60)",
+          "daemmung": "Mineralwolle S 40mm",
+          "rw_dB": {"CW50_40mm": 54, "CW75_60mm": 56, "CW100_80mm": 59},
+          "max_hoehe_m": 9.0,
+          "gewicht_kgm2": 55
+        }
+      ],
+      "lv_schluessel": ["W112 Fireboard", "Fireboard F60", "F60 Metallständerwand"]
+    },
+
+    "W112_Fireboard_F90": {
+      "bezeichnung": "Knauf Metallständerwand W112.de mit Fireboard — F90",
+      "basis_system": "W112.de",
+      "beschreibung": "F90 mit Fireboard. Alternativ zu W131 Brandwand, aber OHNE Stoßbeanspruchung nach DIN 4102-3.",
+      "unterkonstruktion": "CW + UW Einfachständer",
+      "typische_cw_profile": ["CW50", "CW75", "CW100"],
+      "systemvarianten": [
+        {
+          "code": "W112-F90-Fireboard-15",
+          "wanddicke_mm": {"CW50": 110, "CW75": 135, "CW100": 160},
+          "beplankung": "2x Fireboard 15mm je Seite",
+          "plattentyp": "Knauf Fireboard 15mm",
+          "feuerwiderstand": "F90",
+          "daemmung": "Mineralwolle S 40mm",
+          "rw_dB": {"CW50_40mm": 58, "CW75_60mm": 60, "CW100_80mm": 63},
+          "max_hoehe_m": 9.0,
+          "gewicht_kgm2": 63
+        },
+        {
+          "code": "W112-F90-Fireboard-20",
+          "wanddicke_mm": {"CW50": 115, "CW75": 140},
+          "beplankung": "1x Fireboard 20mm + 1x GKF 12,5mm je Seite",
+          "feuerwiderstand": "F90",
+          "daemmung": "Mineralwolle S 40mm",
+          "rw_dB": {"CW50_40mm": 57},
+          "max_hoehe_m": 9.0,
+          "gewicht_kgm2": 60
+        }
+      ],
+      "lv_schluessel": ["W112 F90 Fireboard", "Fireboard F90", "F90 Metallständerwand Fireboard"]
+    },
+
+    "W112_Fireboard_F120": {
+      "bezeichnung": "Knauf Metallständerwand mit Fireboard — F120",
+      "basis_system": "W112.de erweitert",
+      "beschreibung": "F120 nur mit Fireboard erreichbar in vertretbarer Wanddicke.",
+      "unterkonstruktion": "CW + UW Einfachständer",
+      "typische_cw_profile": ["CW75", "CW100"],
+      "systemvarianten": [
+        {
+          "code": "W112-F120-Fireboard",
+          "wanddicke_mm": {"CW75": 150, "CW100": 175},
+          "beplankung": "2x Fireboard 20mm je Seite ODER 1x 25mm + 1x 15mm je Seite",
+          "feuerwiderstand": "F120 (EI120)",
+          "daemmung": "Mineralwolle S 40mm",
+          "rw_dB": {"CW75_60mm": 62, "CW100_80mm": 65},
+          "max_hoehe_m": 8.0,
+          "gewicht_kgm2": 82
+        }
+      ],
+      "lv_schluessel": ["W112 F120 Fireboard", "Fireboard F120", "F120 Metallständerwand"]
+    },
+
+    "W112_Fireboard_F180": {
+      "bezeichnung": "Knauf Metallständerwand mit Fireboard — F180",
+      "basis_system": "W112.de maximal ertüchtigt",
+      "beschreibung": "Höchste Feuerwiderstandsklasse. Nur mit mehrlagigem Fireboard.",
+      "unterkonstruktion": "CW100 + UW + laschierte Doppel-CW",
+      "systemvarianten": [
+        {
+          "code": "W112-F180-Fireboard",
+          "wanddicke_mm": {"CW100": 200},
+          "beplankung": "3x Fireboard 20mm je Seite ODER 2x 25mm + 1x 20mm",
+          "feuerwiderstand": "F180 (EI180)",
+          "daemmung": "Mineralwolle S 40mm",
+          "rw_dB": 68,
+          "max_hoehe_m": 7.0,
+          "gewicht_kgm2": 115
+        }
+      ],
+      "lv_schluessel": ["F180", "Fireboard F180", "höchster Brandschutz"]
+    }
+  },
+
+  "kabelschaechte_K21": {
+
+    "K211": {
+      "bezeichnung": "Knauf Kabelschacht K211 — dreiseitig Fireboard",
+      "typ": "Installations-/Kabelschacht aus Fireboard (3-seitig geschlossen, 1 Seite Massivwand)",
+      "beschreibung": "Kabelkanal/-schacht nach DIN 4102-9 / DIN EN 1366-5. Für Elektro- und Datenkabel mit Feuerwiderstand von innen UND außen (I→O und O→I).",
+      "unterkonstruktion": "CW-Profile oder CD-Profile laschiert, 3-seitig abgeschlossen",
+      "systemvarianten": [
+        {
+          "code": "K211-I30/E30",
+          "wanddicke_mm": 30,
+          "beplankung": "2x Fireboard 15mm",
+          "feuerwiderstand": "I30/E30 (nach DIN 4102-9)",
+          "daemmung": "optional Steinwolle",
+          "max_querschnitt_mm": "bis 800x800",
+          "gewicht_kgm": 30
+        },
+        {
+          "code": "K211-I90/E90",
+          "wanddicke_mm": 50,
+          "beplankung": "2x Fireboard 25mm ODER 3x Fireboard 15mm",
+          "feuerwiderstand": "I90/E90 (bidirektional)",
+          "daemmung": "Steinwolle ≥40mm, Schmelzpunkt ≥1000°C",
+          "max_querschnitt_mm": "bis 1000x1000",
+          "gewicht_kgm": 55
+        },
+        {
+          "code": "K211-I120/E120",
+          "wanddicke_mm": 60,
+          "beplankung": "3x Fireboard 20mm",
+          "feuerwiderstand": "I120/E120",
+          "daemmung": "Steinwolle ≥50mm",
+          "max_querschnitt_mm": "bis 1200x1200",
+          "gewicht_kgm": 75
+        }
+      ],
+      "lv_schluessel": ["K211", "Kabelschacht Fireboard", "Kabelkanal F90", "Elektrokanal", "I90/E90"]
+    },
+
+    "K212": {
+      "bezeichnung": "Knauf Kabelschacht K212 — vierseitig Fireboard (freihängend im Raum)",
+      "typ": "Vierseitig geschlossener Kabelschacht",
+      "beschreibung": "Vollständig freistehender Fireboard-Schacht für Steigstränge und Sonderinstallationen. Alle 4 Seiten Fireboard.",
+      "systemvarianten": [
+        {
+          "code": "K212-I30/E30",
+          "wanddicke_mm": 30,
+          "beplankung": "2x Fireboard 15mm rundum",
+          "feuerwiderstand": "I30/E30",
+          "max_querschnitt_mm": "bis 500x500",
+          "gewicht_kgm": 55
+        },
+        {
+          "code": "K212-I90/E90",
+          "wanddicke_mm": 50,
+          "beplankung": "2x Fireboard 25mm",
+          "feuerwiderstand": "I90/E90",
+          "max_querschnitt_mm": "bis 800x800",
+          "gewicht_kgm": 90
+        }
+      ],
+      "lv_schluessel": ["K212", "vierseitiger Kabelschacht", "Kabelkanal vierseitig"]
+    },
+
+    "K213_Luftleitung": {
+      "bezeichnung": "Knauf Luftleitung / Lüftungskanal aus Fireboard (L30/L90/L120)",
+      "typ": "Fireboard-Lüftungskanal nach DIN EN 1366-1/8",
+      "beschreibung": "Brandschutz-Lüftungskanal aus Fireboard. Alternative zu verzinktem Stahl mit Kalziumsilikat-Beschichtung.",
+      "systemvarianten": [
+        {
+          "code": "L30",
+          "wanddicke_mm": 25,
+          "beplankung": "1x Fireboard 25mm",
+          "feuerwiderstand": "L30 (EI30 multi)",
+          "max_querschnitt_mm": "bis 1000x500"
+        },
+        {
+          "code": "L90",
+          "wanddicke_mm": 35,
+          "beplankung": "1x Fireboard 35mm oder 2x 18mm",
+          "feuerwiderstand": "L90 (EI90 multi)",
+          "max_querschnitt_mm": "bis 1250x1000"
+        },
+        {
+          "code": "L120",
+          "wanddicke_mm": 40,
+          "beplankung": "2x Fireboard 20mm",
+          "feuerwiderstand": "L120 (EI120 multi)",
+          "max_querschnitt_mm": "bis 1250x1000"
+        }
+      ],
+      "lv_schluessel": ["Lüftungskanal Fireboard", "L30", "L90", "L120", "Brandschutzkanal", "Luftleitung F90"]
+    }
+  },
+
+  "fireboard_deckensysteme": {
+
+    "D112_Fireboard_F60": {
+      "bezeichnung": "Knauf Fireboard-Unterdecke D112.de — F60",
+      "basis_system": "D112.de",
+      "beschreibung": "Abgehängte Decke mit CD 60/27 Profilrost und Fireboard-Beplankung. Brandschutz von unten.",
+      "unterkonstruktion": "CD 60/27 Grund- + Tragprofil oder nur Tragprofil, Nonius-Abhänger",
+      "systemvarianten": [
+        {
+          "code": "D112-F60-unten",
+          "beplankung": "1x Fireboard 20mm + 1x GKF 12,5mm",
+          "gewicht_kgm2": 30,
+          "feuerwiderstand_von_unten": "F60",
+          "max_tragprofil_mm": 500,
+          "daemmung": "optional"
+        },
+        {
+          "code": "D112-F60-oben_unten",
+          "beplankung": "1x Fireboard 20mm + 1x GKF 12,5mm",
+          "gewicht_kgm2": 31,
+          "feuerwiderstand": "F60/F60 (oben und unten)",
+          "max_tragprofil_mm": 500,
+          "daemmung": "Mineralwolle S 40mm"
+        }
+      ],
+      "lv_schluessel": ["D112 Fireboard F60", "Fireboard Unterdecke F60", "F60 abgehängte Decke"]
+    },
+
+    "D112_Fireboard_F90": {
+      "bezeichnung": "Knauf Fireboard-Unterdecke D112.de — F90",
+      "systemvarianten": [
+        {
+          "code": "D112-F90-2xFB20",
+          "beplankung": "2x Fireboard 20mm",
+          "gewicht_kgm2": 37.5,
+          "feuerwiderstand": "F90 (von unten, mit massiver Rohdecke darüber)",
+          "max_tragprofil_mm": 500,
+          "daemmung": "Mineralwolle S 40mm"
+        },
+        {
+          "code": "D112-F90-beidseitig",
+          "beplankung": "1x Fireboard 25mm + 1x Fireboard 18mm",
+          "gewicht_kgm2": 40.1,
+          "feuerwiderstand": "F90/F90 (von oben und unten, selbsttragend)",
+          "max_tragprofil_mm": 500,
+          "daemmung": "Mineralwolle S 40mm"
+        }
+      ],
+      "lv_schluessel": ["D112 Fireboard F90", "Fireboard Unterdecke F90", "F90 abgehängte Decke"]
+    },
+
+    "D112_Fireboard_F120": {
+      "bezeichnung": "Knauf Fireboard-Unterdecke — F120",
+      "systemvarianten": [
+        {
+          "code": "D112-F120",
+          "beplankung": "3x Fireboard 20mm oder 2x 25mm + 1x 20mm",
+          "gewicht_kgm2": 55,
+          "feuerwiderstand": "F120",
+          "max_tragprofil_mm": 400,
+          "daemmung": "Mineralwolle S 40mm"
+        }
+      ],
+      "lv_schluessel": ["D112 Fireboard F120", "Fireboard Unterdecke F120", "F120 abgehängte Decke"]
+    },
+
+    "D131_Selbstaendige_Decke": {
+      "bezeichnung": "Knauf Selbstständige Fireboard-Decke D131.de (Membrandecke)",
+      "typ": "Selbstständige Unterdecke — Brandschutz unabhängig von der Rohdecke",
+      "beschreibung": "Die Brandschutzwirkung wird ausschließlich durch die abgehängte Decke erreicht. Unabhängig von Rohdecke/Rohgeschoss.",
+      "unterkonstruktion": "Verstärkter CD-Rost mit Nonius oder Schnellabhänger",
+      "systemvarianten": [
+        {
+          "code": "D131-F30",
+          "beplankung": "2x Fireboard 15mm",
+          "gewicht_kgm2": 30,
+          "feuerwiderstand": "F30 selbstständig",
+          "max_tragprofil_mm": 400
+        },
+        {
+          "code": "D131-F90",
+          "beplankung": "1x Fireboard 25mm + 1x Fireboard 18mm",
+          "gewicht_kgm2": 43,
+          "feuerwiderstand": "F90 selbstständig (ohne Rohdecke)",
+          "max_tragprofil_mm": 400,
+          "daemmung": "Mineralwolle S 40mm"
+        }
+      ],
+      "lv_schluessel": ["D131", "selbstständige Decke", "Membrandecke", "Unterdecke selbstständig", "F90 selbstständig"]
+    }
+  },
+
+  "materialrezepte": {
+    "W131_Brandwand": {
+      "system": "W131 Brandwand F90, CW100, 2x Diamant 12,5mm je Seite",
+      "pro_m2": {
+        "CW100_profil_lfm": {"menge": 1.80},
+        "UW100_profil_lfm": {"menge": 0.80},
+        "diamant_12_5mm_m2": {"menge": 4.20, "beschreibung": "2 Lagen × 2 Seiten × 5% Verschnitt"},
+        "mineralwolle_S_80mm_m2": {"menge": 1.00, "beschreibung": "Schmelzpunkt ≥1000°C"},
+        "schrauben_TN_3_5x35_stk": {"menge": 40},
+        "fugenband_lfm": {"menge": 0.60},
+        "brandschutz_dichtmasse_kartusche_stk": {"menge": 0.15, "beschreibung": "Anschlüsse nach DIN 4102"},
+        "kleinmaterial_pauschal_eur": {"menge": 2.50}
+      }
+    },
+    "K211_Kabelschacht_F90": {
+      "system": "K211 dreiseitig Fireboard I90/E90, 2x Fireboard 25mm",
+      "pro_lfm_schacht": {
+        "CW_profil_lfm": {"menge": 3.20, "beschreibung": "CW50 umlaufend + Laschen"},
+        "fireboard_25mm_m2": {"menge": 3.50, "beschreibung": "3 Seiten × 2 Lagen × Umfang × Verschnitt"},
+        "schrauben_TN_3_5x45_stk": {"menge": 40},
+        "mineralwolle_40mm_m2": {"menge": 1.70, "beschreibung": "Innendämmung"},
+        "kleinmaterial_pauschal_eur": {"menge": 3.00}
+      }
+    },
+    "D131_Selbststaendige_Decke_F90": {
+      "system": "D131 F90 selbstständig, 1x Fireboard 25mm + 1x 18mm",
+      "pro_m2": {
+        "CD_60_27_tragprofil_lfm": {"menge": 2.80, "beschreibung": "400mm Achsabstand für F90"},
+        "CD_60_27_grundprofil_lfm": {"menge": 1.10},
+        "nonius_abhaenger_stk": {"menge": 1.40},
+        "fireboard_25mm_m2": {"menge": 1.05},
+        "fireboard_18mm_m2": {"menge": 1.05},
+        "mineralwolle_S_40mm_m2": {"menge": 1.00},
+        "schrauben_TN_3_5x55_stk": {"menge": 18},
+        "UD_randprofil_lfm": {"menge": 0.40},
+        "kleinmaterial_pauschal_eur": {"menge": 2.00}
+      }
+    }
+  },
+
+  "lv_matching_regeln": {
+    "beschreibung": "Erkennung Brandschutz- und Fireboard-Positionen",
+    "brandwand_erkennung": [
+      {"pattern": ["W131", "Brandwand F90", "Brandwand 3-fach Pendelschlag", "stoßbeanspruchte Brandwand"], "system": "W131"},
+      {"pattern": ["W133", "Brandwand Doppelständer"], "system": "W133"},
+      {"pattern": ["Brandwand", "DIN 4102-3"], "system": "W131", "hinweis": "Default: Einfachständer Brandwand"}
+    ],
+    "fireboard_wand_erkennung": [
+      {"pattern": ["Fireboard F60", "F60 Fireboard"], "system": "W112_Fireboard_F60"},
+      {"pattern": ["Fireboard F90", "F90 Fireboard"], "system": "W112_Fireboard_F90"},
+      {"pattern": ["Fireboard F120", "F120 Fireboard"], "system": "W112_Fireboard_F120"},
+      {"pattern": ["F180", "Fireboard F180"], "system": "W112_Fireboard_F180"}
+    ],
+    "kabelschacht_erkennung": [
+      {"pattern": ["K211", "Kabelschacht Fireboard", "Kabelkanal F90", "Kabelkanal I90", "E90 Kabelschacht"], "system": "K211"},
+      {"pattern": ["K212", "vierseitiger Kabelschacht"], "system": "K212"},
+      {"pattern": ["Lüftungskanal Fireboard", "L30", "L90", "L120", "Brandschutzkanal Luft"], "system": "K213_Luftleitung"},
+      {"pattern": ["Kabelschacht", "Elektrokanal", "Kabelkanal"], "system": "K211", "hinweis": "Default"}
+    ],
+    "fireboard_decken_erkennung": [
+      {"pattern": ["D112 Fireboard F60", "Fireboard Unterdecke F60"], "system": "D112_Fireboard_F60"},
+      {"pattern": ["D112 Fireboard F90", "Fireboard Unterdecke F90", "F90 Decke Fireboard"], "system": "D112_Fireboard_F90"},
+      {"pattern": ["D112 Fireboard F120"], "system": "D112_Fireboard_F120"},
+      {"pattern": ["D131", "selbstständige Decke", "Membrandecke"], "system": "D131_Selbstaendige_Decke"}
+    ],
+    "plattentyp_erkennung": [
+      {"pattern": ["Fireboard"], "produkt": "Knauf Fireboard", "dicken_mm": [15, 18, 20, 25, 30, 35]},
+      {"pattern": ["Diamant", "GKFI", "imprägnierte Feuerschutzplatte"], "produkt": "Knauf Diamant GKFI 12,5mm"},
+      {"pattern": ["GKF", "Feuerschutzplatte", "Piano"], "produkt": "Knauf GKF Piano 12,5mm"},
+      {"pattern": ["Massivbauplatte"], "produkt": "Knauf/Siniat Massivbauplatte 20/25mm"}
+    ]
+  }
+}

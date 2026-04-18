@@ -1,0 +1,238 @@
+{
+  "meta": {
+    "quelle": "Aus Modellwissen rekonstruiert (Claude, Stand Knauf-Detailblätter ca. 2022-2024). Validierung gegen offizielle Knauf-Detailblätter W62X.de und W63X.de ausstehend.",
+    "stand": "April 2026 (Rekonstruktion)",
+    "kategorie": "Schachtwände — ein- und zweiseitig beplankt",
+    "bezugsnorm": "DIN EN 13501-2 (Brandschutz), DIN 4102 Teil 4, DIN EN ISO 10140 (Schallschutz), Muster-Leitungsanlagen-Richtlinie MLAR",
+    "hinweis_validierung": "Montage nur einseitig zugänglich (von außerhalb des Schachts). Feuerwiderstand gilt von beiden Seiten (innen und außen). Vor Live-Einsatz Abgleich mit offiziellen Knauf-Detailblättern."
+  },
+
+  "systeme": {
+
+    "W625S": {
+      "bezeichnung": "Knauf Schachtwand W625.de — einseitig beplankt (nur von außen montiert)",
+      "typ": "Schachtwand einseitig",
+      "beschreibung": "Für Installationsschächte wo nur eine Seite zugänglich ist. Feuerwiderstand von beiden Seiten. Nur 1 Lage von außen aufgebracht.",
+      "unterkonstruktion": "CW + UW Einfachständer",
+      "typische_cw_profile": ["CW50", "CW75", "CW100"],
+      "systemvarianten": [
+        {
+          "code": "W625-F30",
+          "wanddicke_mm": {"CW50": 75, "CW75": 100, "CW100": 125},
+          "beplankung": "1x GKF 20mm (Knauf Fireboard oder Feuerschutzplatte)",
+          "plattentyp": "Knauf Fireboard 20mm oder Massivbauplatte 20mm",
+          "feuerwiderstand": "F30 (EI30 von beiden Seiten)",
+          "daemmung": "Mineralwolle S 40mm, ≥50 kg/m³",
+          "rw_dB": 33,
+          "max_hoehe_m": 4.0,
+          "gewicht_kgm2": 30
+        },
+        {
+          "code": "W625-F60",
+          "wanddicke_mm": {"CW50": 90, "CW75": 115, "CW100": 140},
+          "beplankung": "1x Fireboard 25mm + 1x GKF 12,5mm (gesamt einseitig)",
+          "plattentyp": "Knauf Fireboard + Feuerschutzplatte",
+          "feuerwiderstand": "F60 (EI60 von beiden Seiten)",
+          "daemmung": "Mineralwolle S 40mm",
+          "rw_dB": 38,
+          "max_hoehe_m": 5.0,
+          "gewicht_kgm2": 45
+        },
+        {
+          "code": "W625-F90",
+          "wanddicke_mm": {"CW50": 100, "CW75": 125, "CW100": 150},
+          "beplankung": "2x Fireboard 20mm einseitig oder 1x Fireboard 25mm + 1x GKF 15mm",
+          "plattentyp": "Knauf Fireboard",
+          "feuerwiderstand": "F90 (EI90 von beiden Seiten)",
+          "daemmung": "Mineralwolle S 40mm",
+          "rw_dB": 42,
+          "max_hoehe_m": 5.0,
+          "gewicht_kgm2": 55
+        },
+        {
+          "code": "W625-F120",
+          "wanddicke_mm": {"CW75": 140, "CW100": 165},
+          "beplankung": "2x Fireboard 25mm einseitig oder 3x Fireboard 20mm",
+          "plattentyp": "Knauf Fireboard",
+          "feuerwiderstand": "F120 (EI120 von beiden Seiten)",
+          "daemmung": "Mineralwolle S 40mm",
+          "rw_dB": 45,
+          "max_hoehe_m": 5.5,
+          "gewicht_kgm2": 70
+        }
+      ],
+      "besonderheiten": [
+        "Ständer mit Kontermetallprofilen oder Schiebe-/Losflanschanschluss gegen brennende Installationen",
+        "Platten dürfen nur von außerhalb des Schachts montiert werden",
+        "MLAR-konformer Verschluss bei Leitungsdurchführungen"
+      ],
+      "einbaubereich": "Installationsschächte, Aufzugsschächte (teilw.), Versorgungsschächte",
+      "lv_schluessel": ["W625", "W625.de", "Schachtwand einseitig", "Schachtwand einseitig beplankt", "F30 einseitig", "F90 einseitig", "W625-F90"]
+    },
+
+    "W626S": {
+      "bezeichnung": "Knauf Schachtwand W626.de — einseitig beplankt mit Massivbauplatte",
+      "typ": "Schachtwand einseitig (Massivbau)",
+      "beschreibung": "Alternative zu Fireboard-Ausführung mit Massivbauplatten. Höhere Stoßfestigkeit.",
+      "unterkonstruktion": "CW + UW, teilw. verstärkt mit Laschen",
+      "typische_cw_profile": ["CW75", "CW100"],
+      "systemvarianten": [
+        {
+          "code": "W626-F30",
+          "wanddicke_mm": {"CW75": 100, "CW100": 125},
+          "beplankung": "1x Massivbauplatte 25mm",
+          "feuerwiderstand": "F30",
+          "daemmung": "Mineralwolle 40mm",
+          "rw_dB": 37,
+          "max_hoehe_m": 4.5,
+          "gewicht_kgm2": 34
+        },
+        {
+          "code": "W626-F90",
+          "wanddicke_mm": {"CW75": 125, "CW100": 150},
+          "beplankung": "1x Massivbauplatte 25mm + 1x GKF 12,5mm",
+          "feuerwiderstand": "F90",
+          "daemmung": "Mineralwolle 40mm",
+          "rw_dB": 42,
+          "max_hoehe_m": 5.0,
+          "gewicht_kgm2": 47
+        }
+      ],
+      "lv_schluessel": ["W626", "Schachtwand Massivbauplatte", "Massivbau einseitig"]
+    },
+
+    "W628": {
+      "bezeichnung": "Knauf Schachtwand W628.de — einseitig, Sonderhöhen",
+      "typ": "Schachtwand einseitig hoch",
+      "beschreibung": "Für Schächte mit sehr großer Höhe (>5m). Verstärktes Einfachständerwerk oder Doppelprofil.",
+      "unterkonstruktion": "CW 100/150 oder 2xCW50/75 laschiert",
+      "typische_cw_profile": ["CW100", "CW150", "2xCW50", "2xCW75"],
+      "systemvarianten": [
+        {
+          "code": "W628-F90-hoch",
+          "wanddicke_mm": {"CW100": 150, "CW150": 200, "2xCW75": 175},
+          "beplankung": "2x Fireboard 20mm einseitig",
+          "feuerwiderstand": "F90",
+          "daemmung": "Mineralwolle S 40mm",
+          "rw_dB": 43,
+          "max_hoehe_m": 8.0,
+          "gewicht_kgm2": 55
+        },
+        {
+          "code": "W628-F120-hoch",
+          "wanddicke_mm": {"CW150": 215},
+          "beplankung": "2x Fireboard 25mm einseitig",
+          "feuerwiderstand": "F120",
+          "daemmung": "Mineralwolle S 40mm",
+          "rw_dB": 46,
+          "max_hoehe_m": 8.0,
+          "gewicht_kgm2": 72
+        }
+      ],
+      "lv_schluessel": ["W628", "Schachtwand hoch", "Schachtwand Sonderhöhe", "Schacht F120 einseitig"]
+    },
+
+    "W631S": {
+      "bezeichnung": "Knauf Schachtwand W631.de — zweiseitig beplankt (Standard-Trockenbau Schacht)",
+      "typ": "Schachtwand zweiseitig",
+      "beschreibung": "Beide Seiten zugänglich → klassisch beidseitig beplankt wie normale Trennwand W112/W113. Verwendet wenn Schacht während Rohbau begehbar ist.",
+      "unterkonstruktion": "CW + UW Einfachständer",
+      "typische_cw_profile": ["CW50", "CW75", "CW100"],
+      "systemvarianten": [
+        {
+          "code": "W631-F30",
+          "wanddicke_mm": {"CW50": 100, "CW75": 125, "CW100": 150},
+          "beplankung": "2x GKF 12,5mm je Seite",
+          "feuerwiderstand": "F30",
+          "daemmung": "Mineralwolle 40mm",
+          "rw_dB": 52,
+          "max_hoehe_m": 8.0,
+          "gewicht_kgm2": 45
+        },
+        {
+          "code": "W631-F90",
+          "wanddicke_mm": {"CW50": 100, "CW75": 125, "CW100": 150},
+          "beplankung": "2x GKF 12,5mm je Seite",
+          "feuerwiderstand": "F90",
+          "daemmung": "Mineralwolle S 40mm",
+          "rw_dB": 56,
+          "max_hoehe_m": 8.0,
+          "gewicht_kgm2": 48
+        },
+        {
+          "code": "W631-F120",
+          "wanddicke_mm": {"CW75": 150, "CW100": 175},
+          "beplankung": "2x Fireboard 20mm + 1x GKF 12,5 je Seite",
+          "feuerwiderstand": "F120",
+          "daemmung": "Mineralwolle S 40mm",
+          "rw_dB": 62,
+          "max_hoehe_m": 8.0,
+          "gewicht_kgm2": 75
+        }
+      ],
+      "lv_schluessel": ["W631", "W631.de", "Schachtwand zweiseitig", "Schachtwand beidseitig beplankt"]
+    },
+
+    "W632": {
+      "bezeichnung": "Knauf Schachtwand W632.de — zweiseitig beplankt, schmaler Aufbau",
+      "typ": "Schachtwand zweiseitig (schmal)",
+      "beschreibung": "Platzsparend für sehr enge Installationsschächte. Mit CW50-Profilen.",
+      "unterkonstruktion": "CW50 + UW50",
+      "systemvarianten": [
+        {
+          "code": "W632-F30",
+          "wanddicke_mm": 75,
+          "beplankung": "1x GKF 12,5mm je Seite",
+          "feuerwiderstand": "F30",
+          "daemmung": "Mineralwolle 40mm",
+          "rw_dB": 45,
+          "max_hoehe_m": 3.5,
+          "gewicht_kgm2": 25
+        },
+        {
+          "code": "W632-F90",
+          "wanddicke_mm": 100,
+          "beplankung": "2x GKF 12,5mm je Seite",
+          "feuerwiderstand": "F90",
+          "daemmung": "Mineralwolle S 40mm",
+          "rw_dB": 52,
+          "max_hoehe_m": 4.5,
+          "gewicht_kgm2": 45
+        }
+      ],
+      "lv_schluessel": ["W632", "Schachtwand schmal", "Schachtwand CW50"]
+    }
+  },
+
+  "materialrezept_schachtwand_standard": {
+    "system": "W625-F90 einseitig, CW75, Ständerachsabstand 625mm, 2x Fireboard 20mm",
+    "pro_m2_schachtwand": {
+      "CW75_profil_lfm": {"menge": 1.80, "beschreibung": "CW-Ständer Achsabstand 625mm + 10% Verschnitt"},
+      "UW75_profil_lfm": {"menge": 0.80, "beschreibung": "Boden- und Deckenanschluss"},
+      "fireboard_20mm_m2": {"menge": 2.10, "beschreibung": "2 Lagen einseitig, 5% Verschnitt"},
+      "mineralwolle_40mm_m2": {"menge": 1.00, "beschreibung": "Hohlraumdämmung Mineralwolle S"},
+      "schrauben_TN_3_5x45_stk": {"menge": 20, "beschreibung": "für 2 Lagen Fireboard"},
+      "fugenband_lfm": {"menge": 0.60},
+      "trennwandkitt_silikon_pauschal_eur": {"menge": 2.00, "beschreibung": "MLAR-Anschlüsse"},
+      "kleinmaterial_pauschal_eur": {"menge": 1.80}
+    }
+  },
+
+  "lv_matching_regeln": {
+    "beschreibung": "Erkennung Schachtwand-Positionen im LV",
+    "schachtwand_erkennung": [
+      {"pattern": ["W625", "W625.de", "Schachtwand einseitig"], "system": "W625S"},
+      {"pattern": ["W626", "Schachtwand Massivbauplatte"], "system": "W626S"},
+      {"pattern": ["W628", "Schachtwand hoch", "Schachtwand Sonderhöhe"], "system": "W628"},
+      {"pattern": ["W631", "W631.de", "Schachtwand zweiseitig", "Schachtwand beidseitig"], "system": "W631S"},
+      {"pattern": ["W632", "Schachtwand schmal"], "system": "W632"},
+      {"pattern": ["Schachtwand", "Installationsschacht"], "system": "W625S", "hinweis": "Default: einseitig wenn nichts anderes spezifiziert"}
+    ],
+    "feuerwiderstand_mapping": [
+      {"pattern": ["F30", "EI30"], "feuerwiderstand": "F30"},
+      {"pattern": ["F60", "EI60"], "feuerwiderstand": "F60"},
+      {"pattern": ["F90", "EI90"], "feuerwiderstand": "F90"},
+      {"pattern": ["F120", "EI120"], "feuerwiderstand": "F120"}
+    ]
+  }
+}
