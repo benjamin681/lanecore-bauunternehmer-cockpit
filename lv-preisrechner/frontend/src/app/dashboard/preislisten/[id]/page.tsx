@@ -61,8 +61,16 @@ export default function PreislisteDetailPage() {
   async function saveEdit(entryId: string) {
     if (!editing) return;
     const body: Record<string, unknown> = {};
-    if (editing.field === "preis") body.preis = parseFloat(editing.value.replace(",", "."));
-    else body[editing.field] = editing.value;
+    if (editing.field === "preis") {
+      const n = parseFloat(editing.value.replace(",", "."));
+      if (!Number.isFinite(n)) {
+        toast.error("Bitte eine gültige Zahl eingeben.");
+        return;
+      }
+      body.preis = n;
+    } else {
+      body[editing.field] = editing.value;
+    }
     try {
       await api(`/price-lists/${id}/entries/${entryId}`, {
         method: "PATCH",

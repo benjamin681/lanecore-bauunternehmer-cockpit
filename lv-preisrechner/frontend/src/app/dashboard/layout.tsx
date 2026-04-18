@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  FileText,
   FileStack,
   FolderOpen,
   LayoutDashboard,
   LogOut,
+  Menu,
   Settings,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, clearToken, hasToken, User } from "@/lib/api";
@@ -27,6 +28,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -50,6 +52,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     };
   }, [router]);
 
+  // Schließe Mobile-Menü bei Navigation
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
   function logout() {
     clearToken();
     toast.info("Abgemeldet.");
@@ -66,29 +73,74 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen flex bg-slate-50">
-      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col">
-        <Link href="/" className="flex items-center gap-2 px-6 h-16 border-b border-slate-200">
+      {/* Mobile Top-Bar */}
+      <header className="fixed top-0 inset-x-0 h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:hidden z-30">
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-bauplan-600 text-white grid place-items-center font-bold text-sm">
+            LC
+          </div>
+          <span className="font-semibold text-slate-900 text-sm">LV-Preisrechner</span>
+        </Link>
+        <button
+          onClick={() => setMobileOpen(!mobileOpen)}
+          aria-label={mobileOpen ? "Menü schließen" : "Menü öffnen"}
+          className="w-11 h-11 grid place-items-center rounded-lg hover:bg-slate-100"
+        >
+          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
+      </header>
+
+      {/* Mobile Backdrop */}
+      {mobileOpen && (
+        <button
+          aria-label="Menü-Hintergrund"
+          onClick={() => setMobileOpen(false)}
+          className="fixed inset-0 bg-black/40 z-40 md:hidden"
+        />
+      )}
+
+      {/* Sidebar (Desktop: fixed; Mobile: drawer) */}
+      <aside
+        className={cn(
+          "fixed md:sticky top-0 left-0 h-screen w-64 bg-white border-r border-slate-200 flex flex-col z-50",
+          "transition-transform duration-200",
+          mobileOpen ? "translate-x-0" : "-translate-x-full",
+          "md:translate-x-0",
+        )}
+      >
+        <Link href="/" className="hidden md:flex items-center gap-2 px-6 h-16 border-b border-slate-200">
           <div className="w-8 h-8 rounded-lg bg-bauplan-600 text-white grid place-items-center font-bold text-sm">
             LC
           </div>
           <span className="font-semibold text-slate-900 text-sm">LV-Preisrechner</span>
         </Link>
 
-        <nav className="flex-1 p-3 space-y-0.5">
+        <div className="md:hidden h-14 flex items-center justify-end px-4 border-b border-slate-200">
+          <button
+            onClick={() => setMobileOpen(false)}
+            aria-label="Menü schließen"
+            className="w-10 h-10 grid place-items-center rounded-lg hover:bg-slate-100"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {NAV.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+            const active =
+              pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
             return (
               <Link
                 key={href}
                 href={href}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+                  "flex items-center gap-3 px-3 min-h-[44px] rounded-lg text-sm transition-colors",
                   active
                     ? "bg-bauplan-50 text-bauplan-700 font-medium"
                     : "text-slate-700 hover:bg-slate-100",
                 )}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="w-5 h-5 shrink-0" />
                 {label}
               </Link>
             );
@@ -102,16 +154,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           <button
             onClick={logout}
-            className="w-full mt-1 flex items-center gap-3 px-3 py-2 text-sm rounded-lg text-slate-700 hover:bg-slate-100"
+            className="w-full mt-1 flex items-center gap-3 px-3 min-h-[44px] text-sm rounded-lg text-slate-700 hover:bg-slate-100"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-5 h-5 shrink-0" />
             Abmelden
           </button>
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto">
-        <div className="max-w-6xl mx-auto px-8 py-8">{children}</div>
+      <main className="flex-1 overflow-auto pt-14 md:pt-0">
+        <div className="max-w-6xl mx-auto px-4 py-6 md:px-8 md:py-8">{children}</div>
       </main>
     </div>
   );

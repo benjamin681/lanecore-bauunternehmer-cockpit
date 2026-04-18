@@ -23,7 +23,11 @@ export default function NeuesLvPage() {
     form.set("file", file);
     setBusy(true);
     try {
-      const j = await api<Job>("/lvs/upload-async", { method: "POST", form });
+      const j = await api<Job>("/lvs/upload-async", {
+        method: "POST",
+        form,
+        direct: true,
+      });
       setJob(j);
       toast.success("Upload ok — Parsing läuft im Hintergrund");
       // Sofort zum LV-Detail redirect — Polling läuft dort weiter

@@ -59,9 +59,16 @@ export default function LvDetailPage() {
   async function savePosition(posId: string) {
     if (!edit) return;
     const body: Record<string, unknown> = {};
-    if (edit.field === "menge") body.menge = parseFloat(edit.value.replace(",", "."));
-    else if (edit.field === "ep") body.ep = parseFloat(edit.value.replace(",", "."));
-    else body[edit.field] = edit.value;
+    if (edit.field === "menge" || edit.field === "ep") {
+      const n = parseFloat(edit.value.replace(",", "."));
+      if (!Number.isFinite(n)) {
+        toast.error("Bitte eine gültige Zahl eingeben.");
+        return;
+      }
+      body[edit.field] = n;
+    } else {
+      body[edit.field] = edit.value;
+    }
     try {
       await api(`/lvs/${id}/positions/${posId}`, { method: "PATCH", body });
       toast.success("Gespeichert");

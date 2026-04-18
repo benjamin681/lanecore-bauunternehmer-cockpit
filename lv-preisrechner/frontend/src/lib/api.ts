@@ -2,6 +2,18 @@
 
 const TOKEN_KEY = "lvp_token";
 
+// Direct Backend-URL (umgeht Vercel-Proxy wegen 4.5 MB Body-Limit)
+// Public env, per Build oder per window-Global gesetzt.
+const BACKEND_URL_DIRECT =
+  (typeof process !== "undefined" &&
+    (process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL)) ||
+  "";
+
+function apiBase(directCall: boolean): string {
+  if (directCall && BACKEND_URL_DIRECT) return `${BACKEND_URL_DIRECT}/api/v1`;
+  return "/api/v1";
+}
+
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
   return window.localStorage.getItem(TOKEN_KEY);
@@ -26,6 +38,8 @@ type RequestOptions = {
   body?: unknown;
   form?: FormData;
   raw?: boolean; // Blob-Rückgabe
+  direct?: boolean; // Direkt ans Backend (umgeht Vercel-Proxy, nützlich bei großen Uploads)
+  signal?: AbortSignal;
 };
 
 export class ApiError extends Error {
@@ -53,23 +67,46 @@ export async function api<T = unknown>(path: string, opts: RequestOptions = {}):
 
   let res: Response;
   try {
-    res = await fetch(`/api/v1${path}`, {
+    res = await fetch(`${apiBase(!!opts.direct)}${path}`, {
       method: opts.method ?? "GET",
       headers,
       body,
+      signal: opts.signal,
     });
   } catch (networkErr: any) {
-    // Network-Error / CORS / Timeout — werfe mit klarer Meldung
+    if (networkErr?.name === "AbortError") {
+      throw new ApiError(0, "Abgebrochen");
+    }
     throw new ApiError(0, `Netzwerk-Fehler: ${networkErr?.message || "Unbekannt"}`);
   }
 
   if (!res.ok) {
     let detail = "";
     try {
-      const j = await res.json();
-      detail = typeof j?.detail === "string" ? j.detail : JSON.stringify(j);
+      const j = await res.clone().json();
+      if (typeof j?.detail === "string") {
+        detail = j.detail;
+      } else if (Array.isArray(j?.detail)) {
+        // FastAPI 422-Format: [{loc, msg, type}]
+        detail = j.detail
+          .map((d: any) => d?.msg || JSON.stringify(d))
+          .join(", ");
+      } else {
+        detail = JSON.stringify(j);
+      }
     } catch {
-      detail = await res.text();
+      try {
+        detail = await res.text();
+      } catch {
+        detail = "";
+      }
+    }
+    // Global 401-Handling: Token wegwerfen + zu /login
+    if (res.status === 401 && typeof window !== "undefined") {
+      clearToken();
+      if (!window.location.pathname.startsWith("/login")) {
+        window.location.replace("/login");
+      }
     }
     throw new ApiError(res.status, detail);
   }

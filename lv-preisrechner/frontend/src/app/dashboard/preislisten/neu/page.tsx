@@ -38,6 +38,7 @@ export default function NeuePreislistePage() {
       const j = await api<Job>("/price-lists/upload-async", {
         method: "POST",
         form,
+        direct: true, // Umgeht Vercel-Proxy 4.5 MB Body-Limit
       });
       setJob(j);
       toast.success("Upload ok — Parsing läuft im Hintergrund");
