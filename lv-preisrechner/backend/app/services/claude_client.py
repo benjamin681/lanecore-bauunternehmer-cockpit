@@ -150,6 +150,21 @@ class ClaudeClient:
                 raw = raw[4:]
             raw = raw.rsplit("```", 1)[0].strip()
 
+        # Leere Antwort? → bei Sonnet: 1x mit Opus retry. Sonst: leere Struktur.
+        if not raw:
+            stop_reason = getattr(msg, "stop_reason", "unknown")
+            log.warning("claude_empty_response", model=model, stop_reason=stop_reason)
+            if not force_fallback:
+                log.info("claude_retry_with_opus")
+                return self.extract_json(
+                    system=system,
+                    user_text=user_text,
+                    images=images,
+                    force_fallback=True,
+                )
+            # Auch Opus leer → leere Antwort zurückgeben (Batch wird geskippt, Job läuft weiter)
+            return {"eintraege": [], "positionen": []}, model
+
         try:
             return json.loads(raw), model
         except json.JSONDecodeError as exc:

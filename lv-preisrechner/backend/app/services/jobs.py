@@ -183,8 +183,8 @@ def run_parse_price_list(
         unsicher = 0
         total_eintraege = 0
 
+        skipped_batches = 0
         for bi, start in enumerate(range(0, total_pages, batch_size)):
-            # Streaming: nur dieser Batch im RAM, danach GC
             batch = pdf_batch_images(pdf_bytes, batch_start=start, batch_size=batch_size)
             progress = int(10 + (bi / total_batches) * 85)
             _update(
@@ -192,8 +192,18 @@ def run_parse_price_list(
                 progress=progress,
                 message=f"Batch {bi + 1}/{total_batches} (Seiten {start + 1}-{start + len(batch)})",
             )
-            parsed, _model = claude.extract_json(system=SYSTEM_PROMPT, images=batch)
-            # Batch aus RAM entfernen nach Claude-Call
+            try:
+                parsed, _model = claude.extract_json(system=SYSTEM_PROMPT, images=batch)
+            except Exception as batch_err:  # noqa: BLE001
+                log.warning(
+                    "batch_failed_skipped",
+                    batch=bi + 1,
+                    total=total_batches,
+                    error=str(batch_err)[:200],
+                )
+                skipped_batches += 1
+                del batch
+                continue
             del batch
             for row in parsed.get("eintraege", []):
                 dna_key = "|".join(
@@ -243,6 +253,15 @@ def run_parse_price_list(
         pl.eintraege_gesamt = total_eintraege
         pl.eintraege_unsicher = unsicher
         pl.status = "review"
+        if skipped_batches:
+            _update(
+                job.id,
+                message=f"Fertig ({total_eintraege} Einträge; {skipped_batches}/{total_batches} Batches übersprungen)",
+            )
+        if total_eintraege == 0 and total_batches > 0:
+            raise ValueError(
+                f"Claude konnte keine Einträge erkennen ({skipped_batches}/{total_batches} Batches ohne Antwort)"
+            )
 
     run_job(job_id, _runner)
 
@@ -278,6 +297,7 @@ def run_parse_lv(
         projekt_name = ""
         auftraggeber = ""
 
+        skipped_batches = 0
         for bi, start in enumerate(range(0, total_pages, batch_size)):
             batch = pdf_batch_images(pdf_bytes, batch_start=start, batch_size=batch_size)
             progress = int(10 + (bi / total_batches) * 85)
@@ -286,7 +306,18 @@ def run_parse_lv(
                 progress=progress,
                 message=f"Batch {bi + 1}/{total_batches} (Seiten {start + 1}-{start + len(batch)})",
             )
-            parsed, _model = claude.extract_json(system=SYSTEM_PROMPT, images=batch)
+            try:
+                parsed, _model = claude.extract_json(system=SYSTEM_PROMPT, images=batch)
+            except Exception as batch_err:  # noqa: BLE001
+                log.warning(
+                    "batch_failed_skipped",
+                    batch=bi + 1,
+                    total=total_batches,
+                    error=str(batch_err)[:200],
+                )
+                skipped_batches += 1
+                del batch
+                continue
             del batch
             if not projekt_name:
                 projekt_name = str(parsed.get("projekt_name", ""))
@@ -321,5 +352,14 @@ def run_parse_lv(
         lv.positionen_gesamt = len(positionen)
         lv.positionen_unsicher = unsicher
         lv.status = "review_needed"
+        if skipped_batches:
+            _update(
+                job.id,
+                message=f"Fertig ({len(positionen)} Positionen; {skipped_batches}/{total_batches} Batches übersprungen)",
+            )
+        if len(positionen) == 0 and total_batches > 0:
+            raise ValueError(
+                f"Claude konnte keine Positionen erkennen ({skipped_batches}/{total_batches} Batches ohne Antwort)"
+            )
 
     run_job(job_id, _runner)
