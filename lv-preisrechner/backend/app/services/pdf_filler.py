@@ -19,7 +19,9 @@ log = structlog.get_logger()
 
 
 def _euro(value: float) -> str:
-    return f"{value:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
+    # Verwende EUR statt €-Zeichen, weil PyMuPDF-Standard-Fonts kein € rendern
+    # (mappt sonst auf Mittelpunkt "·" als Fallback).
+    return f"{value:,.2f} EUR".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
 def generate_filled_pdf_bytes(lv: LV, tenant_firma: str) -> bytes:

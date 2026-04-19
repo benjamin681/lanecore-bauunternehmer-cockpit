@@ -222,6 +222,8 @@ def run_parse_price_list(
                     einheit,
                     variante=str(row.get("variante", "")),
                     abmessungen=str(row.get("abmessungen", "")),
+                    produktname=str(row.get("produktname", "")),
+                    kategorie=str(row.get("kategorie", "")),
                 )
                 konf = float(row.get("konfidenz", 1.0) or 1.0)
                 if konf < 0.85:
@@ -329,7 +331,23 @@ def run_parse_lv(
         lv.auftraggeber = auftraggeber[:300]
 
         unsicher = 0
+        saved_positions = 0
         for idx, row in enumerate(positionen):
+            menge = float(row.get("menge", 0.0) or 0.0)
+            kurztext = str(row.get("kurztext", ""))
+            titel = str(row.get("titel", ""))
+            # Skip Titel-Zeilen (Gliederungs-Uberschriften ohne echte Menge):
+            # - Menge = 0 UND (kurztext leer/Titel-Marker ODER OZ ohne Punkt-Suffix)
+            is_title_line = (
+                menge == 0
+                and (
+                    not kurztext
+                    or kurztext.lower().startswith("titel")
+                    or kurztext.strip() == titel.strip()
+                )
+            )
+            if is_title_line:
+                continue
             konf = float(row.get("konfidenz", 0.7) or 0.7)
             if konf < 0.85:
                 unsicher += 1
@@ -337,10 +355,10 @@ def run_parse_lv(
                 lv_id=lv.id,
                 reihenfolge=int(row.get("reihenfolge", idx + 1) or idx + 1),
                 oz=str(row.get("oz", ""))[:50],
-                titel=str(row.get("titel", ""))[:300],
-                kurztext=str(row.get("kurztext", "")),
+                titel=titel[:300],
+                kurztext=kurztext,
                 langtext=str(row.get("langtext", "")),
-                menge=float(row.get("menge", 0.0) or 0.0),
+                menge=menge,
                 einheit=str(row.get("einheit", ""))[:20],
                 erkanntes_system=str(row.get("erkanntes_system", ""))[:50],
                 feuerwiderstand=str(row.get("feuerwiderstand", ""))[:20],
@@ -348,8 +366,9 @@ def run_parse_lv(
                 konfidenz=max(0.0, min(1.0, konf)),
             )
             db.add(p)
+            saved_positions += 1
 
-        lv.positionen_gesamt = len(positionen)
+        lv.positionen_gesamt = saved_positions
         lv.positionen_unsicher = unsicher
         lv.status = "review_needed"
         if skipped_batches:
@@ -357,7 +376,7 @@ def run_parse_lv(
                 job.id,
                 message=f"Fertig ({len(positionen)} Positionen; {skipped_batches}/{total_batches} Batches übersprungen)",
             )
-        if len(positionen) == 0 and total_batches > 0:
+        if saved_positions == 0 and total_batches > 0:
             raise ValueError(
                 f"Claude konnte keine Positionen erkennen ({skipped_batches}/{total_batches} Batches ohne Antwort)"
             )

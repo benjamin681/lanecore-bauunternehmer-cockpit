@@ -49,19 +49,25 @@ def _normalize_to_base(
     einheit: str,
     variante: str = "",
     abmessungen: str = "",
+    produktname: str = "",
+    kategorie: str = "",
 ) -> tuple[float, str]:
-    """Normalisiert "€/Paket (500 Stk)" → €/Stk, "€/Bd. (16 St./Bd., BL=3m)" → €/lfm, …
+    """Normalisiert Händler-Einheit zu €/m², €/lfm, €/Stk, €/kg.
 
-    Berücksichtigt neben `einheit` auch freitext-Hinweise in variante und abmessungen,
-    weil Händler oft dort "16 St./Bd., BL=3000mm" schreiben.
+    Berücksichtigt viele Gebinde-Varianten: "Bd., 16 St./Bd., BL=3m",
+    "Karton (10 Stk)", "Paket à 500", "1 VE = 24 m²", etc.
+    Auch Context aus Produktname/Kategorie für Sanity-Checks.
     """
     import re
 
     e = einheit.lower().strip()
-    context = f"{einheit} {variante} {abmessungen}".lower()
+    context = f"{einheit} {variante} {abmessungen} {produktname}".lower()
 
-    # Gebinde-Erkennung: "16 St./Bd." + "BL=3000mm" → Preis pro lfm
-    m_pkg = re.search(r"(\d+)\s*(?:st|stk)\.?\s*/\s*(?:bd|pak|pkt|paket|bund)", context)
+    # --- 1) Bündel/Karton mit Stückzahl + BL (lfm-Produkte wie Profile) ---
+    m_pkg = re.search(
+        r"(\d+)\s*(?:st|stk|stueck|stück)\.?\s*/\s*(?:bd|bund|pak|pkt|paket|kt|karton|ve|vp)",
+        context,
+    )
     m_bl = re.search(r"bl\s*=?\s*(\d+[\.,]?\d*)\s*(mm|cm|m)\b", context)
     if m_pkg and m_bl:
         stueck = int(m_pkg.group(1))
@@ -72,13 +78,35 @@ def _normalize_to_base(
         if total_lfm > 0:
             return round(preis / total_lfm, 4), "lfm"
 
-    # "Paket (500 Stk)"
-    m_pkg_only = re.search(r"(\d+)\s*stk", context)
-    if ("paket" in e or "bd" in e or "bund" in e or "(" in e) and m_pkg_only:
-        n = int(m_pkg_only.group(1))
+    # --- 2) "à 500 Stk" / "(500 Stk)" / "500-er" → €/Stk ---
+    m_stk_count = re.search(r"(\d{2,5})\s*stk", context)
+    is_pkg = any(w in e for w in ("paket", "bd", "bund", "karton", "kt", "ve", "vp", "("))
+    if is_pkg and m_stk_count:
+        n = int(m_stk_count.group(1))
         if n > 0:
             return round(preis / n, 4), "Stk"
 
+    # --- 3) Profile-Spezialfall: Wenn einheit €/m aber Produkt ist ein Profil
+    # mit BL=3m, Preis oft x3 für Karton. Heuristik: Preis > 50 €/m bei Profil → durch 3 teilen
+    is_profile = "profil" in context or kategorie.lower() == "profile"
+    if is_profile and ("/m" in e or "lfm" in e) and preis > 50:
+        # Default-Bündel 3m → /3 für lfm-Preis
+        m_bl_single = re.search(r"bl\s*=?\s*(\d+[\.,]?\d*)\s*(mm|cm|m)\b", context)
+        if m_bl_single:
+            wert = float(m_bl_single.group(1).replace(",", "."))
+            unit = m_bl_single.group(2)
+            bl_m = wert / {"mm": 1000, "cm": 100, "m": 1}[unit]
+            if bl_m > 0:
+                return round(preis / bl_m, 4), "lfm"
+
+    # --- 4) Verpackungs-Einheit mit m²-Angabe: "1 VE = 24 m²" → €/m² ---
+    m_ve_m2 = re.search(r"(\d+[\.,]?\d*)\s*m[²2]", context)
+    if is_pkg and m_ve_m2 and "m²" not in e and "qm" not in e:
+        m2 = float(m_ve_m2.group(1).replace(",", "."))
+        if m2 > 0:
+            return round(preis / m2, 4), "m²"
+
+    # --- 5) Simple Einheiten ---
     if "m²" in e or "qm" in e or "m2" in e:
         return preis, "m²"
     if "lfm" in e or e.endswith("/m") or re.search(r"€\s*/\s*m(?!\w)", e):

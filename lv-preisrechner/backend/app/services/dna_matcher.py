@@ -32,31 +32,49 @@ def _parse_pattern(pattern: str) -> dict[str, str]:
 
 
 def _score_entry(entry: PriceEntry, pattern_parts: dict[str, str]) -> float:
-    """Score 0.0 - 1.0 wie gut das Entry zum Pattern passt."""
+    """Score 0.0 - 1.0 wie gut das Entry zum Pattern passt.
+
+    Wenn Produktname stark spezifisch (z.B. "UA") ist, HART erzwingen: sonst Score 0.
+    Das verhindert dass z.B. UA-Anfrage zu CW75 matcht.
+    """
+    wanted_prod = pattern_parts.get("produktname", "").lower()
+    have_prod = entry.produktname.lower()
+
+    # Hard-Match-Produktnamen: wenn spezifischer Code wie "UA", "CW50", "CD60/27" usw.
+    # gefordert, MUSS dieser Teil in entry.produktname oder entry.abmessungen vorkommen.
+    hard_codes = {"ua", "cw50", "cw75", "cw100", "cw150", "uw50", "uw75", "uw100",
+                  "cd60", "ud", "fireboard", "diamant", "silentboard", "aquapanel"}
+    for code in hard_codes:
+        if wanted_prod and code == wanted_prod.strip().lower():
+            combined = f"{entry.produktname} {entry.abmessungen} {entry.variante}".lower()
+            if code not in combined:
+                return 0.0
+            # Wenn UA gefordert, dann NICHT zu CW/UW matchen
+            if code == "ua":
+                other = {"cw", "uw", "cd"}
+                if any(o in combined for o in other) and "ua" not in combined.split():
+                    return 0.0
+
     score = 0.0
     weight_total = 0.0
-    weights = {"kategorie": 3, "produktname": 3, "abmessungen": 3, "hersteller": 1, "variante": 1}
+    weights = {"kategorie": 3, "produktname": 4, "abmessungen": 3, "hersteller": 1, "variante": 1}
 
     for key, w in weights.items():
         wanted = pattern_parts.get(key, "").lower()
         have = getattr(entry, key, "").lower()
         if not wanted:
-            # Pattern ist leer → egal
-            weight_total += w * 0.5  # leichter Bonus für nicht-gefordert
+            weight_total += w * 0.5
             score += w * 0.5
             continue
         weight_total += w
-        # Exakter Match
         if wanted == have:
             score += w
             continue
-        # Substring-Match
         if wanted in have or have in wanted:
-            score += w * 0.8
+            score += w * 0.85
             continue
-        # Token-Match (einzelne Wörter)
-        wanted_tokens = set(wanted.replace("-", " ").split())
-        have_tokens = set(have.replace("-", " ").split())
+        wanted_tokens = set(wanted.replace("-", " ").replace("/", " ").split())
+        have_tokens = set(have.replace("-", " ").replace("/", " ").split())
         if wanted_tokens & have_tokens:
             score += w * 0.5
     if weight_total == 0:

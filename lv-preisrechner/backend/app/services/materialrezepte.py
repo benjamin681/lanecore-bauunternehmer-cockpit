@@ -185,13 +185,16 @@ REZEPTE: dict[str, Rezept] = {
         system="OWA_MF",
         beschreibung="OWA-Mineralfaser-Rasterdecke (Einlegesystem, 625x625 oder 625x1250)",
         zieleinheit="m²",
-        zeit_h_pro_einheit=0.35,
+        zeit_h_pro_einheit=0.45,  # realistischer als 0.35
         materialien=[
-            # Rasterplatte selbst (z.B. OWA Bolero/Sinfonia) — DNA offen gelassen
-            MaterialBedarf("OWA||Bolero||", 1.05, "m²"),
-            # Rastersystem T24-Profil und Abhänger
-            MaterialBedarf("|Rasterdecke|T-Profil||", 3.00, "lfm"),
-            MaterialBedarf("|Rasterdecke|Randprofil L||", 0.50, "lfm"),
+            # Rasterplatte (OWA Bolero/Sinfonia/ähnlich) — DNA breit lassen
+            MaterialBedarf("OWA||||", 1.05, "m²"),
+            # T-Profile: Hauptprofil 24mm ~3 lfm/m², Randprofil L 0.5 lfm/m²
+            # Falls Kategorie "Profile" oder "Rasterdecke" vorhanden
+            MaterialBedarf("||T-Profil||", 3.00, "lfm"),
+            MaterialBedarf("||Randprofil||", 0.50, "lfm"),
+            # Abhänger
+            MaterialBedarf("||Schnellabhänger||", 1.20, "Stk"),
         ],
     ),
     "W131": Rezept(
@@ -247,18 +250,32 @@ REZEPTE: dict[str, Rezept] = {
         system="Tueraussparung",
         beschreibung="Türaussparung mit Sturzprofil + UA-Verstärkung",
         zieleinheit="Stk",
-        zeit_h_pro_einheit=1.5,
+        zeit_h_pro_einheit=1.5,  # 1-2h je nach Größe
         materialien=[
-            MaterialBedarf("|Profile|UA|", 6.0, "lfm"),
+            # UA-Profile 50mm ca. 6 lfm (Sturz + 2 seitlich)
+            # DNA muss Kategorie=Profile UND Produktname~UA haben (sonst matcht CW75 etc.)
+            MaterialBedarf("|Profile|UA|50|", 6.0, "lfm"),
+        ],
+    ),
+    "WC_Trennwand": Rezept(
+        system="WC_Trennwand",
+        beschreibung="Vorgefertigte WC-Trennwand inkl. Tür (System-Paket)",
+        zieleinheit="Stk",
+        zeit_h_pro_einheit=3.0,  # 2-4h pro Anlage (anliefern, ausrichten, befestigen)
+        materialien=[
+            # WC-Trennwand als Komplett-System — Kategorie Bauelemente
+            MaterialBedarf("|Bauelemente|WC-Trennwand||", 1.0, "Stk"),
         ],
     ),
     "Eckschiene": Rezept(
         system="Eckschiene",
         beschreibung="ALU/verzinkte Eckschiene",
         zieleinheit="lfm",
-        zeit_h_pro_einheit=0.1,
+        zeit_h_pro_einheit=0.15,
         materialien=[
-            MaterialBedarf("|Profile|Eckschiene||", 1.05, "lfm"),
+            # Auch ohne Match: Zuschlag + Lohn allein (~5-8 €/lfm realistisch)
+            MaterialBedarf("||Eckschiene||", 1.05, "lfm"),
+            MaterialBedarf("||Kantenschutz||", 1.05, "lfm"),
         ],
     ),
     "Fugenversiegelung": Rezept(
@@ -360,6 +377,19 @@ def resolve_rezept(
         "STUNDENLOHN": "Regiestunde",
         "INSTALLATIONSLOCH": "Installationsloch",
         "ABKOFFERUNG": "Verkleidung",
+        "WC-TRENNWAND": "WC_Trennwand",
+        "WC_TRENNWAND": "WC_Trennwand",
+        "WC": "WC_Trennwand",
+        "TRENNWAND-TÜRANLAGE": "WC_Trennwand",
+        "SCHAMWAND": "WC_Trennwand",
+        "WANDHAKEN": "Zulage",
+        "WAND/TÜRSTOPPER": "Zulage",
+        "TÜRSTOPPER": "Zulage",
+        "DEHNUNGSFUGE": "Fugenversiegelung",
+        "DEHNUNGS-BEWEGUNGSFUGE": "Fugenversiegelung",
+        "BEWEGUNGSFUGE": "Fugenversiegelung",
+        "DECKENAUSSCHNITT": "Installationsloch",
+        "DECKENAUSSCHNITTE": "Installationsloch",
     }
     if upper in aliases:
         return REZEPTE.get(aliases[upper])
