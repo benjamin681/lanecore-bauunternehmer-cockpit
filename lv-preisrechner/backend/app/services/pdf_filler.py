@@ -24,6 +24,52 @@ def _euro(value: float) -> str:
     return f"{value:,.2f} EUR".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+def _de_num(value: float, decimals: int = 2) -> str:
+    """Deutsche Zahl: 1.895,00 statt 1.895.00 oder 1,895.00"""
+    return f"{value:,.{decimals}f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def _wrap_text(text: str, max_chars_per_line: int = 40, max_lines: int = 2) -> list[str]:
+    """Einfaches Wortumbruch-Helper fuer PDF-Tabellen-Zellen."""
+    if not text:
+        return [""]
+    words = text.split()
+    lines: list[str] = []
+    current = ""
+    for w in words:
+        if len(current) + len(w) + 1 <= max_chars_per_line:
+            current = f"{current} {w}".strip()
+        else:
+            if current:
+                lines.append(current)
+            if len(lines) >= max_lines:
+                # Letztes Wort + Ellipsis
+                last = lines[-1]
+                if len(last) + 3 <= max_chars_per_line:
+                    lines[-1] = last + "..."
+                return lines
+            current = w
+    if current:
+        lines.append(current)
+    return lines[:max_lines] if lines else [""]
+
+
+def _oz_sort_key(oz: str) -> tuple:
+    """Natural-Sort fuer OZ wie 610.1, 610.10, 620.621.5.
+
+    Zerlegt in Integer-Tupel fuer korrekte numerische Sortierung.
+    """
+    if not oz:
+        return (9999,)
+    parts = []
+    for part in str(oz).replace(" ", "").split("."):
+        try:
+            parts.append((0, int(part)))
+        except ValueError:
+            parts.append((1, part))  # Strings nach Zahlen einsortieren
+    return tuple(parts)
+
+
 def generate_filled_pdf_bytes(lv: LV, tenant_firma: str) -> bytes:
     """Erzeugt ausgefülltes PDF als Bytes (wird in DB persistiert)."""
     if not lv.original_pdf_bytes:
@@ -61,7 +107,7 @@ def _insert_deckblatt(doc: fitz.Document, lv: LV, tenant_firma: str) -> None:
     y = 80.0
     page.insert_text(
         (60, y),
-        f"ANGEBOT — {tenant_firma}",
+        f"ANGEBOT - {tenant_firma}",  # ASCII-Minus statt Em-Dash (Font rendert Em-Dash als .)
         fontsize=22,
         fontname="helv",
         color=(0.1, 0.1, 0.4),
@@ -108,9 +154,30 @@ def _insert_deckblatt(doc: fitz.Document, lv: LV, tenant_firma: str) -> None:
             color=(0.7, 0.2, 0),
         )
 
+    # MwSt-Aufschluesselung direkt unter Netto-Summe
+    netto = lv.angebotssumme_netto or 0.0
+    mwst = netto * 0.19
+    brutto = netto + mwst
+    y += 30
+    page.insert_text(
+        (60, y),
+        f"zzgl. 19% MwSt: {_euro(mwst)}",
+        fontsize=11,
+        fontname="helv",
+        color=(0.3, 0.3, 0.3),
+    )
+    y += 16
+    page.insert_text(
+        (60, y),
+        f"Angebotssumme brutto: {_euro(brutto)}",
+        fontsize=13,
+        fontname="helv",
+        color=(0, 0.4, 0),
+    )
+
     page.insert_text(
         (60, 790),
-        "Erstellt mit LaneCore AI — LV-Preisrechner",
+        "Erstellt mit LaneCore AI - LV-Preisrechner",
         fontsize=8,
         fontname="helv",
         color=(0.5, 0.5, 0.5),
@@ -165,18 +232,29 @@ def _append_kalkulation(doc: fitz.Document, lv: LV) -> None:
     y = MARGIN_T + 10
     cols = _x_cols()
 
-    for pos in lv.positions:
-        # Kurztext ggf. kürzen
-        kurz = (pos.kurztext or pos.titel or "").replace("\n", " ")[:90]
+    # Positionen nach OZ natuerlich sortieren (610.1 vor 610.10)
+    sorted_positions = sorted(lv.positions, key=lambda p: _oz_sort_key(p.oz or ""))
 
-        if y + 2 * LINE_H > PAGE_H - 50:
+    for pos in sorted_positions:
+        # Kurztext mit Textbox wrappen (bis 3 Zeilen)
+        kurz_raw = (pos.kurztext or pos.titel or "").replace("\n", " ").strip()
+        # Max. 160 Zeichen in 2 Zeilen Wrap
+        kurz = kurz_raw[:160]
+        kurz_lines = _wrap_text(kurz, max_chars_per_line=40, max_lines=2)
+        extra_lines = max(0, len(kurz_lines) - 1)
+
+        needed_h = LINE_H * (1 + extra_lines)
+        if y + needed_h + 4 > PAGE_H - 50:
             page = _new_page()
             y = MARGIN_T + 10
 
         page.insert_text((cols[0], y), pos.oz or "", fontsize=8, fontname="helv")
-        page.insert_text((cols[1], y), kurz, fontsize=8, fontname="helv")
+        # Kurztext mehrzeilig
+        for i, line in enumerate(kurz_lines):
+            page.insert_text((cols[1], y + i * (LINE_H - 2)), line, fontsize=8, fontname="helv")
+
         page.insert_text(
-            (cols[2], y), f"{pos.menge:,.2f}".replace(",", "."), fontsize=8, fontname="helv"
+            (cols[2], y), _de_num(pos.menge), fontsize=8, fontname="helv"
         )
         page.insert_text((cols[3], y), pos.einheit or "", fontsize=8, fontname="helv")
         page.insert_text(
@@ -193,16 +271,10 @@ def _append_kalkulation(doc: fitz.Document, lv: LV) -> None:
             color=(0, 0, 0),
         )
 
-        if pos.warnung:
-            y += LINE_H - 2
-            page.insert_text(
-                (cols[1], y),
-                f"! {pos.warnung[:100]}",
-                fontsize=7,
-                fontname="heit",
-                color=(0.7, 0.2, 0),
-            )
-        y += LINE_H
+        # WICHTIG: Interne Warnings (z.B. "Kein Preis: |Profile|UW75|") werden NICHT
+        # mehr im PDF gezeigt — die sind fuer den Empfaenger verwirrend und wirken
+        # unprofessionell. Sie bleiben in lv.warnungen fuer interne Pruefung im UI.
+        y += max(LINE_H, needed_h)
 
     # Summenzeile
     if y + 30 > PAGE_H - 50:

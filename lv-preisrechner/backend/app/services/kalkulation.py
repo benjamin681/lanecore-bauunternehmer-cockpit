@@ -37,7 +37,26 @@ def _kalkuliere_position(
                 dna_pattern=mb.dna_pattern,
             )
             if match.price_entry is None:
-                warnungen.append(f"Kein Preis: {mb.dna_pattern}")
+                # Fallback: wenn optional (fallback_preis_eur gesetzt) Standard-Preis verwenden
+                # Vermeidet 0€-Materialien die zu Unter-Kalkulation führen
+                fallback_preis = getattr(mb, "fallback_preis_eur", None)
+                if fallback_preis and fallback_preis > 0:
+                    teilpreis = mb.menge_pro_einheit * fallback_preis
+                    material_ep += teilpreis
+                    detailliste.append(
+                        {
+                            "dna_pattern": mb.dna_pattern,
+                            "menge": mb.menge_pro_einheit,
+                            "einheit": mb.basis_einheit,
+                            "preis_einheit": fallback_preis,
+                            "gp": round(teilpreis, 2),
+                            "quelle": "fallback",
+                        }
+                    )
+                    continue
+                # Nur bei optional=False warnen (sonst Rauschen)
+                if not getattr(mb, "optional", False):
+                    warnungen.append(f"Kein Preis: {mb.dna_pattern}")
                 detailliste.append(
                     {
                         "dna_pattern": mb.dna_pattern,

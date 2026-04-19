@@ -21,6 +21,13 @@ class MaterialBedarf:
     dna_pattern: str
     menge_pro_einheit: float   # z.B. 1.05 m² GKB pro m² W112
     basis_einheit: str          # "m²", "lfm", "Stk"
+    # Fallback-Preis in €/Einheit falls Material nicht in Kundenpreisliste gefunden wird.
+    # Typisch aus Branchen-Durchschnitt. Verhindert Unterkalkulation bei Lücken in
+    # der Preisliste des Kunden.
+    fallback_preis_eur: float = 0.0
+    # Wenn True: kein "Kein Preis"-Warning wenn fehlt (z.B. UW-Profile oft nicht separat
+    # in Preislisten weil im CW-Gesamtsystem inkludiert).
+    optional: bool = False
 
 
 @dataclass
@@ -44,12 +51,12 @@ REZEPTE: dict[str, Rezept] = {
         zieleinheit="m²",
         zeit_h_pro_einheit=0.55,
         materialien=[
-            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 2.10, "m²"),
-            MaterialBedarf("|Profile|CW75|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW75|", 0.80, "lfm"),
-            MaterialBedarf("|Daemmung||40mm|", 1.00, "m²"),
-            MaterialBedarf("|Schrauben||3.5x25|", 0.05, "Stk"),  # ~25 Stk/m²; Faktor 0.05 = 25/500
-            MaterialBedarf("|Spachtel||Universal|", 0.40, "kg"),
+            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 2.10, "m²", fallback_preis_eur=3.50),
+            MaterialBedarf("|Profile|CW75|", 1.80, "lfm", fallback_preis_eur=3.20),
+            MaterialBedarf("|Profile|UW75|", 0.80, "lfm", fallback_preis_eur=2.50, optional=True),
+            MaterialBedarf("|Daemmung||40mm|", 1.00, "m²", fallback_preis_eur=4.50, optional=True),
+            MaterialBedarf("|Schrauben||3.5x25|", 0.05, "Stk", fallback_preis_eur=0.02, optional=True),  # ~25 Stk/m²; Faktor 0.05 = 25/500
+            MaterialBedarf("|Spachtel||Universal|", 0.40, "kg", fallback_preis_eur=2.20, optional=True),
         ],
     ),
     "W115": Rezept(
@@ -58,13 +65,13 @@ REZEPTE: dict[str, Rezept] = {
         zieleinheit="m²",
         zeit_h_pro_einheit=0.75,
         materialien=[
-            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 4.20, "m²"),
-            MaterialBedarf("|Profile|CW75|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW75|", 0.80, "lfm"),
-            MaterialBedarf("|Daemmung||60mm|", 1.00, "m²"),
-            MaterialBedarf("|Schrauben||3.5x25|", 0.06, "Stk"),
-            MaterialBedarf("|Schrauben||3.5x45|", 0.03, "Stk"),
-            MaterialBedarf("|Spachtel||Universal|", 0.60, "kg"),
+            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 4.20, "m²", fallback_preis_eur=3.50),
+            MaterialBedarf("|Profile|CW75|", 1.80, "lfm", fallback_preis_eur=3.20),
+            MaterialBedarf("|Profile|UW75|", 0.80, "lfm", fallback_preis_eur=2.50, optional=True),
+            MaterialBedarf("|Daemmung||60mm|", 1.00, "m²", fallback_preis_eur=4.50, optional=True),
+            MaterialBedarf("|Schrauben||3.5x25|", 0.06, "Stk", fallback_preis_eur=0.02, optional=True),
+            MaterialBedarf("|Schrauben||3.5x45|", 0.03, "Stk", fallback_preis_eur=0.02, optional=True),
+            MaterialBedarf("|Spachtel||Universal|", 0.60, "kg", fallback_preis_eur=2.20, optional=True),
         ],
     ),
     "W116": Rezept(
@@ -73,12 +80,12 @@ REZEPTE: dict[str, Rezept] = {
         zieleinheit="m²",
         zeit_h_pro_einheit=0.95,
         materialien=[
-            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 4.20, "m²"),
-            MaterialBedarf("|Profile|CW75|", 3.60, "lfm"),
-            MaterialBedarf("|Profile|UW75|", 1.60, "lfm"),
-            MaterialBedarf("|Daemmung||60mm|", 1.00, "m²"),
-            MaterialBedarf("|Schrauben||3.5x45|", 0.06, "Stk"),
-            MaterialBedarf("|Spachtel||Universal|", 0.70, "kg"),
+            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 4.20, "m²", fallback_preis_eur=3.50),
+            MaterialBedarf("|Profile|CW75|", 3.60, "lfm", fallback_preis_eur=3.20),
+            MaterialBedarf("|Profile|UW75|", 1.60, "lfm", fallback_preis_eur=2.50, optional=True),
+            MaterialBedarf("|Daemmung||60mm|", 1.00, "m²", fallback_preis_eur=4.50, optional=True),
+            MaterialBedarf("|Schrauben||3.5x45|", 0.06, "Stk", fallback_preis_eur=0.02, optional=True),
+            MaterialBedarf("|Spachtel||Universal|", 0.70, "kg", fallback_preis_eur=2.20, optional=True),
         ],
     ),
     "W118": Rezept(
@@ -87,13 +94,13 @@ REZEPTE: dict[str, Rezept] = {
         zieleinheit="m²",
         zeit_h_pro_einheit=0.85,
         materialien=[
-            MaterialBedarf("|Gipskarton|GKF|12.5mm|", 4.20, "m²"),
-            MaterialBedarf("|Profile|CW75|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW75|", 0.80, "lfm"),
-            MaterialBedarf("|Daemmung||60mm|", 1.00, "m²"),
-            MaterialBedarf("|Schrauben||3.5x25|", 0.06, "Stk"),
-            MaterialBedarf("|Schrauben||3.5x45|", 0.03, "Stk"),
-            MaterialBedarf("|Spachtel||Universal|", 0.60, "kg"),
+            MaterialBedarf("|Gipskarton|GKF|12.5mm|", 4.20, "m²", fallback_preis_eur=4.20),
+            MaterialBedarf("|Profile|CW75|", 1.80, "lfm", fallback_preis_eur=3.20),
+            MaterialBedarf("|Profile|UW75|", 0.80, "lfm", fallback_preis_eur=2.50, optional=True),
+            MaterialBedarf("|Daemmung||60mm|", 1.00, "m²", fallback_preis_eur=4.50, optional=True),
+            MaterialBedarf("|Schrauben||3.5x25|", 0.06, "Stk", fallback_preis_eur=0.02, optional=True),
+            MaterialBedarf("|Schrauben||3.5x45|", 0.03, "Stk", fallback_preis_eur=0.02, optional=True),
+            MaterialBedarf("|Spachtel||Universal|", 0.60, "kg", fallback_preis_eur=2.20, optional=True),
         ],
     ),
     "W135": Rezept(
@@ -102,12 +109,12 @@ REZEPTE: dict[str, Rezept] = {
         zieleinheit="m²",
         zeit_h_pro_einheit=0.95,
         materialien=[
-            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 4.20, "m²"),
-            MaterialBedarf("|Profile|CW100|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW100|", 0.80, "lfm"),
-            MaterialBedarf("|Daemmung||80mm|", 1.00, "m²"),
-            MaterialBedarf("|Schrauben||3.5x45|", 0.06, "Stk"),
-            MaterialBedarf("|Spachtel||Universal|", 0.60, "kg"),
+            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 4.20, "m²", fallback_preis_eur=3.50),
+            MaterialBedarf("|Profile|CW100|", 1.80, "lfm", fallback_preis_eur=3.20),
+            MaterialBedarf("|Profile|UW100|", 0.80, "lfm", fallback_preis_eur=2.50, optional=True),
+            MaterialBedarf("|Daemmung||80mm|", 1.00, "m²", fallback_preis_eur=4.50, optional=True),
+            MaterialBedarf("|Schrauben||3.5x45|", 0.06, "Stk", fallback_preis_eur=0.02, optional=True),
+            MaterialBedarf("|Spachtel||Universal|", 0.60, "kg", fallback_preis_eur=2.20, optional=True),
         ],
     ),
     # --- Vorsatzschalen -----------------------------------------------------
@@ -117,12 +124,12 @@ REZEPTE: dict[str, Rezept] = {
         zieleinheit="m²",
         zeit_h_pro_einheit=0.50,
         materialien=[
-            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 1.05, "m²"),
-            MaterialBedarf("|Profile|CW50|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW50|", 0.80, "lfm"),
-            MaterialBedarf("|Daemmung||40mm|", 1.00, "m²"),
-            MaterialBedarf("|Schrauben||3.5x25|", 0.03, "Stk"),
-            MaterialBedarf("|Spachtel||Universal|", 0.25, "kg"),
+            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 1.05, "m²", fallback_preis_eur=3.50),
+            MaterialBedarf("|Profile|CW50|", 1.80, "lfm", fallback_preis_eur=3.20),
+            MaterialBedarf("|Profile|UW50|", 0.80, "lfm", fallback_preis_eur=2.50, optional=True),
+            MaterialBedarf("|Daemmung||40mm|", 1.00, "m²", fallback_preis_eur=4.50, optional=True),
+            MaterialBedarf("|Schrauben||3.5x25|", 0.03, "Stk", fallback_preis_eur=0.02, optional=True),
+            MaterialBedarf("|Spachtel||Universal|", 0.25, "kg", fallback_preis_eur=2.20, optional=True),
         ],
     ),
     "W625": Rezept(
@@ -131,11 +138,11 @@ REZEPTE: dict[str, Rezept] = {
         zieleinheit="m²",
         zeit_h_pro_einheit=0.45,
         materialien=[
-            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 1.05, "m²"),
+            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 1.05, "m²", fallback_preis_eur=3.50),
             MaterialBedarf("|Profile|CD60/27|", 2.00, "lfm"),
-            MaterialBedarf("|Daemmung||40mm|", 1.00, "m²"),
-            MaterialBedarf("|Schrauben||3.5x25|", 0.03, "Stk"),
-            MaterialBedarf("|Spachtel||Universal|", 0.25, "kg"),
+            MaterialBedarf("|Daemmung||40mm|", 1.00, "m²", fallback_preis_eur=4.50, optional=True),
+            MaterialBedarf("|Schrauben||3.5x25|", 0.03, "Stk", fallback_preis_eur=0.02, optional=True),
+            MaterialBedarf("|Spachtel||Universal|", 0.25, "kg", fallback_preis_eur=2.20, optional=True),
         ],
     ),
     # --- Schachtwände -------------------------------------------------------
@@ -146,11 +153,11 @@ REZEPTE: dict[str, Rezept] = {
         zeit_h_pro_einheit=0.90,
         materialien=[
             MaterialBedarf("Knauf|Gipskarton|Fireboard|20mm|", 2.10, "m²"),
-            MaterialBedarf("|Profile|CW75|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW75|", 0.80, "lfm"),
-            MaterialBedarf("|Daemmung||40mm|", 1.00, "m²"),
-            MaterialBedarf("|Schrauben||3.5x45|", 0.04, "Stk"),
-            MaterialBedarf("|Spachtel||Universal|", 0.60, "kg"),
+            MaterialBedarf("|Profile|CW75|", 1.80, "lfm", fallback_preis_eur=3.20),
+            MaterialBedarf("|Profile|UW75|", 0.80, "lfm", fallback_preis_eur=2.50, optional=True),
+            MaterialBedarf("|Daemmung||40mm|", 1.00, "m²", fallback_preis_eur=4.50, optional=True),
+            MaterialBedarf("|Schrauben||3.5x45|", 0.04, "Stk", fallback_preis_eur=0.02, optional=True),
+            MaterialBedarf("|Spachtel||Universal|", 0.60, "kg", fallback_preis_eur=2.20, optional=True),
         ],
     ),
     # --- Decken ------------------------------------------------------------
@@ -160,12 +167,12 @@ REZEPTE: dict[str, Rezept] = {
         zieleinheit="m²",
         zeit_h_pro_einheit=0.55,
         materialien=[
-            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 1.05, "m²"),
-            MaterialBedarf("|Profile|CD60|27|", 3.20, "lfm"),
+            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 1.05, "m²", fallback_preis_eur=3.50),
+            MaterialBedarf("|Profile|CD60|27|", 3.20, "lfm", fallback_preis_eur=2.30),
             MaterialBedarf("|Profile|UD|", 0.60, "lfm"),
             # Abhänger/Clip pauschal pro m² (häufig nicht in Preisliste — ggf. kein Match)
-            MaterialBedarf("|Daemmung||40mm|", 0.60, "m²"),  # oft nur teilweise
-            MaterialBedarf("|Spachtel||Universal|", 0.35, "kg"),
+            MaterialBedarf("|Daemmung||40mm|", 0.60, "m²", fallback_preis_eur=4.50, optional=True),  # oft nur teilweise
+            MaterialBedarf("|Spachtel||Universal|", 0.35, "kg", fallback_preis_eur=2.20, optional=True),
         ],
     ),
     "D113": Rezept(
@@ -174,11 +181,11 @@ REZEPTE: dict[str, Rezept] = {
         zieleinheit="m²",
         zeit_h_pro_einheit=0.80,
         materialien=[
-            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 2.10, "m²"),
-            MaterialBedarf("|Profile|CD60|27|", 3.20, "lfm"),
+            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 2.10, "m²", fallback_preis_eur=3.50),
+            MaterialBedarf("|Profile|CD60|27|", 3.20, "lfm", fallback_preis_eur=2.30),
             MaterialBedarf("|Profile|UD|", 0.60, "lfm"),
-            MaterialBedarf("|Daemmung||40mm|", 0.60, "m²"),
-            MaterialBedarf("|Spachtel||Universal|", 0.50, "kg"),
+            MaterialBedarf("|Daemmung||40mm|", 0.60, "m²", fallback_preis_eur=4.50, optional=True),
+            MaterialBedarf("|Spachtel||Universal|", 0.50, "kg", fallback_preis_eur=2.20, optional=True),
         ],
     ),
     "OWA_MF": Rezept(
@@ -203,11 +210,11 @@ REZEPTE: dict[str, Rezept] = {
         zieleinheit="m²",
         zeit_h_pro_einheit=0.95,
         materialien=[
-            MaterialBedarf("|Gipskarton|GKF|12.5mm|", 4.20, "m²"),
-            MaterialBedarf("|Profile|CW100|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW100|", 0.80, "lfm"),
-            MaterialBedarf("|Daemmung||80mm|", 1.00, "m²"),
-            MaterialBedarf("|Spachtel||Universal|", 0.70, "kg"),
+            MaterialBedarf("|Gipskarton|GKF|12.5mm|", 4.20, "m²", fallback_preis_eur=4.20),
+            MaterialBedarf("|Profile|CW100|", 1.80, "lfm", fallback_preis_eur=3.20),
+            MaterialBedarf("|Profile|UW100|", 0.80, "lfm", fallback_preis_eur=2.50, optional=True),
+            MaterialBedarf("|Daemmung||80mm|", 1.00, "m²", fallback_preis_eur=4.50, optional=True),
+            MaterialBedarf("|Spachtel||Universal|", 0.70, "kg", fallback_preis_eur=2.20, optional=True),
         ],
     ),
     "W135_Stahlblech": Rezept(
@@ -216,12 +223,12 @@ REZEPTE: dict[str, Rezept] = {
         zieleinheit="m²",
         zeit_h_pro_einheit=1.10,
         materialien=[
-            MaterialBedarf("|Gipskarton|GKF|12.5mm|", 4.20, "m²"),
-            MaterialBedarf("|Profile|CW75|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW75|", 0.80, "lfm"),
-            MaterialBedarf("|Daemmung||60mm|", 1.00, "m²"),
+            MaterialBedarf("|Gipskarton|GKF|12.5mm|", 4.20, "m²", fallback_preis_eur=4.20),
+            MaterialBedarf("|Profile|CW75|", 1.80, "lfm", fallback_preis_eur=3.20),
+            MaterialBedarf("|Profile|UW75|", 0.80, "lfm", fallback_preis_eur=2.50, optional=True),
+            MaterialBedarf("|Daemmung||60mm|", 1.00, "m²", fallback_preis_eur=4.50, optional=True),
             # Stahlblecheinlage meist nicht in Preisliste → kommt als separate Position
-            MaterialBedarf("|Spachtel||Universal|", 0.60, "kg"),
+            MaterialBedarf("|Spachtel||Universal|", 0.60, "kg", fallback_preis_eur=2.20, optional=True),
         ],
     ),
     "Aquapanel": Rezept(
@@ -231,9 +238,9 @@ REZEPTE: dict[str, Rezept] = {
         zeit_h_pro_einheit=0.80,
         materialien=[
             MaterialBedarf("|Aquapanel||12.5mm|", 1.05, "m²"),
-            MaterialBedarf("|Profile|CW75|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW75|", 0.80, "lfm"),
-            MaterialBedarf("|Daemmung||40mm|", 1.00, "m²"),
+            MaterialBedarf("|Profile|CW75|", 1.80, "lfm", fallback_preis_eur=3.20),
+            MaterialBedarf("|Profile|UW75|", 0.80, "lfm", fallback_preis_eur=2.50, optional=True),
+            MaterialBedarf("|Daemmung||40mm|", 1.00, "m²", fallback_preis_eur=4.50, optional=True),
         ],
     ),
     # --- Zulagen / Einzelteile ---------------------------------------------
@@ -254,7 +261,7 @@ REZEPTE: dict[str, Rezept] = {
         materialien=[
             # UA-Profile 50mm ca. 6 lfm (Sturz + 2 seitlich)
             # DNA muss Kategorie=Profile UND Produktname~UA haben (sonst matcht CW75 etc.)
-            MaterialBedarf("|Profile|UA|50|", 6.0, "lfm"),
+            MaterialBedarf("|Profile|UA|50|", 6.0, "lfm", fallback_preis_eur=5.50),
         ],
     ),
     "WC_Trennwand": Rezept(
@@ -307,10 +314,10 @@ REZEPTE: dict[str, Rezept] = {
         zieleinheit="m",
         zeit_h_pro_einheit=0.65,
         materialien=[
-            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 1.70, "m²"),
-            MaterialBedarf("|Profile|CW50|", 2.50, "lfm"),
-            MaterialBedarf("|Daemmung||60mm|", 0.40, "m²"),
-            MaterialBedarf("|Spachtel||Universal|", 0.30, "kg"),
+            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 1.70, "m²", fallback_preis_eur=3.50),
+            MaterialBedarf("|Profile|CW50|", 2.50, "lfm", fallback_preis_eur=3.20),
+            MaterialBedarf("|Daemmung||60mm|", 0.40, "m²", fallback_preis_eur=4.50, optional=True),
+            MaterialBedarf("|Spachtel||Universal|", 0.30, "kg", fallback_preis_eur=2.20, optional=True),
         ],
     ),
     "Regiestunde": Rezept(
@@ -326,10 +333,10 @@ REZEPTE: dict[str, Rezept] = {
         zieleinheit="lfm",
         zeit_h_pro_einheit=0.9,
         materialien=[
-            MaterialBedarf("|Gipskarton|GKF|12.5mm|", 1.20, "m²"),
-            MaterialBedarf("|Profile|CW50|", 2.50, "lfm"),
-            MaterialBedarf("|Daemmung||40mm|", 0.60, "m²"),
-            MaterialBedarf("|Spachtel||Universal|", 0.40, "kg"),
+            MaterialBedarf("|Gipskarton|GKF|12.5mm|", 1.20, "m²", fallback_preis_eur=4.20),
+            MaterialBedarf("|Profile|CW50|", 2.50, "lfm", fallback_preis_eur=3.20),
+            MaterialBedarf("|Daemmung||40mm|", 0.60, "m²", fallback_preis_eur=4.50, optional=True),
+            MaterialBedarf("|Spachtel||Universal|", 0.40, "kg", fallback_preis_eur=2.20, optional=True),
         ],
     ),
     "Revisionsklappe": Rezept(

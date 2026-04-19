@@ -86,18 +86,36 @@ def _normalize_to_base(
         if n > 0:
             return round(preis / n, 4), "Stk"
 
-    # --- 3) Profile-Spezialfall: Wenn einheit €/m aber Produkt ist ein Profil
-    # mit BL=3m, Preis oft x3 für Karton. Heuristik: Preis > 50 €/m bei Profil → durch 3 teilen
+    # --- 3) Profile-Spezialfall: Trockenbau-Profile in Kartons/Bündeln ---
+    # Erweiterte Heuristik:
+    #  a) Explizites BL= im Context → exakte Teilung
+    #  b) Fallback: wenn Preis > Plausibilitätsgrenze/lfm → Default-Bündel (3m Stange, 10 Stk)
+    #     Trockenbau-Profile kosten typisch 1-5 €/lfm. Alles >15 €/m ist Paket-Preis.
     is_profile = "profil" in context or kategorie.lower() == "profile"
-    if is_profile and ("/m" in e or "lfm" in e) and preis > 50:
-        # Default-Bündel 3m → /3 für lfm-Preis
+    if is_profile and ("/m" in e or "lfm" in e or e.strip() == "m"):
+        # a) Exaktes BL= - immer erste Wahl
         m_bl_single = re.search(r"bl\s*=?\s*(\d+[\.,]?\d*)\s*(mm|cm|m)\b", context)
         if m_bl_single:
             wert = float(m_bl_single.group(1).replace(",", "."))
             unit = m_bl_single.group(2)
             bl_m = wert / {"mm": 1000, "cm": 100, "m": 1}[unit]
             if bl_m > 0:
+                # Wenn Stückzahl pro Bündel angegeben → echter Bundle-Preis
+                m_pack_stk = re.search(r"(\d+)\s*(?:st|stk|stueck|stück)", context)
+                if m_pack_stk and preis > 30:
+                    stueck = int(m_pack_stk.group(1))
+                    total_m = stueck * bl_m
+                    if total_m > 0:
+                        return round(preis / total_m, 4), "lfm"
                 return round(preis / bl_m, 4), "lfm"
+        # b) Default-Annahme: Preis unplausibel hoch → 3m-Stangen-Paket
+        # UW/CW/UA/CD-Profile kosten 0.8-5 €/lfm. Alles über 15 €/m ist verdächtig.
+        if preis > 15:
+            # Konservative Annahme: 3m pro Stange
+            # Bei sehr hohem Preis (>100 €/m): vermutlich 10-er Karton (30m total)
+            if preis > 100:
+                return round(preis / 30.0, 4), "lfm"  # 10×3m Karton
+            return round(preis / 3.0, 4), "lfm"  # 1×3m Stange
 
     # --- 4) Verpackungs-Einheit mit m²-Angabe: "1 VE = 24 m²" → €/m² ---
     m_ve_m2 = re.search(r"(\d+[\.,]?\d*)\s*m[²2]", context)
