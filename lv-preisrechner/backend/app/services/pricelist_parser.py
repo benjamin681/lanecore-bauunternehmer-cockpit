@@ -161,6 +161,57 @@ def _to_meters(value: float, unit: str) -> float:
     return value
 
 
+# Abkuerzungs-Mapping fuer haendler-uebliche Kurzformen (Kemmler & Co.).
+# Schluessel: Kurzform im Produkt-/Unit-Text (lowercase, ohne Trennzeichen),
+# Wert: Langform (Canonical).
+# Nur EINDEUTIGE Kurzformen. Mehrdeutige (z.B. /P. = Paket vs. Packung,
+# /B. = Bund vs. Batterie) werden NICHT automatisch aufgeloest, damit das
+# Review-Signal erhalten bleibt.
+_UNIT_ABBREVIATIONS: dict[str, str] = {
+    "sa.": "Sack",
+    "s.": "Sack",         # In Kemmler-Daten so beobachtet: "25 kg/S."
+    "rol.": "Rolle",
+    "rol": "Rolle",
+    "pak.": "Paket",
+    "eim.": "Eimer",
+    "ktn.": "Karton",
+    "geb.": "Gebinde",
+    "bd.": "Bund",
+    "ku.": "Kuebel",
+    "fl.": "Flasche",
+    "kartu.": "Kartusche",
+}
+
+# Gezielt NICHT mapped (mehrdeutig; bleibt im Fallback-Pfad = needs_review):
+#   p.  (Paket vs. Packung vs. Palette)
+#   b.  (Bund vs. Beutel)
+#   st. (Stueck vs. Stange) — wird bereits separat oben behandelt
+
+
+def _expand_unit_abbreviations(text: str) -> str:
+    """Ersetzt bekannte Einheiten-Abkuerzungen durch Langformen.
+
+    Matcht nur am "/"-Trenner (z.B. "25 kg/Sa." -> "25 kg/Sack"), nicht
+    generell im Text, um False-Positives wie "S.1" (Seite 1) zu vermeiden.
+
+    Gibt den unveraenderten Text zurueck, wenn keine Abkuerzung passt.
+    """
+    if not text:
+        return text
+    # Wir ersetzen "/<abbrev>" case-insensitive. Dictionary nach Laenge sortiert
+    # (laengste zuerst), damit "rol." vor "rol" matcht.
+    for abbrev in sorted(_UNIT_ABBREVIATIONS.keys(), key=len, reverse=True):
+        replacement = _UNIT_ABBREVIATIONS[abbrev]
+        # Wort-Grenze rechts: Punkt ist in Regex ein Sonderzeichen; manuelles
+        # Pattern: "/" + Abkuerzung, gefolgt von Ende/Whitespace/Komma.
+        pattern = re.compile(
+            r"/" + re.escape(abbrev) + r"(?=$|[\s,;)])",
+            flags=re.IGNORECASE,
+        )
+        text = pattern.sub("/" + replacement, text)
+    return text
+
+
 def _normalize_unit(
     raw_unit: str,
     *,
@@ -177,7 +228,14 @@ def _normalize_unit(
       R5: Rollen WxL              -> m² berechnen
 
     Fallback: effective_unit=raw_unit, needs_review=True, confidence<0.7.
+
+    Vor der Regel-Engine werden gaengige Abkuerzungen expandiert
+    (z.B. "€/Sa." -> "€/Sack") — sowohl in raw_unit als auch im
+    product_name (weil R1 die Gebinde-Angabe "25 kg/Sa." dort liest).
     """
+    raw_unit = _expand_unit_abbreviations(raw_unit)
+    product_name = _expand_unit_abbreviations(product_name)
+
     raw = raw_unit.strip()
     raw_lower = raw.lower()
     combined = f"{product_name} {raw_unit}"
