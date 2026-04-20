@@ -104,29 +104,40 @@ REZEPTE: dict[str, Rezept] = {
         ],
     ),
     "W135": Rezept(
+        # KORREKTUR 2026-04-20 (KNAUF_KORREKTUREN.md K-1): W135 ist offiziell eine
+        # Brandwand (Sonderbauwand anstelle Brandwand), Einfachstaenderwerk
+        # 2-lagig + Stahlblecheinlage je Seite, F90-A+mB.
+        # Quelle: knauf.com/de-DE/.../w13-de-metallstaenderwaende-anstelle-von-brandwaenden
+        # Vorheriges Label "Installationswand" war falsch — Installation-DS ist W116.
         system="W135",
-        beschreibung="Installationswand, 2-lagig, verbreiterter Hohlraum",
+        beschreibung="W135.de — Brandwand Einfachstaenderwerk 2-lagig + Stahlblecheinlage (F90-A+mB)",
         zieleinheit="m²",
-        zeit_h_pro_einheit=0.95,
+        zeit_h_pro_einheit=1.10,  # wg. Stahlblech-Handling (wie vormals W135_Stahlblech)
         materialien=[
-            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 4.20, "m²"),
-            MaterialBedarf("|Profile|CW100|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW100|", 0.80, "lfm", optional=True),
-            MaterialBedarf("|Daemmung||80mm|", 1.00, "m²", optional=True),
+            MaterialBedarf("|Gipskarton|GKF|12.5mm|", 4.20, "m²"),  # 2x beidseitig
+            MaterialBedarf("|Profile|CW75|", 1.80, "lfm"),
+            MaterialBedarf("|Profile|UW75|", 0.80, "lfm", optional=True),
+            MaterialBedarf("|Stahlblech|Einlage|0.5mm|", 2.00, "m²"),  # je Seite
+            MaterialBedarf("|Daemmung||60mm|", 1.00, "m²", optional=True),
             MaterialBedarf("|Schrauben||3.5x45|", 0.06, "Stk", optional=True),
             MaterialBedarf("|Spachtel||Universal|", 0.60, "kg", optional=True),
         ],
     ),
     # --- Vorsatzschalen -----------------------------------------------------
+    # BREAKING SEMANTIC CHANGE 2026-04-20 (KNAUF_KORREKTUREN.md K-2):
+    # W623 und W625 waren im Projekt vertauscht. Offizielle Knauf-Definition:
+    #   W623.de = mit CD 60/27, direkt befestigt
+    #   W625.de = mit CW-Profil, einlagig beplankt (freistehend)
+    # Quelle: knauf.com/de-DE/.../w61-de-vorsatzschalen
+    # Rezepte wurden entsprechend getauscht.
     "W623": Rezept(
         system="W623",
-        beschreibung="Vorsatzschale freistehend, 1-lagig GKB/GKF, CW50/75",
+        beschreibung="W623.de — Vorsatzschale direkt befestigt mit CD 60/27 (Direktabhaenger)",
         zieleinheit="m²",
-        zeit_h_pro_einheit=0.50,
+        zeit_h_pro_einheit=0.45,
         materialien=[
             MaterialBedarf("|Gipskarton|GKB|12.5mm|", 1.05, "m²"),
-            MaterialBedarf("|Profile|CW50|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW50|", 0.80, "lfm", optional=True),
+            MaterialBedarf("|Profile|CD60/27|", 2.00, "lfm"),
             MaterialBedarf("|Daemmung||40mm|", 1.00, "m²", optional=True),
             MaterialBedarf("|Schrauben||3.5x25|", 0.03, "Stk", optional=True),
             MaterialBedarf("|Spachtel||Universal|", 0.25, "kg", optional=True),
@@ -134,12 +145,13 @@ REZEPTE: dict[str, Rezept] = {
     ),
     "W625": Rezept(
         system="W625",
-        beschreibung="Vorsatzschale direkt befestigt (Direktabhänger), 1-lagig",
+        beschreibung="W625.de — Vorsatzschale freistehend mit CW-Profil, einlagig beplankt",
         zieleinheit="m²",
-        zeit_h_pro_einheit=0.45,
+        zeit_h_pro_einheit=0.50,
         materialien=[
             MaterialBedarf("|Gipskarton|GKB|12.5mm|", 1.05, "m²"),
-            MaterialBedarf("|Profile|CD60/27|", 2.00, "lfm"),
+            MaterialBedarf("|Profile|CW50|", 1.80, "lfm"),
+            MaterialBedarf("|Profile|UW50|", 0.80, "lfm", optional=True),
             MaterialBedarf("|Daemmung||40mm|", 1.00, "m²", optional=True),
             MaterialBedarf("|Schrauben||3.5x25|", 0.03, "Stk", optional=True),
             MaterialBedarf("|Spachtel||Universal|", 0.25, "kg", optional=True),
@@ -205,30 +217,44 @@ REZEPTE: dict[str, Rezept] = {
         ],
     ),
     "W131": Rezept(
+        # KORREKTUR 2026-04-20 (KNAUF_KORREKTUREN.md K-4): W131 ist offiziell
+        # Einfachstaenderwerk mit 2-3 Lagen GKF UND Stahlblecheinlage je Seite,
+        # F90-A+mB (Sonderbauwand anstelle Brandwand). Stahlblech ist PFLICHT.
+        # Quelle: knauf.com/de-DE/.../w13-de-metallstaenderwaende-anstelle-von-brandwaenden
         system="W131",
-        beschreibung="Brandwand F90 / F120, 2-lagig GKF, breitere UK",
+        beschreibung="W131.de — Brandwand Einfachstaenderwerk 2-lagig GKF + Stahlblecheinlage (F90-A+mB, bis 9m Wandhoehe)",
         zieleinheit="m²",
-        zeit_h_pro_einheit=0.95,
+        zeit_h_pro_einheit=1.10,  # erhoeht wegen Stahlblech-Handling
         materialien=[
-            MaterialBedarf("|Gipskarton|GKF|12.5mm|", 4.20, "m²"),
+            MaterialBedarf("|Gipskarton|GKF|12.5mm|", 4.20, "m²"),  # 2-lagig beidseitig
             MaterialBedarf("|Profile|CW100|", 1.80, "lfm"),
             MaterialBedarf("|Profile|UW100|", 0.80, "lfm", optional=True),
+            MaterialBedarf("|Stahlblech|Einlage|0.5mm|", 2.00, "m²"),  # je Seite, Pflicht
             MaterialBedarf("|Daemmung||80mm|", 1.00, "m²", optional=True),
             MaterialBedarf("|Spachtel||Universal|", 0.70, "kg", optional=True),
         ],
     ),
-    "W135_Stahlblech": Rezept(
-        system="W135_Stahlblech",
-        beschreibung="Installationswand F60 A+M mit Stahlblecheinlage (Einbruchhemmung)",
+    # W135_Stahlblech entfernt (KNAUF_KORREKTUREN.md K-1, 2026-04-20):
+    # Das war Duplikat - W135 ist selbst schon eine Brandwand mit Stahlblech.
+    # Alte Codes "W135_Stahlblech" / "A+M" / "Einbruchhemmung" werden jetzt via
+    # resolve_rezept-Alias auf W135 gemappt (siehe aliases-Dict weiter unten).
+    "W133": Rezept(
+        # NEU 2026-04-20 (KNAUF_KORREKTUREN.md K-5): W133 ist Einfachstaenderwerk
+        # DREILAGIG + Stahlblech (nicht Doppelstaender, wie vorher in der Doku stand).
+        # Bisher wurde W133 im resolve_rezept auf W131 gemappt - das liefert nur
+        # 2 GKF-Lagen, zu wenig Material. Eigenes Rezept ist noetig.
+        # Quelle: knauf.com/de-DE/.../w13-de-metallstaenderwaende-anstelle-von-brandwaenden
+        system="W133",
+        beschreibung="W133.de — Brandwand Einfachstaenderwerk 3-lagig GKF + Stahlblecheinlage (F90-A+mB)",
         zieleinheit="m²",
-        zeit_h_pro_einheit=1.10,
+        zeit_h_pro_einheit=1.25,  # 3-lagig + Stahlblech = hoechster Aufwand
         materialien=[
-            MaterialBedarf("|Gipskarton|GKF|12.5mm|", 4.20, "m²"),
-            MaterialBedarf("|Profile|CW75|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW75|", 0.80, "lfm", optional=True),
-            MaterialBedarf("|Daemmung||60mm|", 1.00, "m²", optional=True),
-            # Stahlblecheinlage meist nicht in Preisliste → kommt als separate Position
-            MaterialBedarf("|Spachtel||Universal|", 0.60, "kg", optional=True),
+            MaterialBedarf("|Gipskarton|GKF|12.5mm|", 6.30, "m²"),  # 3x beidseitig = 6 m²/m²
+            MaterialBedarf("|Profile|CW100|", 1.80, "lfm"),
+            MaterialBedarf("|Profile|UW100|", 0.80, "lfm", optional=True),
+            MaterialBedarf("|Stahlblech|Einlage|0.5mm|", 2.00, "m²"),
+            MaterialBedarf("|Daemmung||80mm|", 1.00, "m²", optional=True),
+            MaterialBedarf("|Spachtel||Universal|", 0.85, "kg", optional=True),
         ],
     ),
     "Aquapanel": Rezept(
@@ -535,9 +561,23 @@ def resolve_rezept(
 
     # Synonyme / Aliase
     aliases = {
-        "VS": "W623",
-        "VORSATZSCHALE": "W623",
+        "VS": "W625",
+        "VORSATZSCHALE": "W625",  # Default: freistehend (W625.de) — siehe K-2 Korrektur
+        "VORSATZSCHALE FREISTEHEND": "W625",
+        "VORSATZSCHALE DIREKT": "W623",
+        "VORSATZSCHALE DIREKT BEFESTIGT": "W623",
         "SCHACHTWAND": "W625S",
+        # W135-Brandwand Backward-Compatibility (Alt-Codes K-1):
+        "W135_STAHLBLECH": "W135",
+        "STAHLBLECHEINLAGE": "W135",
+        "EINBRUCHHEMMUNG": "W135",
+        "A+M": "W135",
+        "F60 A+M": "W135",
+        # Brandwand-Hauptkategorien
+        "BRANDWAND": "W131",
+        "EINSCHALIGE BRANDWAND": "W131",
+        "ZWEISCHALIGE BRANDWAND": "W133",  # intern "zweischalig" = 3-lagig per Knauf
+        "SONDERBAUWAND": "W131",
         "OWA": "OWA_MF",
         "RASTERDECKE": "OWA_MF",
         "MF-RASTERDECKE": "OWA_MF",
@@ -632,6 +672,10 @@ def resolve_rezept(
             return REZEPTE[upper]
         return REZEPTE["W112"]
     if upper.startswith("W13"):
+        # Explizites Mapping der W13-Familie (alle Brandwand-Sonderbauwaende mit Stahlblech)
+        if upper in ("W131", "W133", "W135"):
+            return REZEPTE[upper]
+        # W132, W134, etc. - Fallback auf W131
         return REZEPTE["W131"]
     if upper.startswith("W14"):
         return REZEPTE["W115"]  # Schallschutz-Varianten

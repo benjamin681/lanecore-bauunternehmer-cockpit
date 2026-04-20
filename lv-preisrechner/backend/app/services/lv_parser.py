@@ -94,14 +94,13 @@ Wände Knauf W11x (Metallständerwände, beidseitig beplankt):
 - "W115" = Schallschutzwand, 2-lagig
 - "W116" = Doppelständerwand (Installationswand)
 - "W118" = Brandschutzwand 2-lagig GKF (F90)
-- "W131" = einschalige Brandwand (eigenständig, schwerer Aufbau, F90/F120)
-- "W133" = zweischalige Brandwand (zwei getrennte Profilreihen, höhere Anforderung)
-- "W135" = Installationswand, breitere UK
-- "W135_Stahlblech" = Installationswand mit Stahlblecheinlage (F60 A+M, Einbruchhemmung)
+- "W131" = Brandwand Einfachständerwerk 2-lagig GKF + Stahlblecheinlage (F90-A+mB, Sonderbauwand anstelle Brandwand)
+- "W133" = Brandwand Einfachständerwerk 3-lagig GKF + Stahlblecheinlage (F90-A+mB, höhere Anforderung)
+- "W135" = Brandwand Einfachständerwerk 2-lagig GKF + Stahlblecheinlage (F90-A+mB). Identisch zu W131 in Profil, aber unterschiedliche AbP-Zulassungen.
 
 Vorsatzschalen Knauf W62x (einseitig, vor Bestandswand):
-- "W623" = Vorsatzschale freistehend (CW/UW-Profile)
-- "W625" = Vorsatzschale direkt befestigt (Direktabhänger CD60/27)
+- "W623" = Vorsatzschale direkt befestigt mit CD 60/27 (Direktabhänger)
+- "W625" = Vorsatzschale freistehend mit CW-Profil, einlagig beplankt
 
 Schachtwände Knauf W62x/W63x (Schacht-Abschottung, einseitig oder zweiseitig):
 - "W625S" = Schachtwand einseitig beplankt mit Fireboard (F30–F120)
@@ -162,7 +161,7 @@ Schachtwände (WICHTIG: vor Vorsatzschale prüfen):
 Brandschutz:
 - "W131", "einschalige Brandwand" → W131
 - "W133", "zweischalige Brandwand" → W133
-- "Stahlblecheinlage", "A+M", "Einbruchhemmung" → W135_Stahlblech
+- "Stahlblecheinlage", "A+M", "Einbruchhemmung" → W135 (alle Sonderbauwände W131/W133/W135 haben Stahlblech; W135 als Default)
 
 Decken:
 - "MF-Rasterdecke", "Bolero", "Sinfonia", "OWATECTA", "Einlegesystem", "625x625", "625x1250" → OWA_MF

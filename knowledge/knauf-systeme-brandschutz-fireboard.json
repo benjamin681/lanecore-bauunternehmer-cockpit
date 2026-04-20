@@ -163,16 +163,25 @@
     }
   },
 
-  "kabelschaechte_K21": {
+  "_umbenennung_2026_04_20": {
+    "grund": "KNAUF_KORREKTUREN.md K-3: Die K21-Familie (K21.de) ist laut offizieller Knauf-Klassifikation NICHT 'Kabelschacht' sondern 'Trapezblech-Systeme mit Fireboard' (Decken). Kabelschaechte/Installationsschaechte sind offiziell die K26-Familie (K261.de, K262.de). Interne Codes K211/K212 wurden zu K261/K262 umbenannt.",
+    "mapping": {
+      "K211 (alt) ": "K261 (neu) — Fireboard-Kabelkanal 3-seitig",
+      "K212 (alt)": "K262 (neu) — Fireboard-Kabelkanal 4-seitig"
+    },
+    "quelle": "https://knauf.com/de-DE/knauf-gips/produkte-systeme/systeme/trockenbau-systeme-ueberblick/decken-und-dachgeschosssysteme-im-ueberblick/k21-de-trapezblech-systeme-mit-fireboard"
+  },
 
-    "K211": {
-      "bezeichnung": "Knauf Kabelschacht K211 — dreiseitig Fireboard",
+  "kabelschaechte_K26": {
+
+    "K261": {
+      "bezeichnung": "Knauf Fireboard-Kabelkanal K261.de — dreiseitig",
       "typ": "Installations-/Kabelschacht aus Fireboard (3-seitig geschlossen, 1 Seite Massivwand)",
-      "beschreibung": "Kabelkanal/-schacht nach DIN 4102-9 / DIN EN 1366-5. Für Elektro- und Datenkabel mit Feuerwiderstand von innen UND außen (I→O und O→I).",
+      "beschreibung": "Kabelkanal/-schacht nach DIN 4102-9 / DIN EN 1366-5. Fuer Elektro- und Datenkabel mit Feuerwiderstand von innen UND aussen (I->O und O->I).",
       "unterkonstruktion": "CW-Profile oder CD-Profile laschiert, 3-seitig abgeschlossen",
       "systemvarianten": [
         {
-          "code": "K211-I30/E30",
+          "code": "K261-I30/E30",
           "wanddicke_mm": 30,
           "beplankung": "2x Fireboard 15mm",
           "feuerwiderstand": "I30/E30 (nach DIN 4102-9)",
@@ -181,34 +190,35 @@
           "gewicht_kgm": 30
         },
         {
-          "code": "K211-I90/E90",
+          "code": "K261-I90/E90",
           "wanddicke_mm": 50,
           "beplankung": "2x Fireboard 25mm ODER 3x Fireboard 15mm",
           "feuerwiderstand": "I90/E90 (bidirektional)",
-          "daemmung": "Steinwolle ≥40mm, Schmelzpunkt ≥1000°C",
+          "daemmung": "Steinwolle >=40mm, Schmelzpunkt >=1000 Grad C",
           "max_querschnitt_mm": "bis 1000x1000",
           "gewicht_kgm": 55
         },
         {
-          "code": "K211-I120/E120",
+          "code": "K261-I120/E120",
           "wanddicke_mm": 60,
           "beplankung": "3x Fireboard 20mm",
           "feuerwiderstand": "I120/E120",
-          "daemmung": "Steinwolle ≥50mm",
+          "daemmung": "Steinwolle >=50mm",
           "max_querschnitt_mm": "bis 1200x1200",
           "gewicht_kgm": 75
         }
       ],
-      "lv_schluessel": ["K211", "Kabelschacht Fireboard", "Kabelkanal F90", "Elektrokanal", "I90/E90"]
+      "lv_schluessel": ["K261", "K261.de", "K211", "Kabelschacht Fireboard", "Kabelkanal F90", "Elektrokanal", "I90/E90"],
+      "alte_codes": ["K211 (vor 2026-04-20)"]
     },
 
-    "K212": {
-      "bezeichnung": "Knauf Kabelschacht K212 — vierseitig Fireboard (freihängend im Raum)",
+    "K262": {
+      "bezeichnung": "Knauf Fireboard-Kabelkanal K262.de — vierseitig (freihaengend im Raum)",
       "typ": "Vierseitig geschlossener Kabelschacht",
-      "beschreibung": "Vollständig freistehender Fireboard-Schacht für Steigstränge und Sonderinstallationen. Alle 4 Seiten Fireboard.",
+      "beschreibung": "Vollstaendig freistehender Fireboard-Schacht fuer Steigstraenge und Sonderinstallationen. Alle 4 Seiten Fireboard.",
       "systemvarianten": [
         {
-          "code": "K212-I30/E30",
+          "code": "K262-I30/E30",
           "wanddicke_mm": 30,
           "beplankung": "2x Fireboard 15mm rundum",
           "feuerwiderstand": "I30/E30",
@@ -216,7 +226,7 @@
           "gewicht_kgm": 55
         },
         {
-          "code": "K212-I90/E90",
+          "code": "K262-I90/E90",
           "wanddicke_mm": 50,
           "beplankung": "2x Fireboard 25mm",
           "feuerwiderstand": "I90/E90",
@@ -224,7 +234,8 @@
           "gewicht_kgm": 90
         }
       ],
-      "lv_schluessel": ["K212", "vierseitiger Kabelschacht", "Kabelkanal vierseitig"]
+      "lv_schluessel": ["K262", "K262.de", "K212", "vierseitiger Kabelschacht", "Kabelkanal vierseitig"],
+      "alte_codes": ["K212 (vor 2026-04-20)"]
     },
 
     "K213_Luftleitung": {
