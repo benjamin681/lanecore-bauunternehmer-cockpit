@@ -47,4 +47,7 @@ target-version = "py312"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["tests"]
+testpaths = ["tests", "../tests/golden"]
+markers = [
+    "integration: slow integration/regression tests based on real LV PDFs or external APIs. Skip via: pytest -m 'not integration'",
+]
