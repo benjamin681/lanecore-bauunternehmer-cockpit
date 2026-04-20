@@ -14,6 +14,7 @@ from pathlib import Path
 
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     File,
     Form,
     HTTPException,
@@ -21,17 +22,17 @@ from fastapi import (
     UploadFile,
     status as http_status,
 )
-from sqlalchemy import select
 
-from app.core.config import settings
 from app.core.deps import CurrentUser, DbSession
 from app.models.pricing import (
     PricelistStatus,
+    SupplierPriceEntry,
     SupplierPriceList,
     TenantDiscountRule,
     TenantPriceOverride,
 )
 from app.schemas.pricing import (
+    SupplierPriceEntryOut,
     SupplierPriceListDetail,
     SupplierPriceListOut,
     TenantDiscountRuleCreate,
@@ -39,6 +40,7 @@ from app.schemas.pricing import (
     TenantPriceOverrideCreate,
     TenantPriceOverrideOut,
 )
+from app.workers.pricelist_parse_worker import run_pricelist_parse
 
 router = APIRouter(prefix="/pricing", tags=["pricing"])
 
@@ -78,12 +80,14 @@ def _storage_root() -> Path:
 async def upload_pricelist(
     user: CurrentUser,
     db: DbSession,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     supplier_name: str = Form(...),
     list_name: str = Form(...),
     valid_from: str = Form(..., description="ISO-Datum YYYY-MM-DD"),
     supplier_location: str | None = Form(None),
     valid_until: str | None = Form(None, description="ISO-Datum YYYY-MM-DD"),
+    auto_parse: bool = Form(True, description="Parser sofort starten"),
 ) -> SupplierPriceListOut:
     """Lädt eine Lieferanten-Preisliste hoch.
 
@@ -166,6 +170,11 @@ async def upload_pricelist(
     db.add(entry)
     db.commit()
     db.refresh(entry)
+
+    # --- Background-Parsing anstossen ---
+    if auto_parse:
+        background_tasks.add_task(run_pricelist_parse, entry.id)
+
     return SupplierPriceListOut.model_validate(entry)
 
 
@@ -429,3 +438,97 @@ def delete_discount_rule(
         raise HTTPException(404, "Discount-Rule nicht gefunden")
     db.delete(r)
     db.commit()
+
+
+# ---------------------------------------------------------------------------
+# POST /pricing/pricelists/{id}/parse  (manueller Trigger)
+# ---------------------------------------------------------------------------
+@router.post(
+    "/pricelists/{pricelist_id}/parse",
+    response_model=SupplierPriceListOut,
+    status_code=http_status.HTTP_202_ACCEPTED,
+)
+def trigger_parse(
+    pricelist_id: str,
+    user: CurrentUser,
+    db: DbSession,
+    background_tasks: BackgroundTasks,
+) -> SupplierPriceListOut:
+    """Stoesst das Parsen einer Preisliste manuell an.
+
+    Erlaubt bei Status PENDING_PARSE oder ERROR (Retry). Bei PARSING oder
+    PARSED muss zuerst ueber einen Re-Upload oder manuelle Status-Aenderung
+    gegangen werden (verhindert Race-Conditions).
+    """
+    p = (
+        db.query(SupplierPriceList)
+        .filter(
+            SupplierPriceList.id == pricelist_id,
+            SupplierPriceList.tenant_id == user.tenant_id,
+        )
+        .first()
+    )
+    if p is None:
+        raise HTTPException(404, "Preisliste nicht gefunden")
+    if p.status not in (
+        PricelistStatus.PENDING_PARSE.value,
+        PricelistStatus.ERROR.value,
+    ):
+        raise HTTPException(
+            409,
+            f"Parse kann nur aus Status PENDING_PARSE oder ERROR getriggert "
+            f"werden. Aktueller Status: {p.status}",
+        )
+
+    background_tasks.add_task(run_pricelist_parse, p.id)
+    # Sofort auf PARSING setzen (Client sieht direkt den Fortschritt).
+    p.status = PricelistStatus.PARSING.value
+    p.parse_error = None
+    db.commit()
+    db.refresh(p)
+    return SupplierPriceListOut.model_validate(p)
+
+
+# ---------------------------------------------------------------------------
+# GET /pricing/pricelists/{id}/review-needed
+# ---------------------------------------------------------------------------
+@router.get(
+    "/pricelists/{pricelist_id}/review-needed",
+    response_model=list[SupplierPriceEntryOut],
+)
+def list_entries_needing_review(
+    pricelist_id: str,
+    user: CurrentUser,
+    db: DbSession,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+) -> list[SupplierPriceEntryOut]:
+    """Listet alle Entries mit needs_review=True, sortiert nach Confidence aufsteigend.
+
+    UI-Kontext: Reviewer arbeitet die unsichersten Entries zuerst ab.
+    """
+    # Tenant-Check uber Pricelist (nicht direkt Entry, weil Angreifer koennte
+    # sonst ueber fremde pricelist_id an Entries kommen)
+    pl = (
+        db.query(SupplierPriceList)
+        .filter(
+            SupplierPriceList.id == pricelist_id,
+            SupplierPriceList.tenant_id == user.tenant_id,
+        )
+        .first()
+    )
+    if pl is None:
+        raise HTTPException(404, "Preisliste nicht gefunden")
+
+    q = (
+        db.query(SupplierPriceEntry)
+        .filter(
+            SupplierPriceEntry.pricelist_id == pricelist_id,
+            SupplierPriceEntry.tenant_id == user.tenant_id,
+            SupplierPriceEntry.needs_review.is_(True),
+        )
+        .order_by(SupplierPriceEntry.parser_confidence.asc())
+        .offset(offset)
+        .limit(limit)
+    )
+    return [SupplierPriceEntryOut.model_validate(e) for e in q.all()]

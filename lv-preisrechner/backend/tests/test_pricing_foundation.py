@@ -49,11 +49,16 @@ def _upload_file(
     valid_from: str = "2026-04-01",
     supplier_location: str | None = "Neu-Ulm",
     valid_until: str | None = None,
+    auto_parse: bool = False,
 ):
+    # auto_parse defaulted auf False, damit Test-Uploads KEINEN Background-
+    # Worker starten (der sonst Claude oder pdf_to_page_images aufrufen
+    # wuerde — Dummy-PDFs reichen dafuer nicht).
     data = {
         "supplier_name": supplier_name,
         "list_name": list_name,
         "valid_from": valid_from,
+        "auto_parse": "true" if auto_parse else "false",
     }
     if supplier_location is not None:
         data["supplier_location"] = supplier_location
