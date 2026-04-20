@@ -71,9 +71,9 @@ from pathlib import Path
 import pytest
 
 SNAPSHOT_PATH = (
-    Path(__file__).parent / "snapshots" / "stuttgart_raw_parse_v2.json"
+    Path(__file__).parent / "snapshots" / "stuttgart_raw_parse_v3.json"
 )
-EXPECTED_POSITIONS_COUNT = 93  # Snapshot-Referenz v2 (2026-04-20)
+EXPECTED_POSITIONS_COUNT = 93  # laut User-Vorgabe unveraendert trotz v3-Snapshot mit 103
 DRIFT_THRESHOLD = 10
 
 
@@ -235,4 +235,26 @@ def test_8_bedarfspositionen_not_in_total_sum(positions):
         f"markiert und haben menge>0 — sie würden in Summen-Kalkulationen "
         f"einfließen. Erste OZs: {not_flagged[:5]}. "
         "Erwartet: is_bedarf=True oder menge=0 pro Bedarfsposition."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Zusatz-Assertion: Alternativpositionen analog behandelt
+# ---------------------------------------------------------------------------
+def test_9_alternativpositionen_have_flag(positions):
+    """Positionen mit 'Alternativprodukt'-Marker sollen is_alternative=True
+    haben."""
+    alt_markierte = [
+        p for p in positions
+        if "alternativprodukt" in (p.get("kurztext") or "").lower()
+    ]
+    assert len(alt_markierte) >= 3, (
+        f"Stuttgart-LV hat ~5 Alternativpositionen, gefunden: {len(alt_markierte)}"
+    )
+    not_flagged = [
+        p.get("oz", "?") for p in alt_markierte if not p.get("is_alternative")
+    ]
+    assert not not_flagged, (
+        f"{len(not_flagged)} Alternativpositionen ohne is_alternative-Flag: "
+        f"{not_flagged[:5]}"
     )
