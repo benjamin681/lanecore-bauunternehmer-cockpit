@@ -28,6 +28,7 @@ def _kalkuliere_position(
     detailliste: list[dict] = []
     warnungen: list[str] = []
     fehlende_pflicht_materialien: list[str] = []
+    angebotenes_fabrikat_parts: list[str] = []  # Sammelt Hersteller+Produkt aus Matches
 
     if rezept:
         for mb in rezept.materialien:
@@ -56,6 +57,13 @@ def _kalkuliere_position(
                 continue
             teilpreis = mb.menge_pro_einheit * match.preis_pro_basis
             material_ep += teilpreis
+            # Hauptmaterial fuer "Angebotenes Fabrikat" (erstes m2-Material bei Waenden/Decken)
+            if mb.basis_einheit == "m²" and match.price_entry.hersteller:
+                produkt = match.price_entry.produktname or ""
+                herst = match.price_entry.hersteller or ""
+                combo = f"{herst} {produkt}".strip()
+                if combo and combo not in angebotenes_fabrikat_parts:
+                    angebotenes_fabrikat_parts.append(combo)
             detailliste.append(
                 {
                     "dna": match.price_entry.dna,
@@ -109,6 +117,14 @@ def _kalkuliere_position(
         p.konfidenz = 0.0  # harte Kennzeichnung: manuell noetig
     elif warnungen:
         p.konfidenz = min(p.konfidenz, 0.6)
+
+    # Angebotenes Fabrikat: erstes gematchtes Haupt-Material, sonst Leitfabrikat
+    if not manuell_pruefen and angebotenes_fabrikat_parts:
+        p.angebotenes_fabrikat = angebotenes_fabrikat_parts[0][:200]
+    elif p.leit_fabrikat and not manuell_pruefen:
+        # Wenn Kalkulation geklappt hat aber kein Hersteller aus Match:
+        # Leitfabrikat als Default (Bieter bestaetigt gefordertes Fabrikat)
+        p.angebotenes_fabrikat = p.leit_fabrikat[:200]
 
 
 def kalkuliere_lv(db: Session, lv_id: str, tenant_id: str) -> LV:

@@ -363,6 +363,7 @@ def run_parse_lv(
                 erkanntes_system=str(row.get("erkanntes_system", ""))[:50],
                 feuerwiderstand=str(row.get("feuerwiderstand", ""))[:20],
                 plattentyp=str(row.get("plattentyp", ""))[:50],
+                leit_fabrikat=str(row.get("leit_fabrikat", ""))[:200],
                 konfidenz=max(0.0, min(1.0, konf)),
             )
             db.add(p)

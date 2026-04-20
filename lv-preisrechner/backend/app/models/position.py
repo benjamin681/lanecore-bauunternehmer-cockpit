@@ -34,6 +34,10 @@ class Position(Base):
     feuerwiderstand: Mapped[str] = mapped_column(String(20), default="")  # "F30", "F90"
     plattentyp: Mapped[str] = mapped_column(String(50), default="")  # "GKB", "GKF", "GKFi"
 
+    # Fabrikat-Angaben (aus LV extrahiert, vom Bieter auszufuellen)
+    leit_fabrikat: Mapped[str] = mapped_column(String(200), default="")  # z.B. "Knauf o.glw." aus LV-Text
+    angebotenes_fabrikat: Mapped[str] = mapped_column(String(200), default="")  # was der Bieter anbietet
+
     # Materialrezept (JSON: [{dna, menge, einheit, preis, gp}])
     materialien: Mapped[list] = mapped_column(JSON, default=list)
 

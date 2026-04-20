@@ -33,6 +33,7 @@ AUSGABEFORMAT (strikt):
       "erkanntes_system": "W112",           // siehe SYSTEM-REGELN unten
       "feuerwiderstand": "",                 // "F30" | "F60" | "F90" | "F120" | ""
       "plattentyp": "GKB",                   // "GKB" | "GKF" | "GKFi" | "GKBi" | "Diamant" | "Fireboard" | "Aquapanel" | ""
+      "leit_fabrikat": "Knauf o.glw.",       // Leitfabrikat aus LV-Text: "Leitfabrikat: ..." / "Fabrikat: ..." - leer wenn nicht genannt
       "konfidenz": 0.92                      // 0.0-1.0
     }
   ]
@@ -152,6 +153,7 @@ def parse_and_store(
             erkanntes_system=str(row.get("erkanntes_system", ""))[:50],
             feuerwiderstand=str(row.get("feuerwiderstand", ""))[:20],
             plattentyp=str(row.get("plattentyp", ""))[:50],
+            leit_fabrikat=str(row.get("leit_fabrikat", ""))[:200],
             konfidenz=max(0.0, min(1.0, konf)),
         )
         db.add(p)

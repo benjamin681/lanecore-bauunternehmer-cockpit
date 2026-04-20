@@ -71,13 +71,24 @@ def _oz_sort_key(oz: str) -> tuple:
 
 
 def generate_filled_pdf_bytes(lv: LV, tenant_firma: str) -> bytes:
-    """Erzeugt ausgefülltes PDF als Bytes (wird in DB persistiert)."""
+    """Erzeugt ausgefülltes PDF als Bytes (wird in DB persistiert).
+
+    Strategie:
+    1. Original-LV-Seiten direkt ausfuellen (EP, GP, Angebotenes Fabrikat)
+    2. Neues Deckblatt vorne
+    3. Kalkulations-Anlage hinten (als zweite Ansicht fuer den Kunden)
+    """
     if not lv.original_pdf_bytes:
         raise ValueError("Kein Original-PDF in DB gespeichert")
 
     doc = fitz.open(stream=bytes(lv.original_pdf_bytes), filetype="pdf")
     try:
+        # 1. Original-LV direkt befuellen (bevor Deckblatt davor kommt, damit
+        #    Seitennummern in Search nicht verschoben sind)
+        _fill_original_lv(doc, lv)
+        # 2. Deckblatt vorne
         _insert_deckblatt(doc, lv, tenant_firma)
+        # 3. Kalkulations-Anlage am Ende als Zusammenfassung
         _append_kalkulation(doc, lv)
         import io
 
@@ -87,6 +98,176 @@ def generate_filled_pdf_bytes(lv: LV, tenant_firma: str) -> bytes:
         return buf.getvalue()
     finally:
         doc.close()
+
+
+def _fill_original_lv(doc: fitz.Document, lv: LV) -> None:
+    """Traegt EP, GP und Angebotenes Fabrikat direkt ins Original-LV.
+
+    Heuristik (funktioniert fuer gaengige LV-Layouts von Habau, Gross, etc.):
+    - EP/GP-Felder sind typisch leere Linien ".........................  ........................."
+    - Angebotenes Fabrikat erscheint als "Angebotenes\nFabriakt: ..." (Tippfehler im LV!) oder "Angebotenes Fabrikat: ..."
+    - OZ-Nummer steht typischerweise oberhalb in der Zeile davor
+
+    Wir matchen Positionen ueber OZ-Nummern + Menge (zur Validierung).
+    Nur Positionen mit gueltigem EP>0 werden eingetragen (manuelle bleiben leer).
+    """
+    # Map OZ -> Position fuer schnelles Lookup
+    pos_by_oz = {}
+    for p in lv.positions:
+        if p.oz:
+            pos_by_oz[p.oz.strip()] = p
+
+    if not pos_by_oz:
+        log.warning("fill_original_lv_no_positions", lv_id=lv.id)
+        return
+
+    filled_count = 0
+    # Nur Original-Seiten verarbeiten (vor eventuellem Anhang)
+    for page_idx in range(doc.page_count):
+        page = doc.load_page(page_idx)
+        try:
+            filled_count += _fill_page(page, pos_by_oz)
+        except Exception as e:
+            log.warning("fill_page_failed", page=page_idx, err=str(e))
+
+    log.info("original_lv_filled", lv_id=lv.id, positions=filled_count)
+
+
+def _fill_page(page: fitz.Page, pos_by_oz: dict) -> int:
+    """Fuellt EP/GP/Fabrikat fuer alle auf der Seite gefundenen OZs.
+
+    Returns: Anzahl ausgefuellter Positionen auf dieser Seite.
+    """
+    # Text mit Koordinaten extrahieren (blocks/lines/spans)
+    text_dict = page.get_text("dict")
+    filled = 0
+
+    # 1) Alle Text-Blocks sammeln mit Position
+    lines_with_coords: list[tuple[str, fitz.Rect]] = []
+    for block in text_dict.get("blocks", []):
+        for line in block.get("lines", []):
+            line_text = ""
+            line_bbox = None
+            for span in line.get("spans", []):
+                line_text += span.get("text", "")
+                bbox = span.get("bbox")
+                if bbox and line_bbox is None:
+                    line_bbox = fitz.Rect(bbox)
+                elif bbox and line_bbox is not None:
+                    line_bbox |= fitz.Rect(bbox)
+            if line_text.strip() and line_bbox:
+                lines_with_coords.append((line_text, line_bbox))
+
+    # 2) Finde OZ-Treffer + nachfolgende "..."-Muster fuer EP/GP
+    # Typisches Muster:
+    #    "610.18"
+    #    "Fenster / Tuer..."
+    #    "2,00 Stk"
+    #    ".........................  ........................."  ← EP + GP Leerstellen
+    import re
+
+    # Dot-Patterns (leere EP/GP-Felder) vorab lokalisieren
+    dot_lines = [(t, r) for (t, r) in lines_with_coords if re.fullmatch(r"\s*\.{10,}[\s\.]*", t)]
+
+    for idx, (text, rect) in enumerate(lines_with_coords):
+        # OZ-Muster: "610.18", "1.9.1.1.10", "01.01.005" etc.
+        text_stripped = text.strip()
+        oz_match = re.fullmatch(r"(\d+(?:\.\d+){1,5})\.?", text_stripped)
+        if not oz_match:
+            continue
+        oz_candidates = [oz_match.group(1), oz_match.group(1) + "."]
+        pos = None
+        for oz_try in oz_candidates:
+            if oz_try in pos_by_oz:
+                pos = pos_by_oz[oz_try]
+                break
+        if pos is None:
+            continue
+
+        # Nur ausfuellen wenn EP gueltig
+        if not pos.ep or pos.ep <= 0:
+            continue
+
+        # Suche naechste EP+GP-Dotline (2 Dot-Gruppen mit Leerzeichen dazwischen).
+        # Fabrikat-Felder haben nur EINE Dot-Gruppe, Summen-Felder oft auch.
+        # Window bis naechste OZ oder 80 Zeilen (Stuttgart-LV hat lange Textbloecke).
+        dot_rect = None
+        search_end = min(len(lines_with_coords), idx + 80)
+        # Stoppe bei naechster OZ, damit wir nicht in nachfolgende Position greifen
+        for j in range(idx + 1, search_end):
+            next_text, next_rect = lines_with_coords[j]
+            if j > idx + 2 and re.fullmatch(r"\s*\d+(?:\.\d+){1,5}\.?\s*", next_text.strip()):
+                # naechste OZ -> abbrechen
+                break
+            # EP+GP-Muster: 2 Dot-Gruppen mit Whitespace dazwischen
+            if re.search(r"\.{15,}\s+\.{15,}", next_text):
+                dot_rect = next_rect
+                break
+
+        if dot_rect is None:
+            continue
+
+        # Dots aufteilen: EP-Feld links, GP-Feld rechts.
+        # Wir teilen das Rechteck in zwei Haelften.
+        mid_x = dot_rect.x0 + (dot_rect.width * 0.55)
+        ep_right_x = mid_x - 5
+        gp_right_x = dot_rect.x1 - 5
+
+        # Werte einfuegen - rechtsbuendig gegenueber Spalten-Ende
+        ep_txt = _euro_short(pos.ep)
+        gp_txt = _euro_short(pos.gp)
+
+        # Textbreite schaetzen (ca. 4.5pt pro Zeichen bei 9pt)
+        def _twidth(s: str) -> float:
+            return len(s) * 4.6
+
+        ep_x = max(dot_rect.x0 + 5, ep_right_x - _twidth(ep_txt))
+        gp_x = max(mid_x + 5, gp_right_x - _twidth(gp_txt))
+        y_txt = dot_rect.y0 + dot_rect.height * 0.75
+
+        try:
+            page.insert_text((ep_x, y_txt), ep_txt, fontsize=9, fontname="helv", color=(0, 0, 0.4))
+            page.insert_text((gp_x, y_txt), gp_txt, fontsize=9, fontname="helv", color=(0, 0, 0.4))
+            filled += 1
+        except Exception:
+            continue
+
+        # 3) Angebotenes Fabrikat: suche in naechsten 15 Zeilen nach "Angebotenes"
+        if pos.angebotenes_fabrikat:
+            for fabr_idx in range(idx + 1, min(idx + 30, len(lines_with_coords))):
+                fabr_text, fabr_rect = lines_with_coords[fabr_idx]
+                if "ngebotenes" in fabr_text:
+                    # Naechste Zeile enthaelt "Fabriakt: ....." oder "Fabrikat: ....."
+                    if fabr_idx + 1 < len(lines_with_coords):
+                        label_text, label_rect = lines_with_coords[fabr_idx + 1]
+                        if re.search(r"[Ff]abri?ka?t", label_text):
+                            # Finde dots in selber Zeile
+                            dot_match = re.search(r"\.{10,}", label_text)
+                            if dot_match:
+                                # Schaetzung: Text direkt vor dem Punkt-Bereich
+                                label_prefix_len = dot_match.start()
+                                # Zeichenbreite schaetzen
+                                char_w = label_rect.width / max(len(label_text), 1)
+                                text_x = label_rect.x0 + (label_prefix_len * char_w)
+                                y_fabr = label_rect.y0 + label_rect.height * 0.75
+                                try:
+                                    page.insert_text(
+                                        (text_x, y_fabr),
+                                        pos.angebotenes_fabrikat[:70],
+                                        fontsize=8,
+                                        fontname="helv",
+                                        color=(0, 0, 0.4),
+                                    )
+                                except Exception:
+                                    pass
+                    break
+
+    return filled
+
+
+def _euro_short(value: float) -> str:
+    """Zahl fuer EP/GP-Feld: '1.234,56' (ohne EUR - steht schon im Header)."""
+    return f"{value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
 def generate_filled_pdf(lv: LV, tenant_firma: str) -> Path:
