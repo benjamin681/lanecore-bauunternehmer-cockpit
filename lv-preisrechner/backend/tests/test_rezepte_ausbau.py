@@ -46,8 +46,10 @@ def test_d11x_prefix_heuristik():
 
 
 def test_d13_prefix_heuristik():
+    # Seit 2026-04-20 (KNAUF_KORREKTUREN.md K-7) hat D131 ein eigenes Rezept
+    # (Freitragende Decke unter Holzbalkendecke). Vorher war es auf D113 gemappt.
     r = resolve_rezept("D131", "", "")
-    assert r is REZEPTE["D113"]
+    assert r is REZEPTE["D131"]
 
 
 def test_w13_prefix_heuristik():

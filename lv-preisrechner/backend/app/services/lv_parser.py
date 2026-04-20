@@ -90,10 +90,12 @@ AUSGABEFORMAT (strikt):
 SYSTEM-ERKENNUNGSREGELN (exakt DIESE Werte verwenden):
 
 Wände Knauf W11x (Metallständerwände, beidseitig beplankt):
-- "W112" = Standard-Trennwand, 1-lagig beplankt, meist GKB (F0 ODER F30 abhängig von Plattentyp)
-- "W115" = Schallschutzwand, 2-lagig
-- "W116" = Doppelständerwand (Installationswand)
-- "W118" = Brandschutzwand 2-lagig GKF (F90)
+- "W111" = Einfachständerwerk, einlagig beplankt (1 Lage GKB je Seite)
+- "W112" = Einfachständerwerk, zweilagig beplankt (1 Lage GKB je Seite, = 2 Lagen gesamt)
+- "W113" = Einfachständerwerk, dreilagig beplankt (erhöhter Schallschutz / mechanisch)
+- "W115" = Schallschutzwand, Doppelständer entkoppelt (2-lagig)
+- "W116" = Doppelständerwerk verlascht (Installationswand-Variante, Reihen verbunden)
+- "W118" = Brandschutzwand 2-lagig GKF (F90) — historische/projektinterne Nummer, in W11-Übersicht nicht offiziell gelistet
 - "W131" = Brandwand Einfachständerwerk 2-lagig GKF + Stahlblecheinlage (F90-A+mB, Sonderbauwand anstelle Brandwand)
 - "W133" = Brandwand Einfachständerwerk 3-lagig GKF + Stahlblecheinlage (F90-A+mB, höhere Anforderung)
 - "W135" = Brandwand Einfachständerwerk 2-lagig GKF + Stahlblecheinlage (F90-A+mB). Identisch zu W131 in Profil, aber unterschiedliche AbP-Zulassungen.
@@ -105,13 +107,16 @@ Vorsatzschalen Knauf W62x (einseitig, vor Bestandswand):
 Schachtwände Knauf W62x/W63x (Schacht-Abschottung, einseitig oder zweiseitig):
 - "W625S" = Schachtwand einseitig beplankt mit Fireboard (F30–F120)
 - "W628" = Einschalen-Schachtwand einseitig beplankt (Standard Knauf, meist GKF 2x12,5, F30–F90). Auch "Einschalen-Schachtwand".
-- "W628A" = wie W628, Variante für erhöhte Wandhöhe (Knauf "W628A plus" o.ä., bis ca. 8.9m Höhe)
+- "W628A" = Schachtwand FREISPANNEND (Knauf W628A.de) — bis 2m Schachtbreite, ohne Unterkonstruktion, unbegrenzte Hoehe
 - "W630" = Schachtwand einseitig in "plus"-Variante (verstärkte Konstruktion, F90-fähig). Wenn LV "W630 plus" oder "W 630" erwähnt.
 - "W631" = Schachtwand zweiseitig beplankt (beide Seiten vom Schacht aus)
 
-Decken:
-- "D112" = abgehängte GK-Decke, 1-lagig GKB
-- "D113" = abgehängte GK-Decke, 2-lagig (Brand- oder Schallschutz)
+Decken (Knauf D11x — Unterscheidung nach UK-Art, NICHT nach Beplankungszahl):
+- "D111" = Plattendecke mit Holz-Unterkonstruktion
+- "D112" = Plattendecke Metall-UK Standard (Grund- + Tragprofile CD60/27 auf Abhängern)
+- "D113" = Plattendecke Metall-UK niveaugleich (niedrige Aufbauhöhe, Profile gleichebene)
+- "D116" = Plattendecke Metall-UK weitspannend (UA 50 Grundprofile, große Abhängeabstände)
+- "D131" = Freitragende Decke unter Holzbalkendecke (nur Wandbefestigung, keine Abhänger)
 - "OWA_MF" = OWA Mineralfaser-Rasterdecke (Bolero, Sinfonia, OWATECTA, 625x625, 625x1250)
 - "Streckmetalldecke" = Streckmetall-Rasterdecke (Lindner LMD, rahmenlos, offene Fuge)
 - "Deckensegel" = Akustik-Deckensegel freihängend (Strähle System 7300 o.glw.)

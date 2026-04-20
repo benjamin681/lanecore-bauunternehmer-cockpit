@@ -45,9 +45,14 @@ class Rezept:
 
 REZEPTE: dict[str, Rezept] = {
     # --- Trennwände ---------------------------------------------------------
+    # Hinweis: W112 hat Standard 2.10 m2/m2 GKB (= 1-lagig beidseitig, 1.05 m2
+    # pro Seite x 2 Seiten). Beschreibung wurde 2026-04-20 auf die offizielle
+    # Knauf-Formulierung "zweilagig beplankt" praezisiert (die "zwei Lagen"
+    # beziehen sich auf beide Seiten, nicht auf Doppellagen pro Seite - das
+    # waere W113).
     "W112": Rezept(
         system="W112",
-        beschreibung="Einfache Metallständerwand, 1-lagig GKB 12,5mm beidseitig, CW75",
+        beschreibung="W112.de — Einfachstaenderwerk, zweilagig beplankt (1 Lage GKB je Seite, CW75)",
         zieleinheit="m²",
         zeit_h_pro_einheit=0.55,
         materialien=[
@@ -57,6 +62,27 @@ REZEPTE: dict[str, Rezept] = {
             MaterialBedarf("|Daemmung||40mm|", 1.00, "m²", optional=True),
             MaterialBedarf("|Schrauben||3.5x25|", 0.05, "Stk", optional=True),  # ~25 Stk/m²; Faktor 0.05 = 25/500
             MaterialBedarf("|Spachtel||Universal|", 0.40, "kg", optional=True),
+        ],
+    ),
+    "W113": Rezept(
+        # NEU 2026-04-20 (KNAUF_KORREKTUREN.md K-10): W113.de = Einfachstaenderwerk
+        # DREILAGIG (1.5 Lagen je Seite oder 3 Lagen auf einer Seite je nach Variante).
+        # Offizielles Material: 3 Lagen Gipsplatten gesamt, typischerweise zur
+        # Hoeherbelastung / verstaerkten Schallschutz.
+        # Vorher: W113 wurde via W11-Prefix auf W112 gemappt, was die dritte
+        # Lage unterschlug.
+        system="W113",
+        beschreibung="W113.de — Einfachstaenderwerk, dreilagig beplankt (erhoehter Schallschutz / mechanische Anforderung)",
+        zieleinheit="m²",
+        zeit_h_pro_einheit=0.85,  # zwischen W112 (0.55) und W115 (0.75) mit mehr Material
+        materialien=[
+            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 3.15, "m²"),  # 3 Lagen gesamt (1.5 je Seite, oder 2+1)
+            MaterialBedarf("|Profile|CW75|", 1.80, "lfm"),
+            MaterialBedarf("|Profile|UW75|", 0.80, "lfm", optional=True),
+            MaterialBedarf("|Daemmung||60mm|", 1.00, "m²", optional=True),
+            MaterialBedarf("|Schrauben||3.5x25|", 0.06, "Stk", optional=True),
+            MaterialBedarf("|Schrauben||3.5x45|", 0.03, "Stk", optional=True),
+            MaterialBedarf("|Spachtel||Universal|", 0.55, "kg", optional=True),
         ],
     ),
     "W115": Rezept(
@@ -75,8 +101,12 @@ REZEPTE: dict[str, Rezept] = {
         ],
     ),
     "W116": Rezept(
+        # KORREKTUR 2026-04-20 (KNAUF_KORREKTUREN.md K-9):
+        # W116.de = Doppelstaenderwerk VERLASCHT (beide Profilreihen mechanisch
+        # verbunden, Installationswand-Variante). "Entkoppelt" ist W115 — W116
+        # ist das verlaschte Pendant.
         system="W116",
-        beschreibung="Doppelständerwand (akustisch entkoppelt), 2-lagig",
+        beschreibung="W116.de — Doppelstaenderwerk verlascht (beide Reihen mechanisch verbunden, Installationswand-Variante)",
         zieleinheit="m²",
         zeit_h_pro_einheit=0.95,
         materialien=[
@@ -173,9 +203,18 @@ REZEPTE: dict[str, Rezept] = {
         ],
     ),
     # --- Decken ------------------------------------------------------------
+    # KORREKTUR 2026-04-20 (KNAUF_KORREKTUREN.md K-6): D112/D113 unterscheiden
+    # sich offiziell NICHT nach Beplankungszahl, sondern nach UK-Art:
+    #   D112.de = Metall-UK Standard (Grund- + Tragprofile, auf Abhaengern)
+    #   D113.de = Metall-UK niveaugleich (niedrige Aufbauhoehe)
+    # Beplankung (1- oder 2-lagig) ist ORTHOGONAL — kann aus plattentyp/
+    # feuerwiderstand abgeleitet werden.
+    # Materialmenge GKB bleibt bei 1.05 m2/m2 als Default (1-lagig);
+    # fuer 2-lagig muss Kalkulation via feuerwiderstand=F90 o.ae. erkennen
+    # und Menge verdoppeln (TODO in kalkulation.py fuer spaetere Runde).
     "D112": Rezept(
         system="D112",
-        beschreibung="Abgehängte GK-Decke 1-lagig GKB 12,5mm, CD60/27 auf Direktabhänger",
+        beschreibung="D112.de — Plattendecke mit Metall-UK (Grund- + Tragprofile CD60/27 auf Abhaengern, Standard)",
         zieleinheit="m²",
         zeit_h_pro_einheit=0.55,
         materialien=[
@@ -183,21 +222,55 @@ REZEPTE: dict[str, Rezept] = {
             MaterialBedarf("|Profile|CD60|27|", 3.20, "lfm"),
             MaterialBedarf("|Profile|UD|", 0.60, "lfm"),
             # Abhänger/Clip pauschal pro m² (häufig nicht in Preisliste — ggf. kein Match)
-            MaterialBedarf("|Daemmung||40mm|", 0.60, "m²", optional=True),  # oft nur teilweise
+            MaterialBedarf("|Daemmung||40mm|", 0.60, "m²", optional=True),
             MaterialBedarf("|Spachtel||Universal|", 0.35, "kg", optional=True),
         ],
     ),
     "D113": Rezept(
         system="D113",
-        beschreibung="Abgehängte GK-Decke 2-lagig GKB/GKF 12,5mm (Brandschutz oder Schallschutz)",
+        beschreibung="D113.de — Plattendecke mit Metall-UK niveaugleich (Grund- + Tragprofile gleichebene CD60/27, niedrige Aufbauhoehe)",
         zieleinheit="m²",
-        zeit_h_pro_einheit=0.80,
+        zeit_h_pro_einheit=0.65,  # niveaugleich = schwieriger zu montieren als Standard-D112
         materialien=[
-            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 2.10, "m²"),
+            # Beplankung 1-lagig als Default. Bei F90/F60 Anforderung verdoppelt die
+            # Kalkulation (TODO: over feuerwiderstand-Feld).
+            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 1.05, "m²"),
             MaterialBedarf("|Profile|CD60|27|", 3.20, "lfm"),
             MaterialBedarf("|Profile|UD|", 0.60, "lfm"),
             MaterialBedarf("|Daemmung||40mm|", 0.60, "m²", optional=True),
-            MaterialBedarf("|Spachtel||Universal|", 0.50, "kg", optional=True),
+            MaterialBedarf("|Spachtel||Universal|", 0.35, "kg", optional=True),
+        ],
+    ),
+    "D116": Rezept(
+        # NEU 2026-04-20: D116.de war bisher nur als Knowledge-Datenpunkt, ohne
+        # eigenes Rezept. Weitspannende Unterdecke mit UA 50 Grundprofilen.
+        system="D116",
+        beschreibung="D116.de — Plattendecke Metall-UK weitspannend (UA 50 Grundprofile + CD60/27 Tragprofile, grosse Abhaengeabstaende)",
+        zieleinheit="m²",
+        zeit_h_pro_einheit=0.60,
+        materialien=[
+            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 1.05, "m²"),
+            MaterialBedarf("|Profile|UA|50|", 1.20, "lfm"),  # Grundprofil UA 50
+            MaterialBedarf("|Profile|CD60|27|", 3.20, "lfm"),  # Tragprofil
+            MaterialBedarf("|Daemmung||40mm|", 0.60, "m²", optional=True),
+            MaterialBedarf("|Spachtel||Universal|", 0.35, "kg", optional=True),
+        ],
+    ),
+    "D131": Rezept(
+        # KORREKTUR/NEU 2026-04-20 (KNAUF_KORREKTUREN.md K-7): D131.de ist offiziell
+        # eine freitragende Decke UNTER HOLZBALKENDECKE (nur an Waenden befestigt,
+        # keine Abhaenger). Der bisherige Fallback "D131 -> D113" war zu generisch.
+        # Quelle: knauf.com/de-DE/.../d13-de-freitragende-decken
+        system="D131",
+        beschreibung="D131.de — Freitragende Decke unter Holzbalkendecke (nur Wandbefestigung, kein Abhaenger)",
+        zieleinheit="m²",
+        zeit_h_pro_einheit=0.85,  # aufwendig wg. Wandbefestigung, Spannweite
+        materialien=[
+            MaterialBedarf("|Gipskarton|GKF|12.5mm|", 2.10, "m²"),  # typisch 2-lagig GKF
+            MaterialBedarf("|Profile|CW75|", 2.50, "lfm"),  # Tragprofile spannen frei
+            MaterialBedarf("|Profile|UW75|", 1.00, "lfm", optional=True),
+            MaterialBedarf("|Daemmung||60mm|", 1.00, "m²", optional=True),
+            MaterialBedarf("|Spachtel||Universal|", 0.55, "kg", optional=True),
         ],
     ),
     "OWA_MF": Rezept(
@@ -668,8 +741,10 @@ def resolve_rezept(
     if upper.startswith("W11"):
         if feuerwiderstand in ("F90", "F120", "F180"):
             return REZEPTE["W118"]
-        if upper in ("W115", "W116"):
+        # Explizites Mapping der W11-Familie
+        if upper in ("W112", "W113", "W115", "W116"):
             return REZEPTE[upper]
+        # W111 (1-lagig), W114, W117 etc. fallen auf W112 zurueck
         return REZEPTE["W112"]
     if upper.startswith("W13"):
         # Explizites Mapping der W13-Familie (alle Brandwand-Sonderbauwaende mit Stahlblech)
@@ -684,9 +759,16 @@ def resolve_rezept(
     if upper.startswith("W63"):
         return REZEPTE.get("W625S", REZEPTE["W623"])
     if upper.startswith("D11"):
+        # Explizites Mapping der D11-Familie
+        if upper in ("D112", "D113", "D116"):
+            return REZEPTE[upper]
+        # D111 (Holz-UK), D114, D115 fallen auf D112 zurueck
         return REZEPTE["D112"]
     if upper.startswith("D13"):
-        return REZEPTE["D113"]
+        # D131 hat jetzt eigenes Rezept (Freitragende Decke unter Holzbalkendecke)
+        if upper in ("D131",):
+            return REZEPTE["D131"]
+        return REZEPTE["D131"]  # Auch D132 etc. als freitragend behandeln
     if "OWA" in upper or "RASTER" in upper:
         return REZEPTE["OWA_MF"]
     if "AQUAPANEL" in upper:
