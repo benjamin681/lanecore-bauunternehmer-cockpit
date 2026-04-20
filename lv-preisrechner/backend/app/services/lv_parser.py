@@ -40,44 +40,102 @@ AUSGABEFORMAT (strikt):
 }
 
 SYSTEM-ERKENNUNGSREGELN (exakt DIESE Werte verwenden):
-- "W112" = Standard-Trennwand, 1-lagig beplankt, meist GKB
+
+Wände Knauf W11x (Metallständerwände, beidseitig beplankt):
+- "W112" = Standard-Trennwand, 1-lagig beplankt, meist GKB (F0 ODER F30 abhängig von Plattentyp)
 - "W115" = Schallschutzwand, 2-lagig
-- "W116" = Doppelständerwand
-- "W118" = Brandschutzwand, 2-lagig GKF
-- "W131" = Brandwand (eigenständig, schwerer Aufbau)
+- "W116" = Doppelständerwand (Installationswand)
+- "W118" = Brandschutzwand 2-lagig GKF (F90)
+- "W131" = einschalige Brandwand (eigenständig, schwerer Aufbau, F90/F120)
+- "W133" = zweischalige Brandwand (zwei getrennte Profilreihen, höhere Anforderung)
 - "W135" = Installationswand, breitere UK
 - "W135_Stahlblech" = Installationswand mit Stahlblecheinlage (F60 A+M, Einbruchhemmung)
-- "W623" = Vorsatzschale freistehend
-- "W625" = Vorsatzschale direkt befestigt
-- "W625S" = Schachtwand einseitig beplankt (F30–F120)
-- "W631" = Schachtwand zweiseitig
+
+Vorsatzschalen Knauf W62x (einseitig, vor Bestandswand):
+- "W623" = Vorsatzschale freistehend (CW/UW-Profile)
+- "W625" = Vorsatzschale direkt befestigt (Direktabhänger CD60/27)
+
+Schachtwände Knauf W62x/W63x (Schacht-Abschottung, einseitig oder zweiseitig):
+- "W625S" = Schachtwand einseitig beplankt mit Fireboard (F30–F120)
+- "W628" = Einschalen-Schachtwand einseitig beplankt (Standard Knauf, meist GKF 2x12,5, F30–F90). Auch "Einschalen-Schachtwand".
+- "W628A" = wie W628, Variante für erhöhte Wandhöhe (Knauf "W628A plus" o.ä., bis ca. 8.9m Höhe)
+- "W630" = Schachtwand einseitig in "plus"-Variante (verstärkte Konstruktion, F90-fähig). Wenn LV "W630 plus" oder "W 630" erwähnt.
+- "W631" = Schachtwand zweiseitig beplankt (beide Seiten vom Schacht aus)
+
+Decken:
 - "D112" = abgehängte GK-Decke, 1-lagig GKB
 - "D113" = abgehängte GK-Decke, 2-lagig (Brand- oder Schallschutz)
-- "OWA_MF" = OWA Mineralfaser-Rasterdecke (Bolero, Sinfonia, 625x625, 625x1250)
-- "Aquapanel" = Nassraum-Wand mit Zementplatte
-- "Verkleidung" = Abkofferung / Stahlträger-Bekleidung / Installations-Verkleidung (L/U-Form)
-- "Deckenschuerze" = senkrechte Abschottung unter Decke
-- "Tueraussparung" = Einbau Türzarge-Aussparung mit Sturzprofil
-- "Revisionsklappe" = Revisionsklappe einbauen
+- "OWA_MF" = OWA Mineralfaser-Rasterdecke (Bolero, Sinfonia, OWATECTA, 625x625, 625x1250)
+- "Streckmetalldecke" = Streckmetall-Rasterdecke (Lindner LMD, rahmenlos, offene Fuge)
+- "Deckensegel" = Akustik-Deckensegel freihängend (Strähle System 7300 o.glw.)
+- "Deckensprung" = senkrechter Höhenversatz in Rasterdecke oder Abhangdecke
+
+Akustik:
+- "Wandabsorber" = Tiefenabsorber an der Wand (DUR SONIC Quad o.glw., Pulverbeschichtet)
+
+Nassraum:
+- "Aquapanel" = Nassraum-Wand/Decke mit Zementplatte
+
+Sonderverkleidungen:
+- "Verkleidung" = GK-Verkleidung (Stahlträger/Stahltreppe/Fallrohr-Abkofferung L/U-Form)
+- "Deckenschuerze" = senkrechte GK-Abschottung unter Bestandsdecke (abgehängter Streifen)
+- "Deckenschott" = Brandschutz-Deckenschott (F90 Abschottung senkrecht vom Deckenanschluss)
+
+Zubehör/Nebenleistungen:
+- "Tueraussparung" = Einbau Türzarge-Aussparung mit Sturzprofil in GK-Wand
+- "Revisionsklappe" = Revisionsklappe einbauen (30x30 bis 60x60)
 - "Eckschiene" = ALU/verzinkte Kantenschiene (lfm)
-- "Fugenversiegelung" = Acryl-Fuge (lfm)
+- "Fugenversiegelung" = Acryl-/Brandschutz-Fuge (lfm)
 - "Aussparung" = rechteckige Aussparung für Installation (Stk)
 - "Installationsloch" = Rundloch für Sanitär (Stk)
-- "Regiestunde" = Stundenlohn, einheit="h"
-- "Zulage" = GKBi-Zulage, Eckausbildung, Arbeitshöhen-Zulage etc.
+- "Wandanschluss" = Randfries/Wandanschluss bei Rasterdecke oder GK-Decke
+- "Verstaerkungsprofil" = Z-Profil, QR-Profil, UA-Verstärkung horizontal (lfm)
+- "Kabeldurchfuehrung_F90" = Einzelkabeldurchführung F90 in Brandschutzdecke
+- "Aufdopplung_geklebt" = geklebte GK-Aufdopplung (Ansetzbinder, z.B. h=0.25m)
 
-KEYWORDS für System-Erkennung:
-- "MF-Rasterdecke", "Bolero", "Sinfonia", "Einlegesystem", "625x625", "625x1250" → OWA_MF
-- "Mineralfaser-Raster" → OWA_MF (NICHT D112!)
-- "Aquapanel", "Cement Board" → Aquapanel
+Regie:
+- "Regiestunde" = Stundenlohnarbeit, einheit="h"
+- "Zulage" = GKBi-Zulage, Q3-Zulage, Arbeitshöhen-Zulage etc.
+
+KEYWORDS für System-Erkennung (Prioritäts-Reihenfolge!):
+
+Schachtwände (WICHTIG: vor Vorsatzschale prüfen):
+- "W628", "W 628", "W628A", "Einschalen-Schachtwand" → W628 oder W628A (bei "A" oder "plus" + erhöhte Höhe)
+- "W630", "W 630", "W630 plus", "Schachtwand plus" → W630
+- "W631", "Schachtwand zweiseitig" → W631
+- "Schachtwand" (ohne Nummer) + einseitig → W625S als Default
+
+Brandschutz:
+- "W131", "einschalige Brandwand" → W131
+- "W133", "zweischalige Brandwand" → W133
 - "Stahlblecheinlage", "A+M", "Einbruchhemmung" → W135_Stahlblech
-- "Stundenlohn", "Regie", "Facharbeiter-Stunde" → Regiestunde (einheit="h")
-- "Abkofferung", "Stahlträger-Verkleidung", "Fallrohr-Verkleidung" → Verkleidung
+
+Decken:
+- "MF-Rasterdecke", "Bolero", "Sinfonia", "OWATECTA", "Einlegesystem", "625x625", "625x1250" → OWA_MF
+- "Mineralfaser-Raster" → OWA_MF (NICHT D112!)
+- "LMD", "Streckmetall", "rahmenlos" → Streckmetalldecke
+- "Deckensegel", "Akustiksegel", "Strähle", "System 7300" → Deckensegel
+- "Deckensprung" → Deckensprung
+
+Akustik:
+- "Wandabsorber", "Tiefenabsorber", "DUR SONIC", "Akustikabsorber Wand" → Wandabsorber
+
+Nassraum:
+- "Aquapanel", "Cement Board", "Powerpanel" → Aquapanel
+
+Sonstiges:
+- "Stundenlohn", "Regie", "Facharbeiter-Stunde", "Helferstunde" → Regiestunde (einheit="h")
+- "Abkofferung", "Stahlträger-Verkleidung", "Fallrohr-Verkleidung", "GK-Verkleidung unter Treppe" → Verkleidung
 - "Deckenschürze" → Deckenschuerze
-- "Türaussparung" → Tueraussparung
+- "Deckenschott", "Brandschutzabschottung senkrecht" → Deckenschott
+- "Türaussparung", "Fenster/Türaussparung" → Tueraussparung
 - "Installationsloch", "DN", "Durchbruch rund" → Installationsloch
 - "Eckschiene", "Kantenschutz" → Eckschiene
-- "Fugenversiegelung", "Acryl" → Fugenversiegelung
+- "Fugenversiegelung", "Acryl", "Dehnungsfuge", "Bewegungsfuge" → Fugenversiegelung
+- "Wandanschluss", "Randfries" → Wandanschluss
+- "Z-Profil", "QR-Profil", "Verstärkungsprofil", "UA-Verstärkung horizontal" → Verstaerkungsprofil
+- "Einzelkabeldurchführung F90", "Kabelschott F90" → Kabeldurchfuehrung_F90
+- "Aufdopplung", "GK-Platten geklebt" → Aufdopplung_geklebt
 
 ANTWORTE AUSSCHLIESSLICH MIT JSON.
 """
