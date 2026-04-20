@@ -38,6 +38,21 @@ def client(tmp_sqlite) -> Generator[TestClient, None, None]:
     TestSession = sessionmaker(bind=engine, autoflush=False, autocommit=False)
     database.engine = engine
     database.SessionLocal = TestSession
+
+    # Re-bind SessionLocal in Modulen, die es statisch importiert haben.
+    # Wichtig fuer Background-Worker, die ueber `from ... import SessionLocal`
+    # eine fruehe Referenz auf die urspruengliche Session-Factory halten.
+    import sys
+    for mod_name in list(sys.modules.keys()):
+        if not mod_name.startswith("app."):
+            continue
+        mod = sys.modules[mod_name]
+        if hasattr(mod, "SessionLocal"):
+            try:
+                setattr(mod, "SessionLocal", TestSession)
+            except Exception:  # noqa: BLE001
+                pass
+
     database.init_db()
 
     from app.main import app
