@@ -63,13 +63,21 @@ export function Pagination({
   const pageBtn = (
     content: React.ReactNode,
     {
+      key,
       onClick,
       disabled,
       active,
       ariaLabel,
-    }: { onClick?: () => void; disabled?: boolean; active?: boolean; ariaLabel?: string },
+    }: {
+      key?: string | number;
+      onClick?: () => void;
+      disabled?: boolean;
+      active?: boolean;
+      ariaLabel?: string;
+    },
   ) => (
     <button
+      key={key}
       type="button"
       onClick={onClick}
       disabled={disabled}
@@ -103,6 +111,7 @@ export function Pagination({
             <ChevronLeft className="w-4 h-4" /> Zurück
           </>,
           {
+            key: "m-prev",
             onClick: () => onPageChange(currentPage - 1),
             disabled: !canPrev,
             ariaLabel: "Vorherige Seite",
@@ -116,6 +125,7 @@ export function Pagination({
             Vor <ChevronRight className="w-4 h-4" />
           </>,
           {
+            key: "m-next",
             onClick: () => onPageChange(currentPage + 1),
             disabled: !canNext,
             ariaLabel: "Naechste Seite",
@@ -126,22 +136,25 @@ export function Pagination({
       {/* Desktop: volle Navigation */}
       <div className="hidden sm:flex items-center gap-1">
         {pageBtn(<ChevronsLeft className="w-4 h-4" />, {
+          key: "d-first",
           onClick: () => onPageChange(1),
           disabled: !canPrev,
           ariaLabel: "Erste Seite",
         })}
         {pageBtn(<ChevronLeft className="w-4 h-4" />, {
+          key: "d-prev",
           onClick: () => onPageChange(currentPage - 1),
           disabled: !canPrev,
           ariaLabel: "Vorherige Seite",
         })}
         {pages.map((p, i) =>
           p === "dots" ? (
-            <span key={`d-${i}`} className="px-2 text-slate-400 select-none">
+            <span key={`d-dots-${i}`} className="px-2 text-slate-400 select-none">
               …
             </span>
           ) : (
             pageBtn(p, {
+              key: `p-${p}`,
               onClick: () => onPageChange(p),
               active: p === currentPage,
               ariaLabel: `Seite ${p}`,
@@ -149,11 +162,13 @@ export function Pagination({
           ),
         )}
         {pageBtn(<ChevronRight className="w-4 h-4" />, {
+          key: "d-next",
           onClick: () => onPageChange(currentPage + 1),
           disabled: !canNext,
           ariaLabel: "Naechste Seite",
         })}
         {pageBtn(<ChevronsRight className="w-4 h-4" />, {
+          key: "d-last",
           onClick: () => onPageChange(totalPages),
           disabled: !canNext,
           ariaLabel: "Letzte Seite",

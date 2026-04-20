@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Package,
   Settings,
   X,
 } from "lucide-react";
@@ -19,6 +20,12 @@ import { cn } from "@/lib/cn";
 const NAV = [
   { href: "/dashboard", label: "Übersicht", icon: LayoutDashboard },
   { href: "/dashboard/preislisten", label: "Preislisten", icon: FileStack },
+  {
+    href: "/dashboard/pricing",
+    label: "Lieferanten-Preise",
+    icon: Package,
+    beta: true,
+  },
   { href: "/dashboard/lvs", label: "Leistungsverzeichnisse", icon: FolderOpen },
   { href: "/dashboard/einstellungen", label: "Einstellungen", icon: Settings },
 ];
@@ -126,7 +133,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {NAV.map(({ href, label, icon: Icon }) => {
+          {NAV.map(({ href, label, icon: Icon, beta }) => {
             const active =
               pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
             return (
@@ -141,7 +148,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 )}
               >
                 <Icon className="w-5 h-5 shrink-0" />
-                {label}
+                <span className="flex-1 truncate">{label}</span>
+                {beta && (
+                  <span className="text-[10px] uppercase font-semibold tracking-wide px-1.5 py-0.5 rounded bg-accent-500/10 text-accent-600 border border-accent-500/20">
+                    Beta
+                  </span>
+                )}
               </Link>
             );
           })}
