@@ -389,19 +389,37 @@ class PricelistParser:
 
             # Claude kann ein einzelnes Objekt {"page":..., "entries":[]} oder
             # eine Liste von Seiten zurueckgeben. Beides tolerieren.
-            page_entries_list: list[dict] = []
+            # Wichtig: source_page-Info vom Wrapper an jeden Entry durchreichen,
+            # damit Reviewer spaeter zur Original-PDF-Seite springen koennen.
+            page_entries_pairs: list[tuple[int | None, dict]] = []
             if isinstance(parsed, dict):
-                if "entries" in parsed and isinstance(parsed["entries"], list):
-                    page_entries_list = parsed["entries"]
-                elif "pages" in parsed and isinstance(parsed["pages"], list):
+                if "pages" in parsed and isinstance(parsed["pages"], list):
                     for pg in parsed["pages"]:
-                        page_entries_list.extend(pg.get("entries", []))
+                        if not isinstance(pg, dict):
+                            continue
+                        pg_num = pg.get("page")
+                        for e in pg.get("entries", []):
+                            if isinstance(e, dict):
+                                page_entries_pairs.append((pg_num, e))
+                elif "entries" in parsed and isinstance(parsed["entries"], list):
+                    # Single-Page-Wrapper: {"page": N, "entries": [...]}
+                    pg_num = parsed.get("page")
+                    for e in parsed["entries"]:
+                        if isinstance(e, dict):
+                            page_entries_pairs.append((pg_num, e))
             elif isinstance(parsed, list):
                 for pg in parsed:
-                    if isinstance(pg, dict):
-                        page_entries_list.extend(pg.get("entries", []))
+                    if not isinstance(pg, dict):
+                        continue
+                    pg_num = pg.get("page")
+                    for e in pg.get("entries", []):
+                        if isinstance(e, dict):
+                            page_entries_pairs.append((pg_num, e))
 
-            for raw in page_entries_list:
+            for pg_num, raw in page_entries_pairs:
+                # page vom Wrapper > source_page im Entry > None
+                if pg_num is not None and raw.get("source_page") is None:
+                    raw = {**raw, "source_page": pg_num}
                 try:
                     entry = self._build_entry(pricelist, raw)
                 except Exception as exc:

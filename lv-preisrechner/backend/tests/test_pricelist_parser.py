@@ -357,6 +357,140 @@ def test_pricelist_parser_integration_mit_mock_claude(client, tmp_path):
         assert cw.needs_review is True
         assert cw.pieces_per_package == 8
 
+        # source_page: im single-page-wrapper {"page":1, ...} kommt page=1 durch
+        for e in entries:
+            assert e.source_page == 1, (
+                f"{e.product_name}: source_page sollte 1 sein (kam aus "
+                f"single-page-wrapper), ist aber {e.source_page}"
+            )
+
+
+def test_source_page_aus_pages_wrapper_durchgereicht(client):
+    """pages[]-Wrapper liefert pro Seite page-Nr; jeder Entry bekommt diese."""
+    from app.core.database import SessionLocal
+    from app.models.pricing import SupplierPriceEntry
+
+    token = _register_and_login(client, "source-page@example.com")
+    pdf = _make_mini_pdf(["Kemmler Multi-Page"])
+    resp = client.post(
+        "/api/v1/pricing/upload",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("multi.pdf", io.BytesIO(pdf), "application/pdf")},
+        data={
+            "supplier_name": "Kemmler",
+            "list_name": "Multi-Page-Test",
+            "valid_from": "2026-04-01",
+            "auto_parse": "false",
+        },
+    )
+    pricelist_id = resp.json()["id"]
+
+    mock = _MockClaude(
+        canned_response={
+            "pages": [
+                {
+                    "page": 3,
+                    "entries": [
+                        {
+                            "product_name": "Artikel-Page3-A",
+                            "price_net": 10.0,
+                            "unit": "€/Stk",
+                            "parser_confidence": 1.0,
+                        },
+                        {
+                            "product_name": "Artikel-Page3-B",
+                            "price_net": 20.0,
+                            "unit": "€/Stk",
+                            "parser_confidence": 1.0,
+                        },
+                    ],
+                },
+                {
+                    "page": 5,
+                    "entries": [
+                        {
+                            "product_name": "Artikel-Page5",
+                            "price_net": 30.0,
+                            "unit": "€/Stk",
+                            "parser_confidence": 1.0,
+                        },
+                    ],
+                },
+            ]
+        }
+    )
+    with SessionLocal() as db:
+        parser = PricelistParser(db=db, claude_client=mock)
+        result = parser.parse(pricelist_id)
+
+    assert result.parsed_entries == 3
+
+    with SessionLocal() as db:
+        entries = {
+            e.product_name: e
+            for e in db.query(SupplierPriceEntry).filter(
+                SupplierPriceEntry.pricelist_id == pricelist_id
+            )
+        }
+    assert entries["Artikel-Page3-A"].source_page == 3
+    assert entries["Artikel-Page3-B"].source_page == 3
+    assert entries["Artikel-Page5"].source_page == 5
+
+
+def test_source_page_entry_eigene_page_ueberschreibt_wrapper_nicht(client):
+    """Wenn Entry bereits source_page hat, wird die NICHT ueberschrieben.
+
+    Hintergrund: Claude koennte intern eine feinere Nummer liefern (z.B.
+    Doppelseite unterteilen). Wrapper-page ist nur Fallback.
+    """
+    from app.core.database import SessionLocal
+    from app.models.pricing import SupplierPriceEntry
+
+    token = _register_and_login(client, "source-page-override@example.com")
+    pdf = _make_mini_pdf(["Kemmler"])
+    resp = client.post(
+        "/api/v1/pricing/upload",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("ov.pdf", io.BytesIO(pdf), "application/pdf")},
+        data={
+            "supplier_name": "Kemmler",
+            "list_name": "Override-Test",
+            "valid_from": "2026-04-01",
+            "auto_parse": "false",
+        },
+    )
+    pricelist_id = resp.json()["id"]
+
+    mock = _MockClaude(
+        canned_response={
+            "pages": [
+                {
+                    "page": 10,
+                    "entries": [
+                        {
+                            "product_name": "Mit-Eigener-Page",
+                            "price_net": 1.0,
+                            "unit": "€/Stk",
+                            "parser_confidence": 1.0,
+                            "source_page": 99,  # explizit anders
+                        },
+                    ],
+                }
+            ]
+        }
+    )
+    with SessionLocal() as db:
+        parser = PricelistParser(db=db, claude_client=mock)
+        parser.parse(pricelist_id)
+
+    with SessionLocal() as db:
+        e = (
+            db.query(SupplierPriceEntry)
+            .filter(SupplierPriceEntry.pricelist_id == pricelist_id)
+            .first()
+        )
+    assert e.source_page == 99, "Entry-eigenes source_page soll Wrapper-page gewinnen"
+
 
 def test_pricelist_parser_fehlendes_pflichtfeld_wird_geskipped(client):
     """Wenn Claude einen Entry ohne price_net liefert -> skipped, nicht parsed."""
