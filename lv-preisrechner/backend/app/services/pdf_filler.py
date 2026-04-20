@@ -148,10 +148,23 @@ def _insert_deckblatt(doc: fitz.Document, lv: LV, tenant_firma: str) -> None:
     if lv.positionen_unsicher:
         page.insert_text(
             (60, y),
-            f"Zur manuellen Prüfung: {lv.positionen_unsicher}",
+            f"Zur manuellen Pruefung: {lv.positionen_unsicher}",
             fontsize=11,
             fontname="helv",
             color=(0.7, 0.2, 0),
+        )
+
+    # Hinweis: Positionen ohne Preis in der Preisliste wurden nicht kalkuliert
+    # (keine Schein-Preise aus Modellwissen - ehrlicher Fallback)
+    manual_count = sum(1 for p in lv.positions if (p.konfidenz or 0) == 0.0 and (p.ep or 0) == 0.0)
+    if manual_count > 0:
+        y += 16
+        page.insert_text(
+            (60, y),
+            f"Positionen ohne Preis in Ihrer Preisliste (manuell ergaenzen): {manual_count}",
+            fontsize=10,
+            fontname="helv",
+            color=(0.9, 0.4, 0.0),
         )
 
     # MwSt-Aufschluesselung direkt unter Netto-Summe
@@ -257,19 +270,38 @@ def _append_kalkulation(doc: fitz.Document, lv: LV) -> None:
             (cols[2], y), _de_num(pos.menge), fontsize=8, fontname="helv"
         )
         page.insert_text((cols[3], y), pos.einheit or "", fontsize=8, fontname="helv")
-        page.insert_text(
-            (cols[4] + 20, y),
-            _euro(pos.ep),
-            fontsize=8,
-            fontname="helv",
-        )
-        page.insert_text(
-            (cols[5] + 30, y),
-            _euro(pos.gp),
-            fontsize=8,
-            fontname="helv",
-            color=(0, 0, 0),
-        )
+
+        # Wenn Position manuell zu pruefen ist (konfidenz=0, ep=0) -> klare Markierung
+        needs_manual = (pos.konfidenz or 0) == 0.0 and (pos.ep or 0) == 0.0
+        if needs_manual:
+            page.insert_text(
+                (cols[4] + 20, y),
+                "manuell",
+                fontsize=8,
+                fontname="helv",
+                color=(0.8, 0.3, 0.0),  # orange
+            )
+            page.insert_text(
+                (cols[5] + 30, y),
+                "--- EUR",
+                fontsize=8,
+                fontname="helv",
+                color=(0.8, 0.3, 0.0),
+            )
+        else:
+            page.insert_text(
+                (cols[4] + 20, y),
+                _euro(pos.ep),
+                fontsize=8,
+                fontname="helv",
+            )
+            page.insert_text(
+                (cols[5] + 30, y),
+                _euro(pos.gp),
+                fontsize=8,
+                fontname="helv",
+                color=(0, 0, 0),
+            )
 
         # WICHTIG: Interne Warnings (z.B. "Kein Preis: |Profile|UW75|") werden NICHT
         # mehr im PDF gezeigt — die sind fuer den Empfaenger verwirrend und wirken

@@ -27,6 +27,7 @@ def _kalkuliere_position(
     material_ep = 0.0
     detailliste: list[dict] = []
     warnungen: list[str] = []
+    fehlende_pflicht_materialien: list[str] = []
 
     if rezept:
         for mb in rezept.materialien:
@@ -37,26 +38,11 @@ def _kalkuliere_position(
                 dna_pattern=mb.dna_pattern,
             )
             if match.price_entry is None:
-                # Fallback: wenn optional (fallback_preis_eur gesetzt) Standard-Preis verwenden
-                # Vermeidet 0€-Materialien die zu Unter-Kalkulation führen
-                fallback_preis = getattr(mb, "fallback_preis_eur", None)
-                if fallback_preis and fallback_preis > 0:
-                    teilpreis = mb.menge_pro_einheit * fallback_preis
-                    material_ep += teilpreis
-                    detailliste.append(
-                        {
-                            "dna_pattern": mb.dna_pattern,
-                            "menge": mb.menge_pro_einheit,
-                            "einheit": mb.basis_einheit,
-                            "preis_einheit": fallback_preis,
-                            "gp": round(teilpreis, 2),
-                            "quelle": "fallback",
-                        }
-                    )
-                    continue
-                # Nur bei optional=False warnen (sonst Rauschen)
+                # KEIN Fallback-Preis mehr (bewusste Entscheidung: keine Schein-Genauigkeit).
+                # Stattdessen: Position als manuell-zu-pruefen markieren.
                 if not getattr(mb, "optional", False):
-                    warnungen.append(f"Kein Preis: {mb.dna_pattern}")
+                    fehlende_pflicht_materialien.append(mb.dna_pattern)
+                    warnungen.append(f"Kein Preis in Preisliste: {mb.dna_pattern}")
                 detailliste.append(
                     {
                         "dna_pattern": mb.dna_pattern,
@@ -83,14 +69,16 @@ def _kalkuliere_position(
 
         lohn_stunden = rezept.zeit_h_pro_einheit
     else:
-        warnungen.append(f"Kein Rezept für System '{p.erkanntes_system}'")
-        lohn_stunden = 0.5 if p.einheit in ("Stk", "psch") else 0.3
+        warnungen.append(f"Kein Rezept fuer System '{p.erkanntes_system}' - manuelle Pruefung noetig")
+        fehlende_pflicht_materialien.append("kein_rezept")
+        lohn_stunden = 0.0  # kein Pseudo-Lohn wenn kein Rezept
 
     # Spezialfälle
     if p.einheit.lower() in ("h", "std", "stunden"):
         # Regiestunde: EP = Stundensatz + Zuschläge
         lohn_stunden = 1.0
         material_ep = 0.0
+        fehlende_pflicht_materialien = []  # Regie = gueltig ohne Material
 
     lohn_ep = lohn_stunden * tenant.stundensatz_eur
 
@@ -101,6 +89,14 @@ def _kalkuliere_position(
     ep = round(basis + zuschlaege_ep, 2)
     gp = round(ep * p.menge, 2)
 
+    # Wenn Pflicht-Materialien fehlen: Position als manuell zu pruefen markieren
+    # UND EP auf 0 setzen (KEINE Schein-Zahl im Angebot!)
+    manuell_pruefen = len(fehlende_pflicht_materialien) > 0
+    if manuell_pruefen:
+        # EP bleibt unvollstaendig - wir zeigen 0, NICHT einen Teil-EP der falsch sein koennte
+        ep = 0.0
+        gp = 0.0
+
     p.materialien = detailliste
     p.material_ep = round(material_ep, 2)
     p.lohn_stunden = round(lohn_stunden, 2)
@@ -109,7 +105,9 @@ def _kalkuliere_position(
     p.ep = ep
     p.gp = gp
     p.warnung = " | ".join(warnungen)[:1000]
-    if warnungen:
+    if manuell_pruefen:
+        p.konfidenz = 0.0  # harte Kennzeichnung: manuell noetig
+    elif warnungen:
         p.konfidenz = min(p.konfidenz, 0.6)
 
 
