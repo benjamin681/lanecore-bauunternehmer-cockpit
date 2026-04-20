@@ -151,18 +151,31 @@ def kalkuliere_lv(db: Session, lv_id: str, tenant_id: str) -> LV:
             "Keine aktive Preisliste. Bitte zuerst eine Preisliste hochladen und aktivieren."
         )
 
-    summe = 0.0
+    summe_bindend = 0.0  # ohne Bedarf/Alternative
+    summe_bedarf = 0.0
+    summe_alternative = 0.0
+    summe_gesamt = 0.0  # inkl. aller optionalen
     gematcht = 0
     unsicher = 0
     for p in lv.positions:
         _kalkuliere_position(db, tenant, pl, p)
-        summe += p.gp
+        summe_gesamt += p.gp or 0.0
+        # Optional-Positionen fliessen NICHT in die bindende Angebotssumme
+        if p.is_bedarf:
+            summe_bedarf += p.gp or 0.0
+        elif p.is_alternative:
+            summe_alternative += p.gp or 0.0
+        else:
+            summe_bindend += p.gp or 0.0
         if p.ep > 0 and not p.warnung:
             gematcht += 1
         if p.konfidenz < 0.85:
             unsicher += 1
 
-    lv.angebotssumme_netto = round(summe, 2)
+    lv.angebotssumme_netto = round(summe_bindend, 2)
+    lv.bedarfspositionen_summe = round(summe_bedarf, 2)
+    lv.alternativpositionen_summe = round(summe_alternative, 2)
+    lv.gesamtsumme_inklusive_optional = round(summe_gesamt, 2)
     lv.positionen_gematcht = gematcht
     lv.positionen_unsicher = unsicher
     lv.price_list_id = pl.id
@@ -172,7 +185,10 @@ def kalkuliere_lv(db: Session, lv_id: str, tenant_id: str) -> LV:
     log.info(
         "lv_calculated",
         lv_id=lv.id,
-        summe=lv.angebotssumme_netto,
+        summe_netto=lv.angebotssumme_netto,
+        summe_bedarf=lv.bedarfspositionen_summe,
+        summe_alternative=lv.alternativpositionen_summe,
+        summe_gesamt=lv.gesamtsumme_inklusive_optional,
         gematcht=gematcht,
         unsicher=unsicher,
     )

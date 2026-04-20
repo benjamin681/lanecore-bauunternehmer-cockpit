@@ -1,19 +1,22 @@
-"""add is_bedarf and is_alternative to position
+"""add is_bedarf and is_alternative to position, plus optional-sum fields to lv
 
 Revision ID: 8f2c1a9b4d01
 Revises: 074b144a36ad
 Create Date: 2026-04-20 10:45:00.000000
 
-Fuegt zwei Boolean-Flags zur lvp_positions-Tabelle hinzu:
-- is_bedarf:      Position ist eine Bedarfsposition (LV-Marker "*** Bedarfsposition")
-- is_alternative: Position ist eine Alternativposition (LV-Marker "Alternativprodukt")
+Optional-Positionen (Bedarf/Alternative) werden aus der Angebotssumme
+ausgeschlossen — die Position bleibt aber im Output sichtbar.
 
-Beide Flags schliessen Positionen aus der Angebotssumme aus (Kalkulation),
-die Position bleibt aber im Output sichtbar.
+lvp_positions:
+- is_bedarf      (Boolean, default false)
+- is_alternative (Boolean, default false)
 
-server_default="false" stellt sicher, dass bestehende Positionen (z.B.
-in bereits vorhandenen LVs) als "nicht Bedarf, nicht Alternative" eingestuft
-werden - das ist das sichere Verhalten.
+lvp_lvs (Summen separat ausweisen):
+- bedarfspositionen_summe         (Float, default 0.0)
+- alternativpositionen_summe      (Float, default 0.0)
+- gesamtsumme_inklusive_optional  (Float, default 0.0)
+
+server_default stellt sicher, dass bestehende Daten weiter funktionieren.
 
 Migration wurde manuell verfasst (nicht via autogenerate) weil die lokale
 SQLite-DB nicht mit der Head-Revision synchron war.
@@ -32,6 +35,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # Position-Flags
     op.add_column(
         "lvp_positions",
         sa.Column(
@@ -50,8 +54,39 @@ def upgrade() -> None:
             nullable=False,
         ),
     )
+    # LV-Summen
+    op.add_column(
+        "lvp_lvs",
+        sa.Column(
+            "bedarfspositionen_summe",
+            sa.Float(),
+            server_default=sa.text("0"),
+            nullable=False,
+        ),
+    )
+    op.add_column(
+        "lvp_lvs",
+        sa.Column(
+            "alternativpositionen_summe",
+            sa.Float(),
+            server_default=sa.text("0"),
+            nullable=False,
+        ),
+    )
+    op.add_column(
+        "lvp_lvs",
+        sa.Column(
+            "gesamtsumme_inklusive_optional",
+            sa.Float(),
+            server_default=sa.text("0"),
+            nullable=False,
+        ),
+    )
 
 
 def downgrade() -> None:
+    op.drop_column("lvp_lvs", "gesamtsumme_inklusive_optional")
+    op.drop_column("lvp_lvs", "alternativpositionen_summe")
+    op.drop_column("lvp_lvs", "bedarfspositionen_summe")
     op.drop_column("lvp_positions", "is_alternative")
     op.drop_column("lvp_positions", "is_bedarf")

@@ -43,7 +43,13 @@ class LV(Base):
     positionen_gematcht: Mapped[int] = mapped_column(default=0)
     positionen_unsicher: Mapped[int] = mapped_column(default=0)
 
+    # Angebotssumme OHNE Bedarfs- und Alternativpositionen — das ist die bindende Summe
     angebotssumme_netto: Mapped[float] = mapped_column(default=0.0)
+    # Separat ausgewiesen zur Information:
+    bedarfspositionen_summe: Mapped[float] = mapped_column(default=0.0)
+    alternativpositionen_summe: Mapped[float] = mapped_column(default=0.0)
+    # Gesamtsumme inklusive aller optionalen Positionen (zur Referenz)
+    gesamtsumme_inklusive_optional: Mapped[float] = mapped_column(default=0.0)
 
     # Welche Preisliste wurde verwendet
     price_list_id: Mapped[str] = mapped_column(String, default="")
