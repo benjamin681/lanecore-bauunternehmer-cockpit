@@ -452,6 +452,70 @@ REZEPTE: dict[str, Rezept] = {
             MaterialBedarf("|Profile|UA|75|", 1.0, "lfm"),
         ],
     ),
+    # ------------------------------------------------------------------
+    # Spezial-Rezepte aus Stuttgart-Omega-LV-Diagnose (2026-04-20)
+    # Alle Mengen als Annahme markiert — TODO in den Materialien.
+    # ------------------------------------------------------------------
+    "GK_Schwert": Rezept(
+        system="GK_Schwert",
+        # TODO: Mengen gegen DIN 18181 / Knauf-Verarbeitungsrichtlinie verifizieren
+        beschreibung="Fassadenschwertanschluss Knauf TP 120 A o.glw. (Silentboard beidseitig, Schwertbreite <250mm, Dicke 47mm)",
+        zieleinheit="lfm",
+        zeit_h_pro_einheit=0.80,
+        materialien=[
+            # TODO: Mengen gegen DIN 18181 / Knauf-Verarbeitungsrichtlinie verifizieren
+            MaterialBedarf("|Gipskarton|Silentboard|12.5mm|", 0.50, "m²"),
+            MaterialBedarf("|Daemmung||20mm|", 0.20, "m²", optional=True),
+            MaterialBedarf("|Profile|CW50|", 2.00, "lfm"),
+            MaterialBedarf("|Profile|UW50|", 0.40, "lfm", optional=True),
+            MaterialBedarf("|Profile|Eckschutzschiene||", 2.00, "lfm", optional=True),
+            MaterialBedarf("|Spachtel||Uniflott|", 0.30, "kg", optional=True),
+            MaterialBedarf("|Schrauben||3.5x25|", 15.0, "Stk", optional=True),
+        ],
+    ),
+    "Leibungsbekleidung": Rezept(
+        system="Leibungsbekleidung",
+        # TODO: Mengen gegen DIN 18181 / Knauf-Verarbeitungsrichtlinie verifizieren
+        # TODO: Variante F90 (2-lagig) braucht 0.70 m²/lfm statt 0.35; hydrophobiert nutzt GKBI statt GKB
+        beschreibung="Trockenputz-Leibungsbekleidung an Tür-/Fensteröffnungen (Default F0, 1-lagig, Wanddicke bis 300mm)",
+        zieleinheit="lfm",
+        zeit_h_pro_einheit=0.40,
+        materialien=[
+            # TODO: Mengen gegen DIN 18181 / Knauf-Verarbeitungsrichtlinie verifizieren
+            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 0.35, "m²"),
+            MaterialBedarf("|Spachtel||Ansetzgips|", 0.50, "kg", optional=True),
+            MaterialBedarf("|Spachtel||Uniflott|", 0.20, "kg", optional=True),
+        ],
+    ),
+    "Freies_Wandende": Rezept(
+        system="Freies_Wandende",
+        # TODO: Mengen gegen DIN 18181 / Knauf-Verarbeitungsrichtlinie verifizieren
+        beschreibung="Stirnabschluss einer Trockenbauwand (Wanddicke 125mm, Q2)",
+        zieleinheit="m",
+        zeit_h_pro_einheit=0.30,
+        materialien=[
+            # TODO: Mengen gegen DIN 18181 / Knauf-Verarbeitungsrichtlinie verifizieren
+            MaterialBedarf("|Profile|UA|75|", 1.00, "lfm"),
+            MaterialBedarf("|Profile|Anschlusswinkel||", 2.00, "Stk", optional=True),
+            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 0.15, "m²"),
+            MaterialBedarf("|Spachtel||Uniflott|", 0.20, "kg", optional=True),
+            MaterialBedarf("|Profile|Eckschutzschiene||", 2.00, "lfm", optional=True),
+        ],
+    ),
+    "Stuetzenbekleidung": Rezept(
+        system="Stuetzenbekleidung",
+        # TODO: Mengen gegen DIN 18181 / Knauf-Verarbeitungsrichtlinie verifizieren
+        # TODO: Entscheidung ob Stahlrohr-Lieferung Teil dieser Position oder separat (Metallbau-Gewerk)
+        beschreibung="Stützenbekleidung — Quadratrohr 50x50x4mm als Tragwerk + GK-Bekleidung 4-seitig 12,5mm",
+        zieleinheit="m",
+        zeit_h_pro_einheit=0.60,
+        materialien=[
+            # TODO: Mengen gegen DIN 18181 / Knauf-Verarbeitungsrichtlinie verifizieren
+            MaterialBedarf("|Stahl|Quadratrohr|50x50x4|", 1.00, "lfm", optional=True),
+            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 0.20, "m²"),
+            MaterialBedarf("|Spachtel||Uniflott|", 0.10, "kg", optional=True),
+        ],
+    ),
 }
 
 
@@ -536,6 +600,26 @@ def resolve_rezept(
         "RIPPENDECKE": "D113",  # Brandschutzdecke auf Rippen
         "WEITSPANNDECKE": "D113",
         "FREITRAGEND": "D113",
+        # --- Stuttgart-Omega 2026-04-20 ---
+        "GK-SCHWERT": "GK_Schwert",
+        "GK_SCHWERT": "GK_Schwert",
+        "SCHWERT": "GK_Schwert",
+        "FASSADENSCHWERTANSCHLUSS": "GK_Schwert",
+        "TP 120 A": "GK_Schwert",
+        "TP120A": "GK_Schwert",
+        "LEIBUNGSBEKLEIDUNG": "Leibungsbekleidung",
+        "LEIBUNGSKLEIDUNG": "Leibungsbekleidung",
+        "LEIBUNG": "Leibungsbekleidung",
+        "TROCKENPUTZ": "Leibungsbekleidung",
+        "FREIES WANDENDE": "Freies_Wandende",
+        "FREIES_WANDENDE": "Freies_Wandende",
+        "FREIESWANDENDE": "Freies_Wandende",
+        "STIRNABSCHLUSS": "Freies_Wandende",
+        "FREIES ENDE": "Freies_Wandende",
+        "STUETZENBEKLEIDUNG": "Stuetzenbekleidung",
+        "STÜTZENBEKLEIDUNG": "Stuetzenbekleidung",
+        "QUADRATROHR": "Stuetzenbekleidung",
+        "STAHLBEKLEIDUNG": "Stuetzenbekleidung",
     }
     if upper in aliases:
         return REZEPTE.get(aliases[upper])

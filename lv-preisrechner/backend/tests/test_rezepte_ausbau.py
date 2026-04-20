@@ -58,3 +58,63 @@ def test_w13_prefix_heuristik():
 def test_w118_bei_feuerwiderstand_und_w11x():
     assert resolve_rezept("W114", "F90", "GKF") is REZEPTE["W118"]
     assert resolve_rezept("W114", "", "") is REZEPTE["W112"]
+
+
+# ------------------------------------------------------------------
+# Spezial-Rezepte aus Stuttgart-Omega-LV-Diagnose (2026-04-20)
+# ------------------------------------------------------------------
+
+def test_gk_schwert_rezept_existiert_mit_sinnvoller_materialliste():
+    r = REZEPTE["GK_Schwert"]
+    assert r.system == "GK_Schwert"
+    assert r.zieleinheit == "lfm"
+    assert r.zeit_h_pro_einheit > 0
+    # Silentboard + CW-Profil sind Pflicht-Materialien (nicht optional)
+    pflicht = [m for m in r.materialien if not m.optional]
+    assert any("Silentboard" in m.dna_pattern for m in pflicht)
+    assert any("CW50" in m.dna_pattern for m in pflicht)
+    # Alias-Resolver muss greifen
+    assert resolve_rezept("GK-Schwert", "", "") is r
+    assert resolve_rezept("Fassadenschwertanschluss", "", "") is r
+
+
+def test_leibungsbekleidung_rezept_existiert_mit_sinnvoller_materialliste():
+    r = REZEPTE["Leibungsbekleidung"]
+    assert r.system == "Leibungsbekleidung"
+    assert r.zieleinheit == "lfm"
+    assert r.zeit_h_pro_einheit > 0
+    # GKB-Platte ist Pflicht (nicht optional) — Leibungsbekleidung ohne Platte = sinnlos
+    pflicht = [m for m in r.materialien if not m.optional]
+    assert any("GKB" in m.dna_pattern for m in pflicht)
+    # Alias-Resolver
+    assert resolve_rezept("Leibungsbekleidung", "", "") is r
+    assert resolve_rezept("LEIBUNG", "", "") is r
+    assert resolve_rezept("Trockenputz", "", "") is r
+
+
+def test_freies_wandende_rezept_existiert_mit_sinnvoller_materialliste():
+    r = REZEPTE["Freies_Wandende"]
+    assert r.system == "Freies_Wandende"
+    assert r.zieleinheit == "m"
+    assert r.zeit_h_pro_einheit > 0
+    # UA-Profil + GK-Platten sind Pflicht
+    pflicht = [m for m in r.materialien if not m.optional]
+    assert any("UA" in m.dna_pattern for m in pflicht)
+    assert any("GKB" in m.dna_pattern for m in pflicht)
+    # Alias-Resolver
+    assert resolve_rezept("Freies Wandende", "", "") is r
+    assert resolve_rezept("Stirnabschluss", "", "") is r
+
+
+def test_stuetzenbekleidung_rezept_existiert_mit_sinnvoller_materialliste():
+    r = REZEPTE["Stuetzenbekleidung"]
+    assert r.system == "Stuetzenbekleidung"
+    assert r.zieleinheit == "m"
+    assert r.zeit_h_pro_einheit > 0
+    # GK-Bekleidung ist Pflicht (Stahlrohr ist optional — kann vom Metallbauer geliefert werden)
+    pflicht = [m for m in r.materialien if not m.optional]
+    assert any("GKB" in m.dna_pattern for m in pflicht)
+    # Alias-Resolver
+    assert resolve_rezept("Stützenbekleidung", "", "") is r
+    assert resolve_rezept("Quadratrohr", "", "") is r
+    assert resolve_rezept("Stahlbekleidung", "", "") is r

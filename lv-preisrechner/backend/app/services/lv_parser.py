@@ -93,6 +93,12 @@ Zubehör/Nebenleistungen:
 - "Kabeldurchfuehrung_F90" = Einzelkabeldurchführung F90 in Brandschutzdecke
 - "Aufdopplung_geklebt" = geklebte GK-Aufdopplung (Ansetzbinder, z.B. h=0.25m)
 
+Spezial-Konstruktionen (aus komplexen LVs):
+- "GK_Schwert" = Fassadenschwertanschluss (Knauf TP 120 A o.glw., Silentboard beidseitig)
+- "Leibungsbekleidung" = Trockenputz-Leibungsbekleidung an Tür-/Fensteröffnungen (lfm)
+- "Freies_Wandende" = Stirnabschluss einer Trockenbauwand (laufender Meter)
+- "Stuetzenbekleidung" = Stützenbekleidung (Stahlrohr + GK-Bekleidung, z.B. Quadratrohr 50x50x4)
+
 Regie:
 - "Regiestunde" = Stundenlohnarbeit, einheit="h"
 - "Zulage" = GKBi-Zulage, Q3-Zulage, Arbeitshöhen-Zulage etc.
@@ -136,6 +142,12 @@ Sonstiges:
 - "Z-Profil", "QR-Profil", "Verstärkungsprofil", "UA-Verstärkung horizontal" → Verstaerkungsprofil
 - "Einzelkabeldurchführung F90", "Kabelschott F90" → Kabeldurchfuehrung_F90
 - "Aufdopplung", "GK-Platten geklebt" → Aufdopplung_geklebt
+
+Spezial-Konstruktionen:
+- "GK-Schwert", "Schwert", "Fassadenschwertanschluss", "TP 120", "TP 120 A" → GK_Schwert
+- "Leibungsbekleidung", "Leibungskleidung", "Leibung", "Trockenputz Leibung" → Leibungsbekleidung
+- "Freies Wandende", "Stirnabschluss", "freies Ende" → Freies_Wandende
+- "Quadratrohr", "Stahlbekleidung", "Stützenbekleidung" → Stuetzenbekleidung
 
 ANTWORTE AUSSCHLIESSLICH MIT JSON.
 """
