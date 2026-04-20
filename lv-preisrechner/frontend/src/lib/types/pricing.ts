@@ -84,7 +84,28 @@ export type SupplierPriceEntry = {
   source_page: number | null;
   parser_confidence: number;
   needs_review: boolean;
+  reviewed_by_user_id?: string | null;
+  reviewed_at?: string | null;
+  correction_applied?: boolean;
 };
+
+/** Partial-Update-Payload fuer PATCH /entries/{id} */
+export type SupplierPriceEntryUpdate = Partial<{
+  article_number: string | null;
+  manufacturer: string | null;
+  product_name: string;
+  category: string | null;
+  subcategory: string | null;
+  price_net: number;
+  unit: string;
+  effective_unit: string;
+  price_per_effective_unit: number;
+  package_size: number | null;
+  package_unit: string | null;
+  pieces_per_package: number | null;
+  attributes: Record<string, unknown>;
+  needs_review: boolean;
+}>;
 
 /** SupplierPriceListDetail: Liste plus optional geladene Entries */
 export type SupplierPriceListDetail = SupplierPriceList & {

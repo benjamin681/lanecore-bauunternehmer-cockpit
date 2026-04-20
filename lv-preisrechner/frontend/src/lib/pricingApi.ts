@@ -13,6 +13,7 @@ import type {
   SupplierPriceList,
   SupplierPriceListDetail,
   SupplierPriceEntry,
+  SupplierPriceEntryUpdate,
 } from "@/lib/types/pricing";
 
 function _qs(params: Record<string, unknown>): string {
@@ -81,6 +82,16 @@ export const pricingApi = {
         offset: opts.offset,
         limit: opts.limit,
       })}`,
+    ),
+
+  updateEntry: (
+    pricelistId: string,
+    entryId: string,
+    body: SupplierPriceEntryUpdate,
+  ) =>
+    api<SupplierPriceEntry>(
+      `/pricing/pricelists/${pricelistId}/entries/${entryId}`,
+      { method: "PATCH", body },
     ),
 };
 
