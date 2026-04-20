@@ -53,4 +53,14 @@ class Position(Base):
     manuell_korrigiert: Mapped[bool] = mapped_column(Boolean, default=False)
     warnung: Mapped[str] = mapped_column(Text, default="")  # z.B. "Kein Match für GKF 15mm"
 
+    # Optional-Flags — Position faellt aus der Angebotssumme raus
+    # (bleibt aber im Output zur Info sichtbar).
+    # Beide koennen gleichzeitig True sein (Bedarfs-Alternative).
+    is_bedarf: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", nullable=False
+    )
+    is_alternative: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", nullable=False
+    )
+
     lv: Mapped["LV"] = relationship(back_populates="positions")  # type: ignore  # noqa: F821
