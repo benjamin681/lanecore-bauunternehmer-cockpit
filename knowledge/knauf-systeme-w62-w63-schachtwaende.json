@@ -1,10 +1,22 @@
 {
   "meta": {
-    "quelle": "Aus Modellwissen rekonstruiert (Claude, Stand Knauf-Detailblätter ca. 2022-2024). Validierung gegen offizielle Knauf-Detailblätter W62X.de und W63X.de ausstehend.",
-    "stand": "April 2026 (Rekonstruktion)",
+    "quelle": "Aus Modellwissen rekonstruiert (Claude, Stand Knauf-Detailblätter ca. 2022-2024). Kategorien-Zuordnung (Schachtwand vs. Vorsatzschale) teilweise offiziell verifiziert — siehe 'verifiziert_am' unten. Detaildaten (Wandhöhen, Rw, Gewicht, Plattenvarianten) bleiben bis offizielle Abgleichung zu validieren.",
+    "stand": "April 2026 (Rekonstruktion, Teilverifikation 2026-04-20)",
     "kategorie": "Schachtwände — ein- und zweiseitig beplankt",
     "bezugsnorm": "DIN EN 13501-2 (Brandschutz), DIN 4102 Teil 4, DIN EN ISO 10140 (Schallschutz), Muster-Leitungsanlagen-Richtlinie MLAR",
-    "hinweis_validierung": "Montage nur einseitig zugänglich (von außerhalb des Schachts). Feuerwiderstand gilt von beiden Seiten (innen und außen). Vor Live-Einsatz Abgleich mit offiziellen Knauf-Detailblättern."
+    "hinweis_validierung": "Montage nur einseitig zugänglich (von außerhalb des Schachts). Feuerwiderstand gilt von beiden Seiten (innen und außen). Vor Live-Einsatz Abgleich mit offiziellen Knauf-Detailblättern.",
+    "verifiziert_am": [
+      {
+        "datum": "2026-04-20",
+        "scope": "W628 ist definitiv Schachtwand (nicht Vorsatzschale)",
+        "quelle": "https://knauf.com/de-DE/knauf-gips/produkte-systeme/systeme/trockenbau-systeme-ueberblick/wand-systeme-im-ueberblick/w62-de-schachtwaende",
+        "zitat": "Knauf Schachtwände sind einseitig beplankte Metallständerwände mit Feuerwiderstandsklasse zum brand- und ggf. schallschutztechnischen Raumabschluss von Installationsschächten. Auf der Übersichtsseite W62.de werden folgende Systeme gelistet: W628A.de (freispannend, bis 2m Schachtbreite), W628B.de (CW-Einfachständer), W629.de (CW-Doppelständer), W635.de (UW-Doppelständer).",
+        "offene_punkte": [
+          "W625S / W626S / W631S / W632 sind intern benannt - echte Knauf-Systembezeichnungen auf der Übersichtsseite sind W628A, W628B, W629, W635. Detaillierte Abgleichung der einzelnen Systemnamen und Eigenschaften steht aus.",
+          "W628A vs. W628B (freispannend vs. CW-Ständer) ist in dieser Datei noch nicht differenziert - unser Eintrag 'W628' deckt aktuell beides pauschal ab."
+        ]
+      }
+    ]
   },
 
   "systeme": {

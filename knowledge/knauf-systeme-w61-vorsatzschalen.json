@@ -1,10 +1,18 @@
 {
   "meta": {
-    "quelle": "Aus Modellwissen rekonstruiert (Claude, Stand Knauf-Detailblätter ca. 2022-2024). Validierung gegen offizielle Knauf-Detailblätter W61.de / W62X.de / W63X.de / W628.de ausstehend.",
+    "quelle": "Aus Modellwissen rekonstruiert (Claude, Stand Knauf-Detailblätter ca. 2022-2024). Validierung gegen offizielle Knauf-Detailblätter W61.de ausstehend.",
     "stand": "April 2026 (Rekonstruktion)",
     "kategorie": "Vorsatzschalen W61 — freistehend und direkt befestigt",
     "bezugsnorm": "DIN 4103-1 (Innenbauwände), DIN EN 13501-2 (Brandschutz), DIN EN ISO 10140 (Schallschutz)",
-    "hinweis_validierung": "Vor Live-Einsatz mit LV-Preisrechner bitte mit offiziellen Knauf-Detailblättern abgleichen: downloads.knauf.de oder Knauf-Datenblatt-Suche."
+    "hinweis_validierung": "Vor Live-Einsatz mit LV-Preisrechner bitte mit offiziellen Knauf-Detailblättern abgleichen: downloads.knauf.de oder Knauf-Datenblatt-Suche.",
+    "korrekturen": [
+      {
+        "datum": "2026-04-20",
+        "aenderung": "W628 entfernt — gehört laut offizieller Knauf-Klassifikation zu W62 Schachtwände (siehe knowledge/knauf-systeme-w62-w63-schachtwaende.json).",
+        "quelle": "https://knauf.com/de-DE/knauf-gips/produkte-systeme/systeme/trockenbau-systeme-ueberblick/wand-systeme-im-ueberblick/w62-de-schachtwaende",
+        "zitat": "Knauf Schachtwände sind einseitig beplankte Metallständerwände ... Systeme W628A.de, W628B.de, W629.de, W635.de."
+      }
+    ]
   },
 
   "systeme": {
@@ -144,34 +152,6 @@
       "lv_schluessel": ["W626", "W626.de", "Vorsatzschale geklebt", "angesetzt", "Perlfix", "Ansetzverfahren"]
     },
 
-    "W628": {
-      "bezeichnung": "Knauf Vorsatzschale W628.de — freistehend mit Holzunterkonstruktion",
-      "typ": "Vorsatzschale freistehend Holz",
-      "beschreibung": "Freistehende Holzlatten-Unterkonstruktion. Selten, für Sonderfälle (historische Bausubstanz, kein Metall).",
-      "unterkonstruktion": "Holzlatten 48x24mm oder 60x40mm, freistehend",
-      "gesamt_schalendicke_mm": {"typisch": "50-100mm"},
-      "max_hoehe_m": 4.0,
-      "systemvarianten": [
-        {
-          "beplankung": "1x GKB 12,5mm",
-          "gewicht_kgm2": 10,
-          "feuerwiderstand_vorsatzschale": "ohne"
-        },
-        {
-          "beplankung": "1x GKF 12,5mm",
-          "gewicht_kgm2": 12,
-          "feuerwiderstand_vorsatzschale": "F30"
-        },
-        {
-          "beplankung": "2x GKF 12,5mm",
-          "gewicht_kgm2": 22,
-          "feuerwiderstand_vorsatzschale": "F60"
-        }
-      ],
-      "einbaubereich": "Bereich 1 nach DIN 4103-1",
-      "lv_schluessel": ["W628", "W628.de", "Vorsatzschale Holz", "Vorsatzschale Holzunterkonstruktion", "Holzlatten Vorsatzschale"]
-    },
-
     "W631": {
       "bezeichnung": "Knauf Schutz-Vorsatzschale W631.de — stoßbeanspruchte Wandbereiche",
       "typ": "Vorsatzschale stoßgeschützt",
@@ -220,7 +200,6 @@
       {"pattern": ["W623", "Vorsatzschale freistehend", "freistehende Vorsatzschale"], "system": "W623"},
       {"pattern": ["W625", "Direktabhänger", "Schwingabhänger", "direkt befestigt"], "system": "W625"},
       {"pattern": ["W626", "geklebt", "Perlfix", "angesetzt"], "system": "W626"},
-      {"pattern": ["W628", "Vorsatzschale Holz", "Holzlatten Vorsatzschale"], "system": "W628"},
       {"pattern": ["W631", "Schutz-Vorsatzschale", "stoßbeansprucht"], "system": "W631"},
       {"pattern": ["Vorsatzschale", "Schalenschale"], "system": "W623", "hinweis": "Default: freistehend wenn keine Präzisierung"}
     ]
