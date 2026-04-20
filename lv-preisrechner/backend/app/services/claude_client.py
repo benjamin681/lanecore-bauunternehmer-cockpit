@@ -15,6 +15,47 @@ from app.core.config import settings
 log = structlog.get_logger()
 
 
+def _try_parse_concatenated_json(raw: str) -> list[dict[str, Any]] | None:
+    """Parst mehrere JSON-Objekte, die direkt hintereinander stehen.
+
+    Claude liefert bei Multi-Image-Prompts gelegentlich ein Objekt pro Bild
+    statt ein gemeinsames Wrapper-Objekt, z.B.:
+
+        {"page": 3, "entries": [...]}
+        {"page": 4, "entries": [...]}
+
+    `json.loads()` bricht hier mit "Extra data" ab. Dieser Helper nutzt
+    `raw_decode()` in einer Schleife, um alle Top-Level-Objekte sequentiell
+    einzulesen. Gibt die Liste der Objekte zurueck oder None, wenn schon das
+    erste Objekt nicht geparst werden kann (dann kein Concat-Fall).
+    """
+    decoder = json.JSONDecoder()
+    objects: list[dict[str, Any]] = []
+    idx = 0
+    text = raw.strip()
+    n = len(text)
+    while idx < n:
+        # Fuehrende Whitespaces/Newlines ueberspringen
+        while idx < n and text[idx] in " \t\n\r":
+            idx += 1
+        if idx >= n:
+            break
+        try:
+            obj, end = decoder.raw_decode(text, idx)
+        except json.JSONDecodeError:
+            # Konnten nichts (mehr) dekodieren
+            break
+        if not isinstance(obj, dict):
+            # Nur Objekte akzeptieren (keine Arrays/Primitives)
+            return None
+        objects.append(obj)
+        idx = end
+    if len(objects) < 2:
+        # Ein Objekt allein ist kein Concat-Fall — hier nichts gewonnen.
+        return None
+    return objects
+
+
 def _recover_truncated_array(raw: str, array_key: str) -> dict[str, Any] | None:
     """Rettet Einträge aus abgeschnittenem JSON mit Top-Level-Array.
 
@@ -168,7 +209,18 @@ class ClaudeClient:
         try:
             return json.loads(raw), model
         except json.JSONDecodeError as exc:
-            # Versuch: truncated Top-Level-Array retten
+            # Fallback 1: Claude gab mehrere Top-Level-JSON-Objekte hintereinander
+            # (typisch bei Multi-Image-Prompts — ein Objekt pro Bild). Sammel sie
+            # als Liste und gib sie zurueck. Aufrufer muss list[dict] tolerieren.
+            concat = _try_parse_concatenated_json(raw)
+            if concat is not None:
+                log.warning(
+                    "claude_json_concat_recovered",
+                    count=len(concat),
+                    original_error=str(exc),
+                )
+                return concat, model  # type: ignore[return-value]
+            # Fallback 2: truncated Top-Level-Array retten
             for key in ("eintraege", "positionen"):
                 recovered = _recover_truncated_array(raw, key)
                 if recovered is not None:

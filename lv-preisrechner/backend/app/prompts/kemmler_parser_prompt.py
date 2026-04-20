@@ -28,27 +28,43 @@ Extrahiere pro sichtbarer Produktzeile:
 8. Attribute (flexibel, als Dict: "dimensions", "color", "weight",
    "thickness" etc. wenn extrahierbar)
 
-AUSGABE-SCHEMA (EXAKT dieses JSON-Format, nichts anderes):
+AUSGABE-SCHEMA — GANZ WICHTIG:
+Du erhaeltst MEHRERE Bilder (mehrere Seiten) in EINEM Request. Antworte mit
+GENAU EINEM JSON-Objekt, das alle Seiten in einem "pages"-Array enthaelt.
+NIEMALS mehrere JSON-Objekte nacheinander schicken. NIEMALS nur ein Wrapper
+pro Seite.
+
+EXAKT dieses Format, nichts anderes:
 
 {
-  "page": <seite als int>,
-  "entries": [
+  "pages": [
     {
-      "article_number": "<string oder null>",
-      "manufacturer": "<string oder null>",
-      "product_name": "<string, pflicht>",
-      "category": "<string oder null>",
-      "subcategory": "<string oder null>",
-      "price_net": <float, pflicht>,
-      "currency": "EUR",
-      "unit": "<string, pflicht - ORIGINAL wie im Text, z.B. '€/m²'>",
-      "attributes": { ... },
-      "source_row_raw": "<string - der unverarbeitete Zeilentext, falls OCR-Verdacht>",
-      "parser_confidence": <float 0..1>,
-      "needs_review_hint": <bool>
+      "page": <seitennummer als int, z.B. 3>,
+      "entries": [
+        {
+          "article_number": "<string oder null>",
+          "manufacturer": "<string oder null>",
+          "product_name": "<string, pflicht>",
+          "category": "<string oder null>",
+          "subcategory": "<string oder null>",
+          "price_net": <float, pflicht>,
+          "currency": "EUR",
+          "unit": "<string, pflicht - ORIGINAL wie im Text, z.B. '€/m²'>",
+          "attributes": { ... },
+          "source_row_raw": "<string - unverarbeiteter Zeilentext falls OCR-Verdacht>",
+          "parser_confidence": <float 0..1>,
+          "needs_review_hint": <bool>
+        }
+      ]
+    },
+    {
+      "page": <naechste seite>,
+      "entries": [ ... ]
     }
   ]
 }
+
+Wenn du nur 1 Seite bekommst, ist pages trotzdem ein Array mit einem Element.
 
 CONFIDENCE-REGELN:
 - 1.0: Zeile klar lesbar, alle Pflichtfelder sicher extrahiert
