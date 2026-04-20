@@ -8,9 +8,48 @@ JSON-Fallback-Pfad, der im Live-Test B+2 an Kemmler gescheitert war
 from __future__ import annotations
 
 from app.services.claude_client import (
+    ClaudeClient,
     _try_parse_concatenated_json,
     _recover_truncated_array,
 )
+
+
+# ---------------------------------------------------------------------------
+# Fake Anthropic SDK
+# ---------------------------------------------------------------------------
+
+class _Block:
+    type = "text"
+
+    def __init__(self, text: str) -> None:
+        self.text = text
+
+
+class _Msg:
+    def __init__(self, text: str, stop_reason: str = "end_turn") -> None:
+        self.content = [_Block(text)]
+        self.stop_reason = stop_reason
+
+
+class _FakeAnthropic:
+    """Minimaler Ersatz fuer den Anthropic-SDK-Client in Tests.
+
+    Nimmt eine Liste von Response-Texten entgegen; bei jedem
+    messages.create() wird der naechste aus der Liste zurueckgegeben.
+    """
+
+    def __init__(self, responses: list[str]) -> None:
+        self.responses = list(responses)
+        self.calls: list[dict] = []
+        # Anthropic-SDK: client.messages.create(...)
+        self.messages = self
+
+    def create(self, *, model, max_tokens, system, messages):  # noqa: D401
+        self.calls.append({"model": model, "max_tokens": max_tokens})
+        if not self.responses:
+            raise AssertionError("FakeAnthropic: keine Responses mehr uebrig")
+        text = self.responses.pop(0)
+        return _Msg(text)
 
 
 # ---------------------------------------------------------------------------
@@ -99,3 +138,85 @@ def test_recover_truncated_array_rettet_vollstaendige_eintraege():
 def test_recover_truncated_array_gibt_none_wenn_key_fehlt():
     raw = '{"anderer_key": []}'
     assert _recover_truncated_array(raw, "eintraege") is None
+
+
+# ---------------------------------------------------------------------------
+# Fix 3: Opus-Fallback bei JSONDecodeError
+# ---------------------------------------------------------------------------
+
+def test_opus_fallback_bei_korruptem_json_erfolgreich():
+    """Wenn Sonnet korruptes JSON liefert, wird 1x mit Opus retried."""
+    from app.core.config import settings
+
+    cc = ClaudeClient()
+    # Response 1 (Sonnet): kaputt — weder json.loads, noch concat, noch recover.
+    # Response 2 (Opus): valide.
+    cc._client = _FakeAnthropic([
+        '{"pages": [{"page": 1, "entries": [{"prod',  # echter Truncation-Mid-Objekt
+        '{"pages": [{"page": 1, "entries": []}]}',    # Opus liefert korrektes JSON
+    ])
+
+    result, model = cc.extract_json(system="sys", user_text="txt")
+    assert result == {"pages": [{"page": 1, "entries": []}]}
+    assert len(cc._client.calls) == 2, "Erster Call Sonnet, zweiter Call Opus"
+    # Zweiter Call MUSS auf dem Fallback-Modell laufen
+    assert cc._client.calls[0]["model"] == settings.claude_model_primary
+    assert cc._client.calls[1]["model"] == settings.claude_model_fallback
+
+
+def test_opus_fallback_nur_einmal_bei_doppeltem_fail():
+    """Wenn auch Opus kaputtes JSON liefert, wirft ValueError (kein Loop)."""
+    cc = ClaudeClient()
+    cc._client = _FakeAnthropic([
+        '{"broken',   # Sonnet kaputt
+        '{"still-broken',  # Opus ebenfalls kaputt
+    ])
+
+    import pytest
+
+    with pytest.raises(ValueError, match="Claude gab kein gültiges JSON"):
+        cc.extract_json(system="sys")
+
+    # Exakt 2 Calls: 1x Sonnet + 1x Opus (kein dritter Retry-Loop)
+    assert len(cc._client.calls) == 2
+
+
+def test_opus_fallback_nicht_getriggert_wenn_primary_ok():
+    """Happy-Path: Sonnet liefert valides JSON, Opus wird nie gerufen."""
+    cc = ClaudeClient()
+    cc._client = _FakeAnthropic([
+        '{"ok": true}',
+    ])
+
+    result, _ = cc.extract_json(system="sys")
+    assert result == {"ok": True}
+    assert len(cc._client.calls) == 1
+
+
+def test_opus_fallback_nicht_bei_concat_recovery():
+    """Concat-JSON greift VOR Opus-Fallback — kein extra Call."""
+    cc = ClaudeClient()
+    # Sonnet gibt 2 Top-Level-Objekte zurueck (concat-Fall).
+    cc._client = _FakeAnthropic([
+        '{"page":1,"entries":[]}{"page":2,"entries":[]}',
+    ])
+
+    result, _ = cc.extract_json(system="sys")
+    # Concat-Recovery liefert eine Liste
+    assert isinstance(result, list)
+    assert len(result) == 2
+    # Nur 1 Call an Anthropic, kein Opus-Fallback
+    assert len(cc._client.calls) == 1
+
+
+def test_opus_fallback_reicht_max_tokens_override_weiter():
+    """max_tokens-Override muss auch beim Opus-Retry gelten."""
+    cc = ClaudeClient()
+    cc._client = _FakeAnthropic([
+        '{"kaputt',
+        '{"ok": 1}',
+    ])
+    cc.extract_json(system="sys", max_tokens=32_000)
+    # Beide Calls mit 32k
+    assert cc._client.calls[0]["max_tokens"] == 32_000
+    assert cc._client.calls[1]["max_tokens"] == 32_000

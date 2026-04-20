@@ -236,6 +236,22 @@ class ClaudeClient:
                         original_error=str(exc),
                     )
                     return recovered, model
+            # Fallback 3: Einmal mit Opus retry, falls wir noch nicht dort sind.
+            # Sonnet-Output war korrupt; Opus ist in solchen Faellen oft stabiler,
+            # besonders bei langen Multi-Image-Prompts. Nur 1 Retry (kein Loop).
+            if not force_fallback:
+                log.warning(
+                    "claude_json_retry_with_opus",
+                    original_error=str(exc),
+                    raw_preview=raw[:200],
+                )
+                return self.extract_json(
+                    system=system,
+                    user_text=user_text,
+                    images=images,
+                    force_fallback=True,
+                    max_tokens=max_tokens,
+                )
             log.error("claude_json_parse_failed", error=str(exc), raw=raw[:500])
             raise ValueError(f"Claude gab kein gültiges JSON: {exc}") from exc
 
