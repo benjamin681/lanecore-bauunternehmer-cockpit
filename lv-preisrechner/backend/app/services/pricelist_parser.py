@@ -70,6 +70,13 @@ class UnitInfo:
 # ---------------------------------------------------------------------------
 _KEMMLER_FILENAME_HINTS = ("kemmler", "ausbau-", "a-liste", "a+-liste", "a_liste")
 
+# Pricelist-Parsing braucht mehr Output-Budget als der Default (16k),
+# weil Multi-Image-Batches komplexe JSON-Strukturen liefern (pages + entries +
+# attributes pro Zeile). Live-Messung auf Kemmler (Batch 5): Claude
+# schneidet bei 16k mitten im JSON ab. 32k laesst bequeme Marge auch fuer
+# dichte Seiten mit ~40 Entries.
+_PRICELIST_MAX_TOKENS = 32_000
+
 
 def _detect_format(
     file_path: Path | str,
@@ -307,7 +314,7 @@ class PricelistParser:
     PARSED/ERROR macht der Worker in pricelist_parse_worker.py).
     """
 
-    def __init__(self, *, db, claude_client=None, batch_size: int = 5):
+    def __init__(self, *, db, claude_client=None, batch_size: int = 3):
         self.db = db
         # claude_client optional injectable fuer Tests (Mock). Default: globaler
         # claude-Singleton aus claude_client.py.
@@ -370,7 +377,9 @@ class PricelistParser:
             page_range = f"{start + 1}-{start + len(batch)}"
             try:
                 parsed, _model = self._claude.extract_json(
-                    system=SYSTEM_PROMPT, images=batch
+                    system=SYSTEM_PROMPT,
+                    images=batch,
+                    max_tokens=_PRICELIST_MAX_TOKENS,
                 )
             except Exception as exc:
                 msg = f"Batch {batch_idx} ({page_range}) fehlgeschlagen: {exc}"

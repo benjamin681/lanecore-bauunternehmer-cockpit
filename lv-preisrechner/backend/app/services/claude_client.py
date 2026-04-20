@@ -124,6 +124,7 @@ class ClaudeClient:
         user_text: str | None = None,
         images: list[dict] | None = None,
         force_fallback: bool = False,
+        max_tokens: int | None = None,
     ) -> tuple[dict[str, Any], str]:
         """
         Schickt den Prompt an Claude, erwartet JSON im Response.
@@ -133,6 +134,8 @@ class ClaudeClient:
             user_text: User-Text (optional)
             images: Liste Claude-kompatibler Image-Blöcke (base64 oder url)
             force_fallback: Nutze direkt Opus statt Sonnet
+            max_tokens: Optionales Override fuer den Output-Token-Budget.
+                Wenn None, wird settings.claude_max_tokens verwendet.
 
         Returns:
             (parsed_json, model_used)
@@ -140,6 +143,7 @@ class ClaudeClient:
         model = (
             settings.claude_model_fallback if force_fallback else settings.claude_model_primary
         )
+        effective_max_tokens = max_tokens if max_tokens is not None else settings.claude_max_tokens
 
         content_blocks: list[dict] = []
         if images:
@@ -155,7 +159,7 @@ class ClaudeClient:
             try:
                 msg = self._client.messages.create(
                     model=model,
-                    max_tokens=settings.claude_max_tokens,
+                    max_tokens=effective_max_tokens,
                     system=system,
                     messages=[{"role": "user", "content": content_blocks}],
                 )
@@ -202,6 +206,7 @@ class ClaudeClient:
                     user_text=user_text,
                     images=images,
                     force_fallback=True,
+                    max_tokens=max_tokens,
                 )
             # Auch Opus leer → leere Antwort zurückgeben (Batch wird geskippt, Job läuft weiter)
             return {"eintraege": [], "positionen": []}, model

@@ -193,7 +193,15 @@ class _MockClaude:
         self.canned = canned_response
         self.calls = 0
 
-    def extract_json(self, *, system=None, images=None, user_text=None, force_fallback=False):
+    def extract_json(
+        self,
+        *,
+        system=None,
+        images=None,
+        user_text=None,
+        force_fallback=False,
+        max_tokens=None,
+    ):
         self.calls += 1
         return self.canned, "claude-sonnet-4-6"
 
