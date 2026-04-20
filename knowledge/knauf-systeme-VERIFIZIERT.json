@@ -1,0 +1,335 @@
+{
+  "meta": {
+    "verifiziert_am": "2026-04-20",
+    "methode": "WebFetch knauf.com Übersichtsseiten + WebSearch für Systemname-spezifische Treffer",
+    "anzahl_systeme_im_projekt": 28,
+    "verifiziert_ok": 7,
+    "verifiziert_ok_mit_detail_offen": 1,
+    "korrektur_noetig": 18,
+    "nicht_verifizierbar_ohne_pdf": 2,
+    "zeit_verbrauch_minuten": 12,
+    "hinweis": "Diese Datei konsolidiert die Verifikations-Ergebnisse. Original-Knowledge-Dateien (knauf-systeme-*.json) sind bewusst unverändert — Korrekturen werden separat in docs/KNAUF_KORREKTUREN.md gelistet und erst in einer Folge-Aufgabe angewandt."
+  },
+
+  "uebersichts_quellen": {
+    "w11_metallstaenderwaende": "https://knauf.com/de-DE/knauf-gips/produkte-systeme/systeme/trockenbau-systeme-ueberblick/wand-systeme-im-ueberblick/w11-de-metallstaenderwaende",
+    "w13_sonderbauwaende_brandwand": "https://knauf.com/de-DE/knauf-gips/produkte-systeme/systeme/trockenbau-systeme-ueberblick/wand-systeme-im-ueberblick/w13-de-metallstaenderwaende-anstelle-von-brandwaenden",
+    "w61_vorsatzschalen": "https://knauf.com/de-DE/knauf-gips/produkte-systeme/systeme/trockenbau-systeme-ueberblick/wand-systeme-im-ueberblick/w61-de-vorsatzschalen",
+    "w62_schachtwaende": "https://knauf.com/de-DE/knauf-gips/produkte-systeme/systeme/trockenbau-systeme-ueberblick/wand-systeme-im-ueberblick/w62-de-schachtwaende",
+    "d11_plattendecken": "https://knauf.com/de-DE/knauf-gips/produkte-systeme/systeme/trockenbau-systeme-ueberblick/decken-und-dachgeschosssysteme-im-ueberblick/d11-de-plattendecken",
+    "d13_freitragende_decken": "https://knauf.com/de-DE/knauf-gips/produkte-systeme/systeme/trockenbau-systeme-ueberblick/decken-und-dachgeschosssysteme-im-ueberblick/d13-de-freitragende-decken",
+    "k21_trapezblech_fireboard": "https://knauf.com/de-DE/knauf-gips/produkte-systeme/systeme/trockenbau-systeme-ueberblick/decken-und-dachgeschosssysteme-im-ueberblick/k21-de-trapezblech-systeme-mit-fireboard"
+  },
+
+  "systeme": {
+
+    "W111": {
+      "offizielle_bezeichnung": "W111.de — Einfachständerwerk, einlagig beplankt",
+      "kategorie": "Metallständerwand (Trennwand)",
+      "quelle_url": "uebersichts_quellen.w11_metallstaenderwaende",
+      "zitat": "W111.de – Einfachständerwerk, einlagig beplankt. Wandhöhen bis 10.65 m, F90.",
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "W111",
+      "abweichung": null,
+      "status": "OK"
+    },
+
+    "W112": {
+      "offizielle_bezeichnung": "W112.de — Einfachständerwerk, zweilagig beplankt",
+      "kategorie": "Metallständerwand (Trennwand)",
+      "quelle_url": "uebersichts_quellen.w11_metallstaenderwaende",
+      "zitat": "W112.de – Einfachständerwerk, zweilagig beplankt. Wandhöhen bis 12.00 m.",
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "W112",
+      "abweichung": null,
+      "status": "OK"
+    },
+
+    "W113": {
+      "offizielle_bezeichnung": "W113.de — Einfachständerwerk, dreilagig beplankt",
+      "kategorie": "Metallständerwand (Trennwand)",
+      "quelle_url": "uebersichts_quellen.w11_metallstaenderwaende",
+      "zitat": "W113.de – Einfachständerwerk, dreilagig beplankt.",
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "W113",
+      "abweichung": "Im Projekt beschrieben als '2-lagig verstärkt' — offiziell ist es 3-lagig. Kleine Unschärfe, nicht kritisch.",
+      "status": "KORREKTUR_NOETIG"
+    },
+
+    "W115": {
+      "offizielle_bezeichnung": "W115.de — Doppelständerwerk entkoppelt",
+      "kategorie": "Metallständerwand (Schallschutz, Doppelständer)",
+      "quelle_url": "uebersichts_quellen.w11_metallstaenderwaende",
+      "zitat": "W115.de – Doppelständerwerk entkoppelt.",
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "W115",
+      "abweichung": null,
+      "status": "OK"
+    },
+
+    "W115V": {
+      "offizielle_bezeichnung": "W115V.de — Doppelständerwerk mit Beplankung innen",
+      "kategorie": "Metallständerwand (Schallschutz-Variante)",
+      "quelle_url": "uebersichts_quellen.w11_metallstaenderwaende",
+      "zitat": "W115V.de – Doppelständerwerk, mit Beplankung innen.",
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "W115V",
+      "abweichung": null,
+      "status": "OK"
+    },
+
+    "W116": {
+      "offizielle_bezeichnung": "W116.de — Doppelständerwerk verlascht",
+      "kategorie": "Metallständerwand (Installationswand)",
+      "quelle_url": "uebersichts_quellen.w11_metallstaenderwaende",
+      "zitat": "W116.de – Doppelständerwerk verlascht.",
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "W116",
+      "abweichung": "Im Projekt beschrieben als 'akustisch entkoppelt' — offiziell 'verlascht' (beide Ständerreihen mechanisch verbunden). Semantisch unterschiedlich.",
+      "status": "KORREKTUR_NOETIG"
+    },
+
+    "W118": {
+      "offizielle_bezeichnung": "UNKLAR — nicht in W11.de-Übersicht gelistet",
+      "kategorie": "unklar (projekt-intern als Brandschutzwand F90)",
+      "quelle_url": null,
+      "zitat": null,
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "W118",
+      "abweichung": "W118.de ist KEIN offizieller Knauf-Code in der W11.de-Übersicht. Möglicherweise historisch (ältere Katalog-Generation) oder intern. Für neue LVs wahrscheinlich als W113 (3-lagig) oder Brandwand W131 gemeint.",
+      "status": "NICHT_VERIFIZIERT"
+    },
+
+    "W131": {
+      "offizielle_bezeichnung": "W131.de — Knauf Brandwand Einfachständerwerk (zwei- oder dreilagig + Stahlblech)",
+      "kategorie": "Sonderbauwand anstelle Brandwand (F90-A+mB)",
+      "quelle_url": "uebersichts_quellen.w13_sonderbauwaende_brandwand",
+      "zitat": "W131.de – Metallständerwand, zwei- oder dreilagig beplankt mit Stahlblecheinlage je Seite. F90-A + mB. Bis 9m Wandhöhe getestet.",
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "W131",
+      "abweichung": "Im Projekt beschrieben als 'Brandwand (eigenständig, schwerer Aufbau, F90/F120)'. Offiziell: immer mit Stahlblech (A+mB = angriff + mechanisch). Die Stahlblecheinlage ist TEIL des Systems, nicht optional.",
+      "status": "KORREKTUR_NOETIG"
+    },
+
+    "W133": {
+      "offizielle_bezeichnung": "W133.de — Knauf Brandwand (dreilagig + Stahlblech)",
+      "kategorie": "Sonderbauwand anstelle Brandwand (F90-A+mB)",
+      "quelle_url": "uebersichts_quellen.w13_sonderbauwaende_brandwand",
+      "zitat": "W133.de – Metallständerwand, dreilagig beplankt mit Stahlblecheinlage je Seite. F90-A + mB.",
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "W133",
+      "abweichung": "Im Projekt beschrieben als 'zweischalige Brandwand (zwei getrennte Profilreihen)'. Offiziell: Einfachständerwerk 3-lagig + Stahlblech (NICHT Doppelständer).",
+      "status": "KORREKTUR_NOETIG"
+    },
+
+    "W135": {
+      "offizielle_bezeichnung": "W135.de — Knauf Brandwand (zweilagig + Stahlblech)",
+      "kategorie": "Sonderbauwand anstelle Brandwand (F90-A+mB)",
+      "quelle_url": "uebersichts_quellen.w13_sonderbauwaende_brandwand",
+      "zitat": "W135.de – Metallständerwand, zweilagig beplankt mit Stahlblecheinlage je Seite. F90-A + mB.",
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "W135 (+ intern 'W135_Stahlblech')",
+      "abweichung": "GRAVIEREND: Im Projekt beschrieben als 'Installationswand mit breiterer UK'. Tatsächlich ist W135 eine BRANDWAND mit Stahlblech (F90-A+mB). Unser internes 'W135_Stahlblech'-Rezept dupliziert das — die Stahlblecheinlage IST das System, nicht eine Option. Installationswände sind W116 (Doppelständer) oder im LV als 'Installationswand' ohne Knauf-Nummer.",
+      "status": "KORREKTUR_NOETIG"
+    },
+
+    "W623": {
+      "offizielle_bezeichnung": "W623.de — Vorsatzschale mit CD 60/27, direkt befestigt",
+      "kategorie": "Vorsatzschale (direkt befestigt)",
+      "quelle_url": "uebersichts_quellen.w61_vorsatzschalen",
+      "zitat": "W623.de — Knauf Vorsatzschale mit CD 60/27, direkt befestigt.",
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "W623",
+      "abweichung": "VERTAUSCHT: Im Projekt beschrieben als 'freistehend'. Offiziell: W623 = direkt befestigt (CD 60/27). W625 hingegen ist freistehend (CW-Profil).",
+      "status": "KORREKTUR_NOETIG"
+    },
+
+    "W625": {
+      "offizielle_bezeichnung": "W625.de — Vorsatzschale mit CW-Profil, einlagig beplankt (freistehend)",
+      "kategorie": "Vorsatzschale (freistehend)",
+      "quelle_url": "uebersichts_quellen.w61_vorsatzschalen",
+      "zitat": "W625.de — Knauf Vorsatzschale mit CW-Profil, einlagig beplankt.",
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "W625",
+      "abweichung": "VERTAUSCHT: Im Projekt beschrieben als 'direkt befestigt (Direktabhänger CD60/27)'. Offiziell: W625 = freistehend (CW-Profil).",
+      "status": "KORREKTUR_NOETIG"
+    },
+
+    "W625S": {
+      "offizielle_bezeichnung": "EXISTIERT NICHT offiziell bei Knauf",
+      "kategorie": "projekt-intern (gemeint: einseitige Schachtwand)",
+      "quelle_url": null,
+      "zitat": null,
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "W625S",
+      "abweichung": "Interner Name. Offizielle Knauf-Schachtwände sind W628A.de / W628B.de / W629.de / W635.de. Der Suffix '-S' ist nicht Teil der Knauf-Nomenklatur.",
+      "status": "KORREKTUR_NOETIG"
+    },
+
+    "W626": {
+      "offizielle_bezeichnung": "W626.de — Vorsatzschale mit CW-Profil (mehrlagig beplankt)",
+      "kategorie": "Vorsatzschale (mehrlagig)",
+      "quelle_url": "uebersichts_quellen.w61_vorsatzschalen",
+      "zitat": "W626.de — Knauf Vorsatzschale mit CW-Profil.",
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "W626",
+      "abweichung": "Im Projekt beschrieben als 'geklebt (Ansetzgips Perlfix)'. Offiziell: W626 = CW-Profil mehrlagig, NICHT geklebt. 'Angesetzte Platte' gibt es in der W61-Familie scheinbar nicht als eigener W-Code — das ist ein eigenes Verfahren (Perlfix) ohne System-Nummer.",
+      "status": "KORREKTUR_NOETIG"
+    },
+
+    "W626S": {
+      "offizielle_bezeichnung": "EXISTIERT NICHT offiziell bei Knauf",
+      "kategorie": "projekt-intern",
+      "quelle_url": null,
+      "zitat": null,
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "W626S",
+      "abweichung": "Interner Name, kein offizielles Pendant.",
+      "status": "KORREKTUR_NOETIG"
+    },
+
+    "W628": {
+      "offizielle_bezeichnung": "W628A.de / W628B.de — Schachtwand (freispannend bzw. mit CW-Einfachständer)",
+      "kategorie": "Schachtwand (einseitig beplankt)",
+      "quelle_url": "uebersichts_quellen.w62_schachtwaende",
+      "zitat": "Knauf Schachtwände sind einseitig beplankte Metallständerwände... W628A.de (freispannend, bis 2m Schachtbreite), W628B.de (CW-Einfachständer).",
+      "verifiziert_am": "2026-04-20 (Erstverifikation bereits in Commit 7414f9a)",
+      "im_projekt_als": "W628",
+      "abweichung": "W628 ohne Suffix wird nicht differenziert (A vs. B). In der Projektklassifikation OK (Schachtwand), aber Detail-Klassifikation nach Profil-Typ steht aus.",
+      "status": "OK_mit_detail_offen"
+    },
+
+    "W628A": {
+      "offizielle_bezeichnung": "W628A.de — Schachtwand freispannend (bis 2m Schachtbreite, unbegrenzte Höhe)",
+      "kategorie": "Schachtwand (einseitig, freispannend)",
+      "quelle_url": "https://www.knauf.de/media/modules/cad/cadlayer.php?herst=1001&ss_sg_nr=W628A.de",
+      "zitat": "W628A.de – Knauf Schachtwand Freispannend. Bis 2m Schachtbreite ohne Unterkonstruktion.",
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "W628A",
+      "abweichung": "Im SYSTEM_PROMPT beschrieben als 'erhöhte Wandhöhe bis 8.9m'. Offiziell: 'freispannend bis 2m Schachtbreite, unbegrenzte Höhe'. Beschreibung im Prompt ist nicht falsch (freispannend erlaubt große Höhen) aber ungenau.",
+      "status": "KORREKTUR_NOETIG"
+    },
+
+    "W630": {
+      "offizielle_bezeichnung": "W630.de — Schachtwand Riegelwerk mit CW-Profilen",
+      "kategorie": "Schachtwand (mit Riegelwerk, bis 5m Schachtbreite)",
+      "quelle_url": "https://www.knauf.de/media/modules/cad/cadlayer.php?ss_sg_nr=W630.de&herst=1001",
+      "zitat": "W630.de – Knauf Schachtwand mit Riegelwerk aus CW-Profilen. Bis 5m Schachtbreite.",
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "W630",
+      "abweichung": null,
+      "status": "OK"
+    },
+
+    "W631": {
+      "offizielle_bezeichnung": "UNKLAR — nicht in W61- oder W62-Übersicht gefunden",
+      "kategorie": "unklar",
+      "quelle_url": null,
+      "zitat": null,
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "W631 (in w61-vorsatzschalen: Schutz-Vorsatzschale; in w62-w63: Schachtwand zweiseitig)",
+      "abweichung": "W631.de ist WEDER in der offiziellen W61-Übersicht (Vorsatzschalen) NOCH in der W62-Übersicht (Schachtwände) gelistet. Möglicherweise veraltet oder intern.",
+      "status": "NICHT_VERIFIZIERT"
+    },
+
+    "W631S": {
+      "offizielle_bezeichnung": "EXISTIERT NICHT offiziell bei Knauf",
+      "kategorie": "projekt-intern",
+      "quelle_url": null,
+      "zitat": null,
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "W631S",
+      "abweichung": "Interner Name.",
+      "status": "KORREKTUR_NOETIG"
+    },
+
+    "W632": {
+      "offizielle_bezeichnung": "EXISTIERT NICHT offiziell bei Knauf",
+      "kategorie": "projekt-intern",
+      "quelle_url": null,
+      "zitat": null,
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "W632",
+      "abweichung": "Interner Name.",
+      "status": "KORREKTUR_NOETIG"
+    },
+
+    "D111": {
+      "offizielle_bezeichnung": "D111.de — Knauf Plattendecke mit Holz-Unterkonstruktion",
+      "kategorie": "Unterdecke (Holz-UK)",
+      "quelle_url": "uebersichts_quellen.d11_plattendecken",
+      "zitat": "D111.de – Knauf Plattendecke mit Holz-Unterkonstruktion (Grund- und Traglatte).",
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "D111",
+      "abweichung": null,
+      "status": "OK"
+    },
+
+    "D112": {
+      "offizielle_bezeichnung": "D112.de — Knauf Plattendecke mit Metall-Unterkonstruktion",
+      "kategorie": "Unterdecke (Metall-UK)",
+      "quelle_url": "uebersichts_quellen.d11_plattendecken",
+      "zitat": "D112.de – Knauf Plattendecke mit Metall-Unterkonstruktion (Grund- und Tragprofil CD60/27, auf Abhängern).",
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "D112",
+      "abweichung": "Im Projekt beschrieben als '1-lagig GKB'. Offiziell: D112 definiert sich über die UK (Metall), nicht über die Beplankungszahl. 1- oder 2-lagig sind Varianten innerhalb D112.",
+      "status": "KORREKTUR_NOETIG"
+    },
+
+    "D113": {
+      "offizielle_bezeichnung": "D113.de — Knauf Plattendecke mit Metall-Unterkonstruktion niveaugleich",
+      "kategorie": "Unterdecke (Metall-UK, niveaugleiche Profile)",
+      "quelle_url": "uebersichts_quellen.d11_plattendecken",
+      "zitat": "D113.de – Metall-UK aus niveaugleich verbundenen Grund- und Tragprofilen CD 60/27, niedrige Aufbauhöhe.",
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "D113",
+      "abweichung": "GRAVIEREND: Im Projekt beschrieben als '2-lagig (Brand-/Schallschutz)'. Offiziell: D113 definiert sich über niveaugleich verbundene Profile, NICHT über die Beplankung. Eine 2-lagige Decke kann sowohl D112 als auch D113 sein. Unsere Heuristik 'D113 = 2-lagig' ist falsch.",
+      "status": "KORREKTUR_NOETIG"
+    },
+
+    "D116": {
+      "offizielle_bezeichnung": "D116.de — Knauf Plattendecke Metall-UK weitspannend",
+      "kategorie": "Unterdecke (Metall-UK mit UA-Profilen, große Abhängeabstände)",
+      "quelle_url": "uebersichts_quellen.d11_plattendecken",
+      "zitat": "D116.de – Metall-UK aus Grundprofilen UA 50 und Tragprofilen CD 60/27, große Abhängeabstände.",
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "D116",
+      "abweichung": null,
+      "status": "OK"
+    },
+
+    "D131": {
+      "offizielle_bezeichnung": "D131.de — Knauf Freitragende Decke unter Holzbalkendecke",
+      "kategorie": "Freitragende Decke (nur Wandbefestigung)",
+      "quelle_url": "uebersichts_quellen.d13_freitragende_decken",
+      "zitat": "D131.de – Freitragende Decke unter Holzbalkendecke. Unterdecken, die ausschließlich an den Wänden befestigt werden.",
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "D131",
+      "abweichung": "Im Projekt beschrieben als 'selbstständige Decke F30 (Membrandecke)'. Offiziell: D131 ist spezifisch für den Einsatz UNTER Holzbalkendecken. Das Konzept (nur Wandbefestigung, keine Abhänger) stimmt überein, der Anwendungsfall ist aber enger.",
+      "status": "KORREKTUR_NOETIG"
+    },
+
+    "K211": {
+      "offizielle_bezeichnung": "FALSCHE FAMILIE — K21.de ist 'Trapezblech-Systeme mit Fireboard' (Decken)",
+      "kategorie": "Im Projekt als 'Kabelschacht' klassifiziert — offiziell: Decken-System auf Trapezblech",
+      "quelle_url": "uebersichts_quellen.k21_trapezblech_fireboard",
+      "zitat": "K21.de – Trapezblech-Systeme mit Fireboard. Decken-/Dachgeschoss-Systeme, NICHT Kabelschacht.",
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "K211",
+      "abweichung": "GRAVIEREND: K21-Familie sind DECKENSYSTEME mit Fireboard, nicht Kabelschächte. Für Kabelkanäle/Installationsschächte ist die offizielle Familie K26 (K261.de, K262.de = Fireboard-Kabelkanäle). Unser K211/K212 = Kabelschacht ist falsche Nomenklatur.",
+      "status": "KORREKTUR_NOETIG"
+    },
+
+    "K212": {
+      "offizielle_bezeichnung": "FALSCHE FAMILIE — siehe K211",
+      "kategorie": "Im Projekt als 'Kabelschacht' — offiziell: keine solche K212-Nummer für Kabel",
+      "quelle_url": "uebersichts_quellen.k21_trapezblech_fireboard",
+      "zitat": null,
+      "verifiziert_am": "2026-04-20",
+      "im_projekt_als": "K212",
+      "abweichung": "Analog zu K211: richtig wäre Familie K26 (Kabelkanäle/Installationsschächte).",
+      "status": "KORREKTUR_NOETIG"
+    }
+
+  }
+}
