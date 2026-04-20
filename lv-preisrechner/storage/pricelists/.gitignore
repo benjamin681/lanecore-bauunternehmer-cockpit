@@ -1,0 +1,5 @@
+# Kundenspezifische Preislisten sind vertraulich und werden nie committed.
+# Verzeichnisstruktur: pricelists/{tenant_id}/{supplier}/{filename}_{timestamp}.{ext}
+*
+!.gitignore
+!README.md

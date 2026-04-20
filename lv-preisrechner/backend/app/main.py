@@ -19,6 +19,7 @@ from app.api import auth as auth_api
 from app.api import jobs as jobs_api
 from app.api import lvs as lvs_api
 from app.api import price_lists as price_lists_api
+from app.api import pricing as pricing_api
 from app.core.config import settings
 from app.core.database import init_db
 
@@ -103,3 +104,5 @@ app.include_router(auth_api.router, prefix="/api/v1")
 app.include_router(price_lists_api.router, prefix="/api/v1")
 app.include_router(lvs_api.router, prefix="/api/v1")
 app.include_router(jobs_api.router, prefix="/api/v1")
+# Neue Pricing-API (B+1, parallel zum alten price_lists_api)
+app.include_router(pricing_api.router, prefix="/api/v1")
