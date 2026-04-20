@@ -57,6 +57,11 @@ uploads/
 # Golden Test Fixtures (echte LV-PDFs, vertraulich)
 lv-preisrechner/tests/golden/fixtures/*.pdf
 
+# Tenant-spezifische Preis-Overrides (Rahmenvertrag, Einkaufsrabatte = vertraulich)
+# Nur die README.md ist erlaubt, alle JSON-Dateien pro tenant_id-Unterordner werden ignoriert.
+knowledge/pricing/tenants/*/*.json
+knowledge/pricing/tenants/*/notes.md
+
 # Secrets
 *.pem
 *.key
