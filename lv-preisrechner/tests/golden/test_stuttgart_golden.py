@@ -71,9 +71,11 @@ from pathlib import Path
 import pytest
 
 SNAPSHOT_PATH = (
-    Path(__file__).parent / "snapshots" / "stuttgart_raw_parse_v3.json"
+    Path(__file__).parent / "snapshots" / "stuttgart_raw_parse_v4.json"
 )
-EXPECTED_POSITIONS_COUNT = 93  # laut User-Vorgabe unveraendert trotz v3-Snapshot mit 103
+# Snapshot-Referenz v4 (nach Etappe 1-3 der Knauf-Korrekturen, 2026-04-20 nachmittags).
+# Wert bleibt 93 als User-Vorgabe — Drift-Warnung bei Abweichung > 10 Positionen aktiv.
+EXPECTED_POSITIONS_COUNT = 93
 DRIFT_THRESHOLD = 10
 
 
