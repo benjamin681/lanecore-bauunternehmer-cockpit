@@ -285,12 +285,15 @@ export default function PricingDetailPage() {
                 korrigiere sie.
               </div>
               <div className="text-sm text-slate-500 mt-1">
-                Die Review-UI wird in Kuerze verfuegbar sein.
+                Filter, sortieren, bearbeiten — die Korrekturen werden sofort
+                gespeichert.
               </div>
             </div>
-            <Button variant="primary" disabled title="Kommt bald (B+3.3)">
-              <ClipboardCheck className="w-4 h-4" /> Review starten
-            </Button>
+            <Link href={`/dashboard/pricing/${pl.id}/review`}>
+              <Button variant="primary">
+                <ClipboardCheck className="w-4 h-4" /> Review starten
+              </Button>
+            </Link>
           </CardBody>
         </Card>
       )}
