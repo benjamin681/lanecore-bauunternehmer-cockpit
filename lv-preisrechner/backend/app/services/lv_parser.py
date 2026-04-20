@@ -13,6 +13,54 @@ from app.services.pdf_utils import compute_sha256, pdf_to_page_images, save_uplo
 
 log = structlog.get_logger()
 
+
+# ---------------------------------------------------------------------------
+# Marker-Erkennung fuer Bedarfs-/Alternativpositionen
+# Beide Flags koennen gleichzeitig True sein (Bedarfs-Alternative).
+# ---------------------------------------------------------------------------
+
+_BEDARF_MARKERS = (
+    "bedarfsposition",
+    "bedarfs-position",
+    "bedarfs position",
+    "nur einh.-pr.",
+    "nur einh.pr.",
+    "nur einh pr",
+    "nur einheitspreis",
+)
+
+_ALTERNATIVE_MARKERS = (
+    "alternativprodukt",
+    "alternativ-position",
+    "alternativposition",
+    "alternative zu pos",
+    "alternative zu position",
+    "nebenangebot",
+)
+
+
+def detect_optional_flags(
+    *, kurztext: str = "", titel: str = "", langtext: str = "", einheit: str = ""
+) -> tuple[bool, bool]:
+    """Erkennt Bedarfs- und Alternativ-Marker in Positions-Texten.
+
+    Return: (is_bedarf, is_alternative)
+    """
+    haystack = " ".join([kurztext or "", titel or "", langtext or ""]).lower()
+    einheit_l = (einheit or "").lower()
+
+    # Harter Marker "***" (im Stuttgart-LV typisch direkt vor "Bedarfsposition")
+    raw_combined = (kurztext or "") + " " + (titel or "") + " " + (langtext or "")
+    has_sternchen = "***" in raw_combined
+
+    is_bedarf = any(m in haystack for m in _BEDARF_MARKERS) or has_sternchen or (
+        # In der Mengen-Spalte statt Menge: "Nur Einh.-Pr."
+        "einh" in einheit_l and "pr" in einheit_l
+    )
+    is_alt = any(m in haystack for m in _ALTERNATIVE_MARKERS)
+
+    return is_bedarf, is_alt
+
 SYSTEM_PROMPT = """Du bist Experte für Leistungsverzeichnisse (LV) im Trockenbau.
 
 Du bekommst Bilder eines LV-PDFs vom Auftraggeber. Extrahiere ALLE Positionen strukturiert.
@@ -211,20 +259,29 @@ def parse_and_store(
         konf = float(row.get("konfidenz", 0.7) or 0.7)
         if konf < 0.85:
             unsicher += 1
+        kurz_t = str(row.get("kurztext", ""))
+        titel_t = str(row.get("titel", ""))
+        langt = str(row.get("langtext", ""))
+        eh = str(row.get("einheit", ""))[:20]
+        is_bedarf, is_alt = detect_optional_flags(
+            kurztext=kurz_t, titel=titel_t, langtext=langt, einheit=eh
+        )
         p = Position(
             lv_id=lv.id,
             reihenfolge=int(row.get("reihenfolge", idx + 1) or idx + 1),
             oz=str(row.get("oz", ""))[:50],
-            titel=str(row.get("titel", ""))[:300],
-            kurztext=str(row.get("kurztext", "")),
-            langtext=str(row.get("langtext", "")),
+            titel=titel_t[:300],
+            kurztext=kurz_t,
+            langtext=langt,
             menge=float(row.get("menge", 0.0) or 0.0),
-            einheit=str(row.get("einheit", ""))[:20],
+            einheit=eh,
             erkanntes_system=str(row.get("erkanntes_system", ""))[:50],
             feuerwiderstand=str(row.get("feuerwiderstand", ""))[:20],
             plattentyp=str(row.get("plattentyp", ""))[:50],
             leit_fabrikat=str(row.get("leit_fabrikat", ""))[:200],
             konfidenz=max(0.0, min(1.0, konf)),
+            is_bedarf=is_bedarf,
+            is_alternative=is_alt,
         )
         db.add(p)
 

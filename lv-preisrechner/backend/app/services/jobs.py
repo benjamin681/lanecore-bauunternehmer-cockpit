@@ -351,20 +351,29 @@ def run_parse_lv(
             konf = float(row.get("konfidenz", 0.7) or 0.7)
             if konf < 0.85:
                 unsicher += 1
+            langt = str(row.get("langtext", ""))
+            eh = str(row.get("einheit", ""))[:20]
+            from app.services.lv_parser import detect_optional_flags
+
+            is_bedarf, is_alt = detect_optional_flags(
+                kurztext=kurztext, titel=titel, langtext=langt, einheit=eh
+            )
             p = Position(
                 lv_id=lv.id,
                 reihenfolge=int(row.get("reihenfolge", idx + 1) or idx + 1),
                 oz=str(row.get("oz", ""))[:50],
                 titel=titel[:300],
                 kurztext=kurztext,
-                langtext=str(row.get("langtext", "")),
+                langtext=langt,
                 menge=menge,
-                einheit=str(row.get("einheit", ""))[:20],
+                einheit=eh,
                 erkanntes_system=str(row.get("erkanntes_system", ""))[:50],
                 feuerwiderstand=str(row.get("feuerwiderstand", ""))[:20],
                 plattentyp=str(row.get("plattentyp", ""))[:50],
                 leit_fabrikat=str(row.get("leit_fabrikat", ""))[:200],
                 konfidenz=max(0.0, min(1.0, konf)),
+                is_bedarf=is_bedarf,
+                is_alternative=is_alt,
             )
             db.add(p)
             saved_positions += 1
