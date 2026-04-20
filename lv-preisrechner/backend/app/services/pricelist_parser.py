@@ -288,3 +288,200 @@ def _extract_price_per_effective_unit(
     """Convenience-Wrapper: nur den normalisierten Preis zurueck."""
     info = _normalize_unit(raw_unit, product_name=product_name, price=price)
     return info.price_per_effective_unit
+
+
+# ---------------------------------------------------------------------------
+# Haupt-Parser-Klasse (Claude Vision Integration)
+# ---------------------------------------------------------------------------
+class PricelistParser:
+    """Parser fuer eine einzelne SupplierPriceList.
+
+    Pipeline pro parse()-Call:
+    1. Lade PDF-Bytes vom source_file_path (oder DB, falls bytes-Spalte existiert).
+    2. PDF -> Images (Renderung via pymupdf in pdf_to_page_images).
+    3. Batch-weise an Claude Vision senden mit Kemmler-System-Prompt.
+    4. Pro Raw-Entry: _normalize_unit() anwenden.
+    5. SupplierPriceEntry in DB anlegen.
+
+    Der Parser ist stateless (die Status-Uebergaenge PENDING_PARSE -> PARSING ->
+    PARSED/ERROR macht der Worker in pricelist_parse_worker.py).
+    """
+
+    def __init__(self, *, db, claude_client=None, batch_size: int = 5):
+        self.db = db
+        # claude_client optional injectable fuer Tests (Mock). Default: globaler
+        # claude-Singleton aus claude_client.py.
+        if claude_client is None:
+            from app.services.claude_client import claude as default_client
+
+            self._claude = default_client
+        else:
+            self._claude = claude_client
+        self._batch_size = max(1, batch_size)
+
+    def parse(self, pricelist_id: str) -> ParseResult:
+        """Parst die Preisliste komplett. Rueckgabe: ParseResult mit Statistiken.
+
+        Schreibt die Entries direkt in die DB (SupplierPriceEntry).
+        Wirft Exception bei kritischen Fehlern (Datei nicht da, Format unbekannt,
+        DB-Commit schlaegt fehl). Kleinere Fehler landen in result.errors.
+        """
+        from app.models.pricing import SupplierPriceEntry, SupplierPriceList
+        from app.services.pdf_utils import pdf_to_page_images
+
+        pricelist = self.db.get(SupplierPriceList, pricelist_id)
+        if pricelist is None:
+            raise ValueError(f"SupplierPriceList {pricelist_id} nicht gefunden")
+
+        result = ParseResult(pricelist_id=pricelist_id)
+
+        # 1. PDF-Bytes laden
+        path = Path(pricelist.source_file_path)
+        if not path.exists():
+            raise FileNotFoundError(f"source_file_path fehlt: {path}")
+        pdf_bytes = path.read_bytes()
+
+        # 2. Format-Detection
+        fmt = _detect_format(
+            path,
+            supplier_hint=pricelist.supplier_name,
+        )
+        if fmt != "kemmler":
+            raise ValueError(
+                f"Format '{fmt}' noch nicht unterstuetzt. Aktuell nur 'kemmler'."
+            )
+
+        # 3. PDF -> Images (Production-Pipeline)
+        images = pdf_to_page_images(pdf_bytes, dpi=200, max_pages=80)
+        log.info(
+            "pricelist_parse_start",
+            pricelist_id=pricelist_id,
+            pages=len(images),
+            batch_size=self._batch_size,
+        )
+
+        # 4. Batch-weise durch Claude Vision
+        from app.prompts.kemmler_parser_prompt import SYSTEM_PROMPT
+
+        confidences: list[float] = []
+        for start in range(0, len(images), self._batch_size):
+            batch = images[start : start + self._batch_size]
+            batch_idx = start // self._batch_size + 1
+            page_range = f"{start + 1}-{start + len(batch)}"
+            try:
+                parsed, _model = self._claude.extract_json(
+                    system=SYSTEM_PROMPT, images=batch
+                )
+            except Exception as exc:
+                msg = f"Batch {batch_idx} ({page_range}) fehlgeschlagen: {exc}"
+                log.warning("pricelist_batch_failed", batch=batch_idx, error=str(exc))
+                result.errors.append(msg)
+                continue
+
+            # Claude kann ein einzelnes Objekt {"page":..., "entries":[]} oder
+            # eine Liste von Seiten zurueckgeben. Beides tolerieren.
+            page_entries_list: list[dict] = []
+            if isinstance(parsed, dict):
+                if "entries" in parsed and isinstance(parsed["entries"], list):
+                    page_entries_list = parsed["entries"]
+                elif "pages" in parsed and isinstance(parsed["pages"], list):
+                    for pg in parsed["pages"]:
+                        page_entries_list.extend(pg.get("entries", []))
+            elif isinstance(parsed, list):
+                for pg in parsed:
+                    if isinstance(pg, dict):
+                        page_entries_list.extend(pg.get("entries", []))
+
+            for raw in page_entries_list:
+                try:
+                    entry = self._build_entry(pricelist, raw)
+                except Exception as exc:
+                    result.skipped_entries += 1
+                    log.warning(
+                        "pricelist_entry_skipped", error=str(exc), raw=str(raw)[:200]
+                    )
+                    continue
+                self.db.add(entry)
+                result.parsed_entries += 1
+                result.total_entries += 1
+                confidences.append(entry.parser_confidence)
+                if entry.needs_review:
+                    result.needs_review_count += 1
+
+        if confidences:
+            result.avg_confidence = sum(confidences) / len(confidences)
+
+        # 5. Summen aufs Pricelist-Model zurueckschreiben
+        pricelist.entries_total = result.parsed_entries
+        pricelist.entries_reviewed = 0  # wird im Review-Flow spaeter erhoeht
+        self.db.commit()
+
+        log.info(
+            "pricelist_parse_done",
+            pricelist_id=pricelist_id,
+            total=result.parsed_entries,
+            skipped=result.skipped_entries,
+            needs_review=result.needs_review_count,
+            avg_confidence=round(result.avg_confidence, 3),
+        )
+        return result
+
+    def _build_entry(self, pricelist, raw: dict):
+        """Validiert Raw-Claude-Output + Unit-Normalisierung -> SupplierPriceEntry."""
+        from app.models.pricing import SupplierPriceEntry
+
+        product_name = (raw.get("product_name") or "").strip()
+        if not product_name:
+            raise ValueError("product_name fehlt")
+
+        price_raw = raw.get("price_net")
+        if price_raw is None:
+            raise ValueError("price_net fehlt")
+        price_net = float(price_raw)
+        if price_net <= 0:
+            raise ValueError(f"price_net <= 0 ({price_net})")
+
+        unit = (raw.get("unit") or "").strip()
+        if not unit:
+            raise ValueError("unit fehlt")
+
+        # Unit-Normalisierung (lokale Python-Logik, keine API)
+        unit_info = _normalize_unit(unit, product_name=product_name, price=price_net)
+
+        # Confidence: Minimum aus Parser (Vision) und Normalisierer
+        claude_conf = float(raw.get("parser_confidence", 1.0) or 1.0)
+        claude_conf = max(0.0, min(1.0, claude_conf))
+        combined_conf = min(claude_conf, unit_info.confidence)
+
+        needs_review = bool(
+            raw.get("needs_review_hint", False)
+            or unit_info.needs_review
+            or combined_conf < 0.7
+        )
+
+        attributes = raw.get("attributes") or {}
+        if not isinstance(attributes, dict):
+            attributes = {}
+
+        return SupplierPriceEntry(
+            pricelist_id=pricelist.id,
+            tenant_id=pricelist.tenant_id,
+            article_number=(raw.get("article_number") or None),
+            manufacturer=(raw.get("manufacturer") or None),
+            product_name=product_name[:500],
+            category=(raw.get("category") or None),
+            subcategory=(raw.get("subcategory") or None),
+            price_net=price_net,
+            currency=(raw.get("currency") or "EUR"),
+            unit=unit[:50],
+            package_size=unit_info.package_size,
+            package_unit=unit_info.package_unit,
+            pieces_per_package=unit_info.pieces_per_package,
+            effective_unit=unit_info.effective_unit[:50],
+            price_per_effective_unit=unit_info.price_per_effective_unit,
+            attributes=attributes,
+            source_page=raw.get("source_page"),
+            source_row_raw=(raw.get("source_row_raw") or None),
+            parser_confidence=combined_conf,
+            needs_review=needs_review,
+        )
