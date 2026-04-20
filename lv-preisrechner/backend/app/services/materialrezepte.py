@@ -348,6 +348,110 @@ REZEPTE: dict[str, Rezept] = {
             MaterialBedarf("|Revisionsklappen||400x400|", 1.0, "Stk"),
         ],
     ),
+    # --- Spezial-Decken (Premium) -----------------------------------------
+    "Streckmetalldecke": Rezept(
+        system="Streckmetalldecke",
+        beschreibung="Streckmetalldecke Lindner LMD ST 215 o.glw. rahmenlos",
+        zieleinheit="m²",
+        zeit_h_pro_einheit=0.65,  # hoher Montageaufwand (Einhängesystem)
+        materialien=[
+            # Streckmetallplatte + Einhängeprofile: hoher Paketpreis
+            # Ca. 95-130 EUR/m² Material -> fallback als Sicherheit
+            MaterialBedarf("Lindner|Streckmetalldecke|LMD|215|", 1.0, "m²", fallback_preis_eur=105.0),
+            MaterialBedarf("|Profile|Tragprofil||", 2.0, "lfm", fallback_preis_eur=8.50, optional=True),
+            MaterialBedarf("|Abhänger|Nonius||", 1.2, "Stk", fallback_preis_eur=4.50, optional=True),
+        ],
+    ),
+    "Deckensegel": Rezept(
+        system="Deckensegel",
+        beschreibung="Akustik-Deckensegel (Strähle System 7300 o.glw.)",
+        zieleinheit="Stk",
+        zeit_h_pro_einheit=2.5,  # Lieferung, Ausrichtung, Abhängung
+        materialien=[
+            # Akustik-Segel komplett als Stk-Fabrikat (typ. 350-650 EUR je nach Größe)
+            MaterialBedarf("Strähle|Deckensegel|System|7300|", 1.0, "Stk", fallback_preis_eur=450.0),
+            MaterialBedarf("|Abhänger|Seil||", 4.0, "Stk", fallback_preis_eur=3.80, optional=True),
+        ],
+    ),
+    "Wandabsorber": Rezept(
+        system="Wandabsorber",
+        beschreibung="Akustik-Wandabsorber (DUR SONIC Quad o.glw.)",
+        zieleinheit="Stk",
+        zeit_h_pro_einheit=1.5,  # Anbohren, Wandbefestigung
+        materialien=[
+            # Absorber komplett (Tiefenabsorber, Stahlblech pulverbeschichtet)
+            MaterialBedarf("DUR Lum|Wandabsorber|Quad||", 1.0, "Stk", fallback_preis_eur=320.0),
+            MaterialBedarf("|Befestigung|Wandanker||", 4.0, "Stk", fallback_preis_eur=1.20, optional=True),
+        ],
+    ),
+    "Deckenschott": Rezept(
+        system="Deckenschott",
+        beschreibung="Deckenschott F90 (Brandschutzabschottung senkrecht von oben)",
+        zieleinheit="lfm",
+        zeit_h_pro_einheit=1.0,
+        materialien=[
+            MaterialBedarf("|Gipskarton|GKF|12.5mm|", 2.40, "m²", fallback_preis_eur=4.20),
+            MaterialBedarf("|Profile|UA|75|", 2.20, "lfm", fallback_preis_eur=5.50),
+            MaterialBedarf("|Daemmung||60mm|", 0.60, "m²", fallback_preis_eur=4.50, optional=True),
+            MaterialBedarf("|Spachtel||Universal|", 0.50, "kg", fallback_preis_eur=2.20, optional=True),
+        ],
+    ),
+    "Streckmetall_Zulage": Rezept(
+        system="Streckmetall_Zulage",
+        beschreibung="Akustikvlies-Zulage hinter Streckmetall-/Rasterdecken",
+        zieleinheit="m²",
+        zeit_h_pro_einheit=0.05,
+        materialien=[
+            MaterialBedarf("|Akustikvlies||30mm|", 1.0, "m²", fallback_preis_eur=7.50),
+        ],
+    ),
+    "Wandanschluss": Rezept(
+        system="Wandanschluss",
+        beschreibung="Wandanschluss Rasterdecke/GK-Decke, Randprofil + Fuge",
+        zieleinheit="m",  # häufig 'm' nicht 'lfm' im LV
+        zeit_h_pro_einheit=0.1,
+        materialien=[
+            MaterialBedarf("|Profile|Randprofil||", 1.05, "lfm", fallback_preis_eur=2.20, optional=True),
+        ],
+    ),
+    "Kabeldurchfuehrung_F90": Rezept(
+        system="Kabeldurchfuehrung_F90",
+        beschreibung="Einzelkabeldurchführung F90 in GK-Brandschutzdecke",
+        zieleinheit="Stk",
+        zeit_h_pro_einheit=0.5,
+        materialien=[
+            MaterialBedarf("|Brandschutz|Schottmanschette||", 1.0, "Stk", fallback_preis_eur=18.0),
+        ],
+    ),
+    "Deckensprung": Rezept(
+        system="Deckensprung",
+        beschreibung="Vertikaler Deckenversprung Rasterdecke (Stirnabschluss)",
+        zieleinheit="m",
+        zeit_h_pro_einheit=0.45,
+        materialien=[
+            MaterialBedarf("|Profile|UA|75|", 1.5, "lfm", fallback_preis_eur=5.50),
+            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 1.0, "m²", fallback_preis_eur=3.50, optional=True),
+        ],
+    ),
+    "Aufdopplung_geklebt": Rezept(
+        system="Aufdopplung_geklebt",
+        beschreibung="Aufdopplung GK-Platten geklebt (Ansetzbinder)",
+        zieleinheit="lfm",
+        zeit_h_pro_einheit=0.35,
+        materialien=[
+            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 0.30, "m²", fallback_preis_eur=3.50),
+            MaterialBedarf("|Spachtel||Ansetzbinder|", 1.5, "kg", fallback_preis_eur=1.80, optional=True),
+        ],
+    ),
+    "Verstaerkungsprofil": Rezept(
+        system="Verstaerkungsprofil",
+        beschreibung="Verstärkungsprofil QR / horizontale UA-Verstärkung",
+        zieleinheit="lfm",
+        zeit_h_pro_einheit=0.20,
+        materialien=[
+            MaterialBedarf("|Profile|UA|75|", 1.0, "lfm", fallback_preis_eur=5.50),
+        ],
+    ),
 }
 
 
@@ -397,6 +501,41 @@ def resolve_rezept(
         "BEWEGUNGSFUGE": "Fugenversiegelung",
         "DECKENAUSSCHNITT": "Installationsloch",
         "DECKENAUSSCHNITTE": "Installationsloch",
+        # --- Stuttgart Omega LV Aliase ---
+        "STRECKMETALLDECKE": "Streckmetalldecke",
+        "STRECKMETALL": "Streckmetalldecke",
+        "LMD": "Streckmetalldecke",
+        "DECKENSEGEL": "Deckensegel",
+        "AKUSTIKSEGEL": "Deckensegel",
+        "WANDABSORBER": "Wandabsorber",
+        "TIEFENABSORBER": "Wandabsorber",
+        "AKUSTIKABSORBER": "Wandabsorber",
+        "DECKENSCHOTT": "Deckenschott",
+        "BRANDSCHOTT": "Deckenschott",
+        "OWATECTA": "OWA_MF",
+        "AKUSTIKVLIES": "Streckmetall_Zulage",
+        "WANDANSCHLUSS": "Wandanschluss",
+        "RANDFRIES": "Wandanschluss",
+        "KABELDURCHFÜHRUNG": "Kabeldurchfuehrung_F90",
+        "KABELDURCHFUEHRUNG": "Kabeldurchfuehrung_F90",
+        "EINZELKABELDURCHFÜHRUNG": "Kabeldurchfuehrung_F90",
+        "DECKENSPRUNG": "Deckensprung",
+        "Z-PROFIL": "Verstaerkungsprofil",
+        "VERSTÄRKUNGSPROFIL": "Verstaerkungsprofil",
+        "VERSTÄRKUNGSPROFILE": "Verstaerkungsprofil",
+        "UA-VERSTÄRKUNG": "Verstaerkungsprofil",
+        "QR-PROFIL": "Verstaerkungsprofil",
+        "AUFDOPPLUNG": "Aufdopplung_geklebt",
+        "ZULAGE": "Zulage",
+        "AQUAPANEEL": "Aquapanel",
+        "AQUAPANEL-ZULAGE": "Aquapanel",
+        "GKBI-ZULAGE": "Zulage",
+        "Q3-ZULAGE": "Zulage",
+        "Q3-SPACHTELUNG": "Zulage",
+        "RIPPENDECKENHOHLRAUM": "Zulage",
+        "RIPPENDECKE": "D113",  # Brandschutzdecke auf Rippen
+        "WEITSPANNDECKE": "D113",
+        "FREITRAGEND": "D113",
     }
     if upper in aliases:
         return REZEPTE.get(aliases[upper])
