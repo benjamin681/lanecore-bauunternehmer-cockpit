@@ -33,6 +33,7 @@ from app.models.pricing import (
 )
 from app.schemas.pricing import (
     SupplierPriceEntryOut,
+    SupplierPriceEntryUpdate,
     SupplierPriceListDetail,
     SupplierPriceListOut,
     TenantDiscountRuleCreate,
@@ -532,3 +533,84 @@ def list_entries_needing_review(
         .limit(limit)
     )
     return [SupplierPriceEntryOut.model_validate(e) for e in q.all()]
+
+
+# ---------------------------------------------------------------------------
+# PATCH /pricing/pricelists/{id}/entries/{entry_id}  (Review-Korrektur)
+# ---------------------------------------------------------------------------
+@router.patch(
+    "/pricelists/{pricelist_id}/entries/{entry_id}",
+    response_model=SupplierPriceEntryOut,
+)
+def update_entry(
+    pricelist_id: str,
+    entry_id: str,
+    payload: SupplierPriceEntryUpdate,
+    user: CurrentUser,
+    db: DbSession,
+) -> SupplierPriceEntryOut:
+    """Partial-Update eines SupplierPriceEntry im Review-Flow.
+
+    - Alle Pflichtfelder bleiben optional. Nur gesetzte Felder werden angewendet.
+    - Wenn sich der effektive Wert irgendeines Feldes aendert:
+      correction_applied=True, reviewed_by_user_id=user.id, reviewed_at=UTC.now
+    - Wenn needs_review True->False: Parent-Pricelist.entries_reviewed += 1
+      (umgekehrt: -= 1).
+    - Tenant-Isolation via pricelist.tenant_id (NICHT nur Entry, damit ein
+      Angreifer nicht mit fremder entry_id + eigener pricelist_id Daten ueber
+      Tenant-Grenzen hinweg ausliest).
+    """
+    from datetime import datetime, timezone
+
+    pl = (
+        db.query(SupplierPriceList)
+        .filter(
+            SupplierPriceList.id == pricelist_id,
+            SupplierPriceList.tenant_id == user.tenant_id,
+        )
+        .first()
+    )
+    if pl is None:
+        raise HTTPException(404, "Preisliste nicht gefunden")
+
+    entry = (
+        db.query(SupplierPriceEntry)
+        .filter(
+            SupplierPriceEntry.id == entry_id,
+            SupplierPriceEntry.pricelist_id == pricelist_id,
+            SupplierPriceEntry.tenant_id == user.tenant_id,
+        )
+        .first()
+    )
+    if entry is None:
+        raise HTTPException(404, "Eintrag nicht gefunden")
+
+    updates = payload.model_dump(exclude_unset=True)
+    if not updates:
+        # Kein Body: nichts zu tun, bestehenden Stand zurueckgeben.
+        return SupplierPriceEntryOut.model_validate(entry)
+
+    changed = False
+    needs_review_before = entry.needs_review
+    for field, new_val in updates.items():
+        old_val = getattr(entry, field)
+        if old_val != new_val:
+            setattr(entry, field, new_val)
+            changed = True
+
+    if changed:
+        entry.correction_applied = True
+        entry.reviewed_by_user_id = user.id
+        entry.reviewed_at = datetime.now(timezone.utc)
+
+        # Reviewed-Counter auf Parent-Pricelist synchronisieren,
+        # wenn needs_review umgekippt ist.
+        needs_review_after = entry.needs_review
+        if needs_review_before and not needs_review_after:
+            pl.entries_reviewed = (pl.entries_reviewed or 0) + 1
+        elif not needs_review_before and needs_review_after:
+            pl.entries_reviewed = max(0, (pl.entries_reviewed or 0) - 1)
+
+    db.commit()
+    db.refresh(entry)
+    return SupplierPriceEntryOut.model_validate(entry)

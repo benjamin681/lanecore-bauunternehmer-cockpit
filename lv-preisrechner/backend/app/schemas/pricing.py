@@ -93,6 +93,36 @@ class SupplierPriceEntryOut(BaseModel):
     source_page: int | None
     parser_confidence: float
     needs_review: bool
+    reviewed_by_user_id: str | None = None
+    reviewed_at: datetime | None = None
+    correction_applied: bool = False
+
+
+class SupplierPriceEntryUpdate(BaseModel):
+    """Partial-Update fuer einen Entry. Alle Felder optional.
+
+    Der Server erkennt Aenderungen, setzt correction_applied=True und
+    markiert den Reviewer. Wenn needs_review von True auf False wechselt,
+    wird der entries_reviewed-Counter auf der Parent-Pricelist
+    inkrementiert (umgekehrt dekrementiert).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    article_number: str | None = Field(None, max_length=100)
+    manufacturer: str | None = Field(None, max_length=200)
+    product_name: str | None = Field(None, min_length=1, max_length=500)
+    category: str | None = Field(None, max_length=200)
+    subcategory: str | None = Field(None, max_length=200)
+    price_net: float | None = Field(None, gt=0)
+    unit: str | None = Field(None, min_length=1, max_length=50)
+    effective_unit: str | None = Field(None, min_length=1, max_length=50)
+    price_per_effective_unit: float | None = Field(None, gt=0)
+    package_size: float | None = Field(None, gt=0)
+    package_unit: str | None = Field(None, max_length=50)
+    pieces_per_package: int | None = Field(None, gt=0)
+    attributes: dict[str, Any] | None = None
+    needs_review: bool | None = None
 
 
 class SupplierPriceListDetail(SupplierPriceListOut):
