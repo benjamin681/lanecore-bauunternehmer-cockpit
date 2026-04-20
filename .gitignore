@@ -54,6 +54,9 @@ Thumbs.db
 uploads/
 *.pdf
 
+# Golden Test Fixtures (echte LV-PDFs, vertraulich)
+lv-preisrechner/tests/golden/fixtures/*.pdf
+
 # Secrets
 *.pem
 *.key
