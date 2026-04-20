@@ -19,6 +19,17 @@
     ]
   },
 
+  "_rename_2026_04_20": {
+    "kontext": "KNAUF_KORREKTUREN.md K-12: Interne S-Suffix-Codes auf offizielle Knauf-Namen umgestellt (in materialrezepte.py). Diese JSON behaelt die historischen Keys zur Nachvollziehbarkeit; der Produktivcode nutzt aber die neuen Namen.",
+    "mapping_alt_zu_neu": {
+      "W625S": "W628A (= Knauf W628A.de, freispannend bis 2m Schachtbreite)",
+      "W626S": "W628B (= Knauf W628B.de, CW-Einfachstaender)",
+      "W631S": "W629  (= Knauf W629.de, CW-Doppelstaender, bis 5m)",
+      "W632":  "W635  (= Knauf W635.de, UW-Doppelstaender, schlanker Aufbau)"
+    },
+    "wirkung": "Produktiver Parser erkennt beide Varianten. Bei Match wird immer das neue Rezept genommen (W628A etc.). Alte Codes sind reine Aliase."
+  },
+
   "systeme": {
 
     "W625S": {

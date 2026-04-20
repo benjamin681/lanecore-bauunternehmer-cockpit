@@ -127,10 +127,11 @@
     },
 
     "W626": {
-      "bezeichnung": "Knauf Vorsatzschale W626.de — direkt geklebt (Ansetzverfahren)",
-      "typ": "Vorsatzschale geklebt",
-      "beschreibung": "Gipsplatten werden direkt mit Ansetzbinder (Perlfix) auf die Massivwand geklebt. Keine Unterkonstruktion.",
-      "unterkonstruktion": "keine — Ansetzbinder Perlfix",
+      "_korrektur_2026_04_20": "KNAUF_KORREKTUREN.md K-11: W626.de ist laut offizieller Knauf-Klassifikation 'Vorsatzschale mit CW-Profil, mehrlagig beplankt'. NICHT eine geklebte Vorsatzschale (das hat keine eigene W-Nummer). Die geklebte Variante (Perlfix/Ansetzbinder) wird als separates Rezept 'Vorsatzschale_geklebt' ohne W-Code gefuehrt.",
+      "bezeichnung": "Knauf Vorsatzschale W626.de — mit CW-Profil, mehrlagig beplankt",
+      "typ": "Vorsatzschale freistehend, mehrlagig",
+      "beschreibung": "Freistehende CW-Profil-Vorsatzschale mit 2 oder 3 Lagen Gipsplatten je Seite. Fuer erhoehten Schallschutz oder F90-Brandschutz.",
+      "unterkonstruktion": "CW/UW-Profile freistehend, analog W625, aber mehrlagig beplankt",
       "gesamt_schalendicke_mm": {"typisch": "15-30mm (Klebebatzen + Platte)"},
       "max_hoehe_m": 4.0,
       "systemvarianten": [

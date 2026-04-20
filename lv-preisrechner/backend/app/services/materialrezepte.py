@@ -187,10 +187,22 @@ REZEPTE: dict[str, Rezept] = {
             MaterialBedarf("|Spachtel||Universal|", 0.25, "kg", optional=True),
         ],
     ),
-    # --- Schachtwände -------------------------------------------------------
-    "W625S": Rezept(
-        system="W625S",
-        beschreibung="Schachtwand einseitig beplankt F90, Fireboard",
+    # --- Schachtwände (offizielle Knauf-Nomenklatur seit 2026-04-20) ----
+    # KNAUF_KORREKTUREN.md K-12: Umbenennung auf offizielle W62X.de-Codes.
+    # Die alten internen Namen (W625S, W626S, W631S, W632) werden via
+    # resolve_rezept-Aliase weiterhin akzeptiert (Backward-Compatibility).
+    # Offizielle Knauf-Familie W62.de (einseitig):
+    #   W628A.de = freispannend bis 2m Schachtbreite (keine UK)
+    #   W628B.de = CW-Einfachstaender
+    #   W629.de  = CW-Doppelstaender
+    #   W635.de  = UW-Doppelstaender
+    # Quelle: knauf.com/de-DE/.../w62-de-schachtwaende
+    "W628A": Rezept(
+        # Vormals "W625S" im Projekt. Fachlich ist das einseitige Beplanken mit
+        # Fireboard — der Knauf-W628A ist die freispannende Variante bis 2m
+        # Schachtbreite (keine Zwischen-UK).
+        system="W628A",
+        beschreibung="W628A.de — Schachtwand einseitig freispannend (bis 2m Schachtbreite, ohne Unterkonstruktion, unbegrenzte Hoehe)",
         zieleinheit="m²",
         zeit_h_pro_einheit=0.90,
         materialien=[
@@ -199,6 +211,55 @@ REZEPTE: dict[str, Rezept] = {
             MaterialBedarf("|Profile|UW75|", 0.80, "lfm", optional=True),
             MaterialBedarf("|Daemmung||40mm|", 1.00, "m²", optional=True),
             MaterialBedarf("|Schrauben||3.5x45|", 0.04, "Stk", optional=True),
+            MaterialBedarf("|Spachtel||Universal|", 0.60, "kg", optional=True),
+        ],
+    ),
+    "W628B": Rezept(
+        # Vormals "W626S" im Projekt (Massivbauplatte-Variante). Knauf-W628B ist
+        # die Variante MIT CW-Einfachstaender (Standardfall fuer Schachtbreiten
+        # > 2m, wo Freispannen nicht reicht).
+        system="W628B",
+        beschreibung="W628B.de — Schachtwand einseitig mit CW-Einfachstaender (Standard bei Schachtbreite > 2m)",
+        zieleinheit="m²",
+        zeit_h_pro_einheit=0.95,
+        materialien=[
+            MaterialBedarf("Knauf|Gipskarton|Fireboard|20mm|", 2.10, "m²"),
+            MaterialBedarf("|Profile|CW100|", 1.80, "lfm"),  # 100mm wegen groesserer Spannweite
+            MaterialBedarf("|Profile|UW100|", 0.80, "lfm", optional=True),
+            MaterialBedarf("|Daemmung||60mm|", 1.00, "m²", optional=True),
+            MaterialBedarf("|Schrauben||3.5x45|", 0.05, "Stk", optional=True),
+            MaterialBedarf("|Spachtel||Universal|", 0.60, "kg", optional=True),
+        ],
+    ),
+    "W629": Rezept(
+        # Vormals "W631S" im Projekt. Knauf-W629 = CW-Doppelstaender (fuer hohe
+        # Wandhoehen oder groessere Schachtbreiten bis ~5m).
+        system="W629",
+        beschreibung="W629.de — Schachtwand einseitig mit CW-Doppelstaender (grosse Schachtbreiten bis 5m)",
+        zieleinheit="m²",
+        zeit_h_pro_einheit=1.05,  # hoeherer Aufwand wg. Doppelstaender
+        materialien=[
+            MaterialBedarf("Knauf|Gipskarton|Fireboard|20mm|", 2.10, "m²"),
+            MaterialBedarf("|Profile|CW100|", 3.60, "lfm"),  # doppelte Profilreihe
+            MaterialBedarf("|Profile|UW100|", 1.60, "lfm", optional=True),
+            MaterialBedarf("|Daemmung||80mm|", 1.00, "m²", optional=True),
+            MaterialBedarf("|Schrauben||3.5x45|", 0.06, "Stk", optional=True),
+            MaterialBedarf("|Spachtel||Universal|", 0.65, "kg", optional=True),
+        ],
+    ),
+    "W635": Rezept(
+        # Vormals "W632" im Projekt. Knauf-W635 = UW-Doppelstaender (schlanker
+        # Aufbau mit UW-Profilen statt CW fuer begrenzten Bauraum).
+        system="W635",
+        beschreibung="W635.de — Schachtwand einseitig mit UW-Doppelstaender (schlanker Aufbau)",
+        zieleinheit="m²",
+        zeit_h_pro_einheit=1.00,
+        materialien=[
+            MaterialBedarf("Knauf|Gipskarton|Fireboard|20mm|", 2.10, "m²"),
+            MaterialBedarf("|Profile|UW75|", 3.60, "lfm"),  # doppelte Reihe aus UW
+            MaterialBedarf("|Profile|UW75|", 0.80, "lfm", optional=True),
+            MaterialBedarf("|Daemmung||60mm|", 1.00, "m²", optional=True),
+            MaterialBedarf("|Schrauben||3.5x45|", 0.05, "Stk", optional=True),
             MaterialBedarf("|Spachtel||Universal|", 0.60, "kg", optional=True),
         ],
     ),
@@ -639,7 +700,17 @@ def resolve_rezept(
         "VORSATZSCHALE FREISTEHEND": "W625",
         "VORSATZSCHALE DIREKT": "W623",
         "VORSATZSCHALE DIREKT BEFESTIGT": "W623",
-        "SCHACHTWAND": "W625S",
+        "SCHACHTWAND": "W628A",  # Default: freispannende Variante (Knauf-offizielle Bez.)
+        # Backward-Compat: interne S-Suffix-Codes (vor 2026-04-20) auf offizielle Namen
+        "W625S": "W628A",
+        "W626S": "W628B",
+        "W631S": "W629",
+        "W632": "W635",
+        # Offizielle Knauf-Codes mit .de-Suffix
+        "W628A.DE": "W628A",
+        "W628B.DE": "W628B",
+        "W629.DE": "W629",
+        "W635.DE": "W635",
         # W135-Brandwand Backward-Compatibility (Alt-Codes K-1):
         "W135_STAHLBLECH": "W135",
         "STAHLBLECHEINLAGE": "W135",
@@ -755,9 +826,25 @@ def resolve_rezept(
     if upper.startswith("W14"):
         return REZEPTE["W115"]  # Schallschutz-Varianten
     if upper.startswith("W62"):
-        return REZEPTE["W623"]
+        # W621-W627: Vorsatzschalen (W61-Familie-Aufbau, historische W62x-Codes)
+        # W628+: Schachtwaende laut offizieller Knauf-Klassifikation
+        if upper in ("W623", "W625", "W626"):
+            return REZEPTE[upper]
+        if upper in ("W628A", "W628B"):
+            return REZEPTE[upper]
+        # W628 (ohne Suffix) → Default auf W628A (freispannend, haeufigster Fall)
+        if upper == "W628":
+            return REZEPTE["W628A"]
+        if upper == "W629":
+            return REZEPTE["W629"]
+        # Fallback fuer undefinierte W62-Codes: Vorsatzschale W625 (freistehend)
+        return REZEPTE["W625"]
     if upper.startswith("W63"):
-        return REZEPTE.get("W625S", REZEPTE["W623"])
+        # W63X sind alle Schachtwand-Varianten (W635 = UW-Doppelstaender).
+        if upper == "W635":
+            return REZEPTE["W635"]
+        # Fallback: W628A (freispannende Schachtwand)
+        return REZEPTE.get("W628A", REZEPTE["W625"])
     if upper.startswith("D11"):
         # Explizites Mapping der D11-Familie
         if upper in ("D112", "D113", "D116"):

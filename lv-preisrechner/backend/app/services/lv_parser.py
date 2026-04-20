@@ -104,12 +104,17 @@ Vorsatzschalen Knauf W62x (einseitig, vor Bestandswand):
 - "W623" = Vorsatzschale direkt befestigt mit CD 60/27 (Direktabhänger)
 - "W625" = Vorsatzschale freistehend mit CW-Profil, einlagig beplankt
 
-Schachtwände Knauf W62x/W63x (Schacht-Abschottung, einseitig oder zweiseitig):
-- "W625S" = Schachtwand einseitig beplankt mit Fireboard (F30–F120)
-- "W628" = Einschalen-Schachtwand einseitig beplankt (Standard Knauf, meist GKF 2x12,5, F30–F90). Auch "Einschalen-Schachtwand".
-- "W628A" = Schachtwand FREISPANNEND (Knauf W628A.de) — bis 2m Schachtbreite, ohne Unterkonstruktion, unbegrenzte Hoehe
-- "W630" = Schachtwand einseitig in "plus"-Variante (verstärkte Konstruktion, F90-fähig). Wenn LV "W630 plus" oder "W 630" erwähnt.
-- "W631" = Schachtwand zweiseitig beplankt (beide Seiten vom Schacht aus)
+Schachtwände Knauf W62x/W63x (offizielle Knauf-Nomenklatur seit 2026-04-20):
+- "W628A" = Schachtwand FREISPANNEND (W628A.de) — bis 2m Schachtbreite, ohne UK, unbegrenzte Höhe
+- "W628B" = Schachtwand mit CW-Einfachständer (W628B.de) — Standard bei Schachtbreite > 2m
+- "W629"  = Schachtwand mit CW-Doppelständer (W629.de) — große Schachtbreiten bis 5m
+- "W635"  = Schachtwand mit UW-Doppelständer (W635.de) — schlanker Aufbau
+- "W630"  = Schachtwand Riegelwerk mit CW-Profilen (W630.de) — bis 5m Schachtbreite
+- "W631"  = historische/projektinterne Variante — zweiseitige Schachtwand (keine offizielle W63-Nummer bei Knauf)
+
+Hinweis: Wenn das LV explizit alte/interne Codes enthält (W625S, W626S, W631S, W632),
+diese trotzdem **direkt verwenden** — der Resolver mappt sie automatisch auf die
+offiziellen Namen (W625S→W628A, W626S→W628B, W631S→W629, W632→W635).
 
 Decken (Knauf D11x — Unterscheidung nach UK-Art, NICHT nach Beplankungszahl):
 - "D111" = Plattendecke mit Holz-Unterkonstruktion
@@ -161,7 +166,8 @@ Schachtwände (WICHTIG: vor Vorsatzschale prüfen):
 - "W628", "W 628", "W628A", "Einschalen-Schachtwand" → W628 oder W628A (bei "A" oder "plus" + erhöhte Höhe)
 - "W630", "W 630", "W630 plus", "Schachtwand plus" → W630
 - "W631", "Schachtwand zweiseitig" → W631
-- "Schachtwand" (ohne Nummer) + einseitig → W625S als Default
+- "Schachtwand" (ohne Nummer) + einseitig → W628A als Default (freispannend)
+- "W625S" / "W626S" / "W631S" / "W632" → offizielle Namen W628A/W628B/W629/W635 (Resolver mappt)
 
 Brandschutz:
 - "W131", "einschalige Brandwand" → W131

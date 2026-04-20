@@ -8,6 +8,7 @@
     "korrektur_noetig": 18,
     "nicht_verifizierbar_ohne_pdf": 2,
     "zeit_verbrauch_minuten": 12,
+    "todo_phase_2": "W118 und W631 sind mit Status NICHT_VERIFIZIERT_OHNE_PDF markiert. Loesung braucht Zugriff auf Knauf-PDF-Archiv / AbZ-Datenbank. Nicht dringend - beide Codes werden im SYSTEM_PROMPT bereits als 'historisch/projektintern' behandelt und liefern funktionierende Rezepte via Fallback (W118 -> Brandschutz F90, W631 -> Schachtwand).",
     "hinweis": "Diese Datei konsolidiert die Verifikations-Ergebnisse. Original-Knowledge-Dateien (knauf-systeme-*.json) sind bewusst unverändert — Korrekturen werden separat in docs/KNAUF_KORREKTUREN.md gelistet und erst in einer Folge-Aufgabe angewandt."
   },
 
@@ -97,7 +98,7 @@
       "verifiziert_am": "2026-04-20",
       "im_projekt_als": "W118",
       "abweichung": "W118.de ist KEIN offizieller Knauf-Code in der W11.de-Übersicht. Möglicherweise historisch (ältere Katalog-Generation) oder intern. Für neue LVs wahrscheinlich als W113 (3-lagig) oder Brandwand W131 gemeint.",
-      "status": "NICHT_VERIFIZIERT"
+      "status": "NICHT_VERIFIZIERT_OHNE_PDF"
     },
 
     "W131": {
@@ -229,7 +230,7 @@
       "verifiziert_am": "2026-04-20",
       "im_projekt_als": "W631 (in w61-vorsatzschalen: Schutz-Vorsatzschale; in w62-w63: Schachtwand zweiseitig)",
       "abweichung": "W631.de ist WEDER in der offiziellen W61-Übersicht (Vorsatzschalen) NOCH in der W62-Übersicht (Schachtwände) gelistet. Möglicherweise veraltet oder intern.",
-      "status": "NICHT_VERIFIZIERT"
+      "status": "NICHT_VERIFIZIERT_OHNE_PDF"
     },
 
     "W631S": {
