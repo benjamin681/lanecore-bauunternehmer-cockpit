@@ -41,9 +41,28 @@ from app.schemas.pricing import (
     TenantPriceOverrideCreate,
     TenantPriceOverrideOut,
 )
+from app.services.pricing_readiness import compute_readiness
 from app.workers.pricelist_parse_worker import run_pricelist_parse
 
 router = APIRouter(prefix="/pricing", tags=["pricing"])
+
+
+# ---------------------------------------------------------------------------
+# Readiness-Endpoint (B+4.3.1)
+# ---------------------------------------------------------------------------
+@router.get("/readiness")
+def pricing_readiness(user: CurrentUser, db: DbSession) -> dict:
+    """Kann dieser Tenant die neue Preis-Engine aktivieren?
+
+    True, wenn mindestens eine aktive Lieferanten-Preisliste ODER
+    mindestens ein Tenant-Override vorhanden ist.
+    """
+    r = compute_readiness(db, user.tenant_id)
+    return {
+        "has_active_pricelist": r.has_active_pricelist,
+        "has_overrides": r.has_overrides,
+        "ready_for_new_pricing": r.ready_for_new_pricing,
+    }
 
 
 # ---------------------------------------------------------------------------

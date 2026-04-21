@@ -35,6 +35,8 @@ class MeResponse(BaseModel):
     bgk_prozent: float
     agk_prozent: float
     wg_prozent: float
+    # B+4.3.1: Neue Preis-Engine (Lookup ueber SupplierPriceList/Overrides)
+    use_new_pricing: bool = False
 
 
 class TenantUpdate(BaseModel):
@@ -45,3 +47,5 @@ class TenantUpdate(BaseModel):
     bgk_prozent: float | None = Field(default=None, ge=0, le=100)
     agk_prozent: float | None = Field(default=None, ge=0, le=100)
     wg_prozent: float | None = Field(default=None, ge=0, le=100)
+    # B+4.3.1: explizites Setzen (None = nicht aendern)
+    use_new_pricing: bool | None = None
