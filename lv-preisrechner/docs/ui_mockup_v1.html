@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LV Kalkulierer — UI Mockup v1</title>
+<!--
+  UI MOCKUP v1 für B+4.3.1 (LV-Ergebnis-Tabelle)
+  Stand: 21.04.2026
+
+  Zweck:
+    Visuelle Referenz für die Kern-UI des LV-Kalkulierers.
+    Dieses Mockup ist NICHT ans Backend angebunden — es ist eine
+    Design-Spec für Layout, Typografie, Farben, Interaktion und
+    Sprache. Buttons simulieren Flows, machen aber keine API-Calls.
+
+  Designprinzipien:
+    - Apple-/Linear-inspiriert: typografie-getriebene Hierarchie
+    - Flache Oberflächen, keine Schatten, keine Gradients
+    - Generöser Weißraum, 0.5px Trennlinien
+    - Status-Farben in desaturierter Lesbarkeit
+    - Wording nach docs/ui_wording_guide.md (Handwerker-gerecht)
+
+  Layout:
+    - Kopfzeile (Projekt + Meta + PDF-Button)
+    - 3 Metrik-Karten (Angebotssumme, Preise stehen, Noch zu prüfen)
+    - Filter-Chips (Alle, Preis gefunden, Ähnlicher Artikel,
+      Richtwert, Fehlt im Katalog)
+    - Tabelle mit klickbaren Zeilen + inline Detail-Panels
+    - Pos 01.07 zeigt Near-Miss-Drawer als aufgeklappte Referenz
+
+  Referenz für Claude Code in B+4.3.1:
+    Struktur und Wording übernehmen. Farben als Tokens in
+    Tailwind-Config übersetzen. Interaktion mit State-Management
+    nachbauen. Echte API-Calls statt sendPrompt-Mocks einbauen.
+-->
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Segoe UI", Roboto, sans-serif;
+  background: #fff;
+  color: #1d1d1f;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  padding: 32px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* Kopfzeile */
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+.title {
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+.meta {
+  font-size: 13px;
+  color: #6e6e73;
+}
+.status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #0f5d2a;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* Buttons */
+button {
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 14px;
+  background: #fff;
+  color: #1d1d1f;
+  border: 0.5px solid rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+button:hover {
+  border-color: rgba(0, 0, 0, 0.3);
+  background: #fafafa;
+}
+button:active { transform: scale(0.98); }
+
+/* Metrik-Karten */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.metric {
+  background: #f5f5f7;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.metric-label {
+  font-size: 13px;
+  color: #6e6e73;
+  margin-bottom: 6px;
+}
+.metric-value {
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.metric-value .sub {
+  font-size: 14px;
+  color: #6e6e73;
+  font-weight: 400;
+  margin-left: 6px;
+}
+.metric-value.success { color: #0f5d2a; }
+.metric-value.warning { color: #8a5a00; }
+
+/* Filter-Chips */
+.chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.chip {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 0.5px solid rgba(0, 0, 0, 0.15);
+  font-size: 13px;
+  cursor: pointer;
+  background: #fff;
+  color: #6e6e73;
+  transition: all 0.15s ease;
+}
+.chip:hover { border-color: rgba(0, 0, 0, 0.3); color: #1d1d1f; }
+.chip.on {
+  background: #1d1d1f;
+  color: #fff;
+  border-color: #1d1d1f;
+}
+
+/* Tabelle */
+.table {
+  border: 0.5px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+.table-head, .row-lv {
+  display: grid;
+  grid-template-columns: 48px 1fr 160px 160px 20px;
+  gap: 12px;
+  padding: 10px 16px;
+  align-items: center;
+}
+.table-head {
+  background: #f5f5f7;
+  font-size: 12px;
+  color: #6e6e73;
+  font-weight: 500;
+}
+.table-head .num { text-align: right; }
+
+.row-lv {
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
+}
+.row-lv:hover { background: #fafafa; }
+.row-lv.active { background: #f5f5f7; }
+.row-lv:last-of-type { border-bottom: none; }
+
+.pos-num {
+  font-family: "SF Mono", Monaco, "Courier New", monospace;
+  font-size: 12px;
+  color: #86868b;
+}
+.pos-desc { font-size: 14px; color: #1d1d1f; }
+.pos-qty {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #6e6e73;
+  font-variant-numeric: tabular-nums;
+}
+.pos-price {
+  text-align: right;
+  font-size: 14px;
+  color: #1d1d1f;
+  font-variant-numeric: tabular-nums;
+}
+.pos-price.empty { color: #86868b; }
+.pos-unit {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #6e6e73;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Status-Pills */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.pill .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.pill.success { background: #e9f4eb; color: #0f5d2a; }
+.pill.success .dot { background: #0f5d2a; }
+.pill.info { background: #e8f0fe; color: #1a4999; }
+.pill.info .dot { background: #1a4999; }
+.pill.warning { background: #fef4e6; color: #8a5a00; }
+.pill.warning .dot { background: #8a5a00; }
+.pill.danger { background: #fde7e9; color: #a50e0e; }
+.pill.danger .dot { background: #a50e0e; }
+
+/* Chevron */
+.chev {
+  width: 14px;
+  height: 14px;
+  color: #86868b;
+  transition: transform 0.2s ease;
+}
+.row-lv.active .chev { transform: rotate(90deg); }
+
+/* Expand-Panel */
+.expand {
+  display: none;
+  padding: 14px 20px 18px 64px;
+  background: #fafafa;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
+}
+.row-lv.active + .expand { display: block; }
+.expand-text {
+  font-size: 13px;
+  color: #6e6e73;
+  margin-bottom: 10px;
+}
+
+/* Kandidaten-Karten */
+.cand {
+  background: #fff;
+  border: 0.5px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 16px;
+  align-items: baseline;
+}
+.cand-name {
+  font-size: 13px;
+  color: #1d1d1f;
+}
+.cand-meta {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #6e6e73;
+}
+.cand-price {
+  font-size: 14px;
+  color: #1d1d1f;
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+</style>
+</head>
+<body>
+
+<!-- Kopfzeile -->
+<div class="header">
+  <div>
+    <h1 class="title">Stuttgart Krankenhaus-Trockenbau</h1>
+    <p class="meta"><span class="status-dot"></span>Peter Gross Bau · 11 Positionen · Aktualisiert vor 2 Min</p>
+  </div>
+  <button>Angebot als PDF ↗</button>
+</div>
+
+<!-- Metrik-Karten -->
+<div class="metrics">
+  <div class="metric">
+    <p class="metric-label">Angebotssumme</p>
+    <p class="metric-value">4.057,55 €</p>
+  </div>
+  <div class="metric">
+    <p class="metric-label">Preise stehen</p>
+    <p class="metric-value success">9<span class="sub">von 11</span></p>
+  </div>
+  <div class="metric">
+    <p class="metric-label">Noch zu prüfen</p>
+    <p class="metric-value warning">2</p>
+  </div>
+</div>
+
+<!-- Filter-Chips -->
+<div class="chips">
+  <button class="chip on" data-filter="all">Alle · 11</button>
+  <button class="chip" data-filter="success">Preis gefunden · 6</button>
+  <button class="chip" data-filter="info">Ähnlicher Artikel · 2</button>
+  <button class="chip" data-filter="warning">Richtwert · 1</button>
+  <button class="chip" data-filter="danger">Fehlt im Katalog · 2</button>
+</div>
+
+<!-- Tabelle -->
+<div class="table">
+
+  <div class="table-head">
+    <span>Pos</span>
+    <span>Beschreibung</span>
+    <span>Status</span>
+    <span class="num">Preis · Gesamt</span>
+    <span></span>
+  </div>
+
+  <!-- Positionen -->
+  <div class="row-lv" data-stage="success">
+    <span class="pos-num">01.01</span>
+    <div>
+      <p class="pos-desc">Systemtrennwand W112 Knauf</p>
+      <p class="pos-qty">45,50 m²</p>
+    </div>
+    <span class="pill success"><span class="dot"></span>Preis gefunden</span>
+    <div>
+      <p class="pos-price">556,92 €</p>
+      <p class="pos-unit">12,24 €/m²</p>
+    </div>
+    <svg class="chev" viewBox="0 0 20 20"><path d="M7 5l6 5-6 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+  </div>
+  <div class="expand"><p class="expand-text">Treffer in der Kemmler-Preisliste · Rezept W112 mit 4 Materialien · fast sicher</p></div>
+
+  <div class="row-lv" data-stage="success">
+    <span class="pos-num">01.02</span>
+    <div>
+      <p class="pos-desc">Montagewand Installationskern W115</p>
+      <p class="pos-qty">38,00 m²</p>
+    </div>
+    <span class="pill success"><span class="dot"></span>Preis gefunden</span>
+    <div>
+      <p class="pos-price">627,00 €</p>
+      <p class="pos-unit">16,50 €/m²</p>
+    </div>
+    <svg class="chev" viewBox="0 0 20 20"><path d="M7 5l6 5-6 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+  </div>
+  <div class="expand"><p class="expand-text">Treffer in der Kemmler-Preisliste · fast sicher</p></div>
+
+  <div class="row-lv" data-stage="warning">
+    <span class="pos-num">01.03</span>
+    <div>
+      <p class="pos-desc">Türaussparung Brandschutzrahmen T30</p>
+      <p class="pos-qty">6 St</p>
+    </div>
+    <span class="pill warning"><span class="dot"></span>Richtwert</span>
+    <div>
+      <p class="pos-price">1.110,00 €</p>
+      <p class="pos-unit">ca. 185,00 €/St</p>
+    </div>
+    <svg class="chev" viewBox="0 0 20 20"><path d="M7 5l6 5-6 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+  </div>
+  <div class="expand">
+    <p class="expand-text">In keiner Preisliste gefunden · Richtwert aus Branchen-Erfahrung · bitte prüfen vor Abgabe</p>
+    <button>Preis selbst eintragen ↗</button>
+  </div>
+
+  <div class="row-lv" data-stage="info">
+    <span class="pos-num">01.04</span>
+    <div>
+      <p class="pos-desc">Zulage Deckenabschluss akustisch</p>
+      <p class="pos-qty">52,00 lfm</p>
+    </div>
+    <span class="pill info"><span class="dot"></span>Ähnlicher Artikel</span>
+    <div>
+      <p class="pos-price">187,20 €</p>
+      <p class="pos-unit">3,60 €/m</p>
+    </div>
+    <svg class="chev" viewBox="0 0 20 20"><path d="M7 5l6 5-6 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+  </div>
+  <div class="expand"><p class="expand-text">Ähnlicher Artikel bei Kemmler gefunden · Einheit lfm und m sind dasselbe · wahrscheinlich passend</p></div>
+
+  <div class="row-lv" data-stage="success">
+    <span class="pos-num">01.05</span>
+    <div>
+      <p class="pos-desc">Putz Kalk-Zement 10 mm</p>
+      <p class="pos-qty">120,00 m²</p>
+    </div>
+    <span class="pill success"><span class="dot"></span>Preis gefunden</span>
+    <div>
+      <p class="pos-price">907,20 €</p>
+      <p class="pos-unit">7,56 €/m²</p>
+    </div>
+    <svg class="chev" viewBox="0 0 20 20"><path d="M7 5l6 5-6 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+  </div>
+  <div class="expand"><p class="expand-text">Treffer bei Baumit Jahresangebot · 58,83 % Rabatt bereits eingerechnet</p></div>
+
+  <div class="row-lv" data-stage="success">
+    <span class="pos-num">01.06</span>
+    <div>
+      <p class="pos-desc">Rockwool Trennwandplatte 40 mm</p>
+      <p class="pos-qty">45,50 m²</p>
+    </div>
+    <span class="pill success"><span class="dot"></span>Preis gefunden</span>
+    <div>
+      <p class="pos-price">138,78 €</p>
+      <p class="pos-unit">3,05 €/m²</p>
+    </div>
+    <svg class="chev" viewBox="0 0 20 20"><path d="M7 5l6 5-6 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+  </div>
+  <div class="expand"><p class="expand-text">Treffer bei Kemmler · 167,40 €/Karton auf 3,05 €/m² umgerechnet</p></div>
+
+  <!-- Pos 01.07 — aufgeklappt als Referenz für Near-Miss-Drawer -->
+  <div class="row-lv active" data-stage="danger">
+    <span class="pos-num">01.07</span>
+    <div>
+      <p class="pos-desc">CW-Profil 75 verzinkt</p>
+      <p class="pos-qty">180,00 m</p>
+    </div>
+    <span class="pill danger"><span class="dot"></span>Fehlt im Katalog</span>
+    <div>
+      <p class="pos-price empty">—</p>
+      <p class="pos-unit" style="color: #86868b;">offen</p>
+    </div>
+    <svg class="chev" viewBox="0 0 20 20"><path d="M7 5l6 5-6 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+  </div>
+  <div class="expand">
+    <p class="expand-text">Nicht in deinen Preislisten · 3 ähnliche Artikel gefunden, die passen könnten</p>
+    <div class="cand">
+      <div>
+        <p class="cand-name">UA-Profil 75 mm verzinkt · 2950 mm</p>
+        <p class="cand-meta">Wölpert · anderer Profil-Typ · eher unsicher</p>
+      </div>
+      <p class="cand-price">0,89 €/m</p>
+    </div>
+    <div class="cand">
+      <div>
+        <p class="cand-name">CW-Profil 50 verzinkt</p>
+        <p class="cand-meta">Kemmler · anderes Maß · eher unsicher</p>
+      </div>
+      <p class="cand-price">1,15 €/m</p>
+    </div>
+    <div class="cand">
+      <div>
+        <p class="cand-name">CW-Profil 100 standard</p>
+        <p class="cand-meta">Kemmler · anderes Maß · eher unsicher</p>
+      </div>
+      <p class="cand-price">1,40 €/m</p>
+    </div>
+    <div class="actions">
+      <button>Preis selbst eintragen ↗</button>
+      <button>Beim Lieferanten anfragen ↗</button>
+    </div>
+  </div>
+
+  <div class="row-lv" data-stage="danger">
+    <span class="pos-num">01.08</span>
+    <div>
+      <p class="pos-desc">UW-Profil 75 verzinkt</p>
+      <p class="pos-qty">60,00 m</p>
+    </div>
+    <span class="pill danger"><span class="dot"></span>Fehlt im Katalog</span>
+    <div>
+      <p class="pos-price empty">—</p>
+      <p class="pos-unit" style="color: #86868b;">offen</p>
+    </div>
+    <svg class="chev" viewBox="0 0 20 20"><path d="M7 5l6 5-6 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+  </div>
+  <div class="expand"><p class="expand-text">Nicht in deinen Preislisten · 2 ähnliche Artikel vorhanden · bitte ansehen</p></div>
+
+  <div class="row-lv" data-stage="info">
+    <span class="pos-num">01.09</span>
+    <div>
+      <p class="pos-desc">Schnellabhänger 60/27</p>
+      <p class="pos-qty">420 St</p>
+    </div>
+    <span class="pill info"><span class="dot"></span>Ähnlicher Artikel</span>
+    <div>
+      <p class="pos-price">92,40 €</p>
+      <p class="pos-unit">0,22 €/St</p>
+    </div>
+    <svg class="chev" viewBox="0 0 20 20"><path d="M7 5l6 5-6 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+  </div>
+  <div class="expand"><p class="expand-text">Bei Kemmler als ASA01 · 21,56 €/Karton mit 100 Stück · auf Stückpreis umgerechnet</p></div>
+
+  <div class="row-lv" data-stage="success">
+    <span class="pos-num">01.10</span>
+    <div>
+      <p class="pos-desc">Dichtungsband Fugendicht</p>
+      <p class="pos-qty">95,00 lfm</p>
+    </div>
+    <span class="pill success"><span class="dot"></span>Preis gefunden</span>
+    <div>
+      <p class="pos-price">137,75 €</p>
+      <p class="pos-unit">1,45 €/m</p>
+    </div>
+    <svg class="chev" viewBox="0 0 20 20"><path d="M7 5l6 5-6 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+  </div>
+  <div class="expand"><p class="expand-text">Treffer bei Hornbach · fast sicher</p></div>
+
+  <div class="row-lv" data-stage="success">
+    <span class="pos-num">01.11</span>
+    <div>
+      <p class="pos-desc">Gipskartonplatte 12,5 mm</p>
+      <p class="pos-qty">91,00 m²</p>
+    </div>
+    <span class="pill success"><span class="dot"></span>Preis gefunden</span>
+    <div>
+      <p class="pos-price">300,30 €</p>
+      <p class="pos-unit">3,30 €/m²</p>
+    </div>
+    <svg class="chev" viewBox="0 0 20 20"><path d="M7 5l6 5-6 5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+  </div>
+  <div class="expand"><p class="expand-text">Treffer bei Kemmler · fast sicher</p></div>
+
+</div>
+
+<script>
+// Zeilen-Expansion
+document.querySelectorAll('.row-lv').forEach(row => {
+  row.addEventListener('click', () => {
+    const wasOn = row.classList.contains('active');
+    document.querySelectorAll('.row-lv').forEach(r => r.classList.remove('active'));
+    if (!wasOn) row.classList.add('active');
+  });
+});
+
+// Filter-Chips
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+    chip.classList.add('on');
+    const f = chip.dataset.filter;
+    document.querySelectorAll('.row-lv').forEach(row => {
+      const match = f === 'all' || f === row.dataset.stage;
+      row.style.display = match ? 'grid' : 'none';
+      const ex = row.nextElementSibling;
+      if (ex && ex.classList.contains('expand')) {
+        ex.style.display = match ? '' : 'none';
+      }
+      if (!match) row.classList.remove('active');
+    });
+  });
+});
+</script>
+
+</body>
+</html>
