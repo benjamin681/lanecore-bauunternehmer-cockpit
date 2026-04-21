@@ -213,3 +213,24 @@ def fuzzy_match_score(*, product_name: str, dna_pattern: str) -> float:
         return 0.0
     matched = sum(1 for t in pat_tokens if t in prod_tokens)
     return 100.0 * matched / len(pat_tokens)
+
+
+def score_query_against_candidate(query: str, candidate: str) -> float:
+    """Fuzzy-Score fuer "freier Anfrage-String gegen Katalog-Produktname".
+
+    Beide Seiten werden durch `normalize_product_name` geschickt und
+    anschliessend wird die asymmetrische Token-Coverage berechnet:
+    Wie viel Prozent der Anfrage-Tokens sind im Katalog-Namen enthalten?
+
+    Verwendet von `price_lookup.lookup_price` in der Fuzzy-Stufe (2c/3c),
+    wo `material_name` die Anfrage ist und `entry.product_name` der
+    Katalog-Eintrag.
+
+    Rueckgabe: 0.0 wenn Anfrage leer, sonst in [0, 100].
+    """
+    q_tokens = set(normalize_product_name(query).split())
+    c_tokens = set(normalize_product_name(candidate).split())
+    if not q_tokens:
+        return 0.0
+    matched = sum(1 for t in q_tokens if t in c_tokens)
+    return 100.0 * matched / len(q_tokens)

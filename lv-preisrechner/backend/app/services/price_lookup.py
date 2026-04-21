@@ -16,7 +16,9 @@ Designentscheidungen:
 - Overrides werden NICHT mit Rabatt verrechnet (Override = finaler Wert).
 - Der Audit-Trail (`lookup_details`) enthält je Stufe ein Dict mit dem
   jeweils geprüften Ergebnis — nützlich für UI-Tooltip und Debugging.
-- Fuzzy-Matching via stdlib (`difflib.SequenceMatcher`) mit Ratio ≥ 0.85.
+- Fuzzy-Matching via `material_normalizer.score_query_against_candidate`
+  (asymmetrische Token-Coverage nach rapidfuzz-gestuetzter Normalisierung)
+  mit Score ≥ 0.85 (entspricht 85 % Token-Coverage).
 """
 
 from __future__ import annotations
@@ -573,17 +575,35 @@ def _norm(s: str | None) -> str:
 
 
 def _best_fuzzy(items, target: str, key_fn):
-    """Gibt (best_item, best_ratio) zurück. Items leer -> (None, 0.0)."""
+    """Gibt (best_item, best_ratio) zurück. Items leer -> (None, 0.0).
+
+    Seit B+4.2.5 nutzt diese Funktion die asymmetrische Token-Coverage
+    aus material_normalizer, die speziell fuer "kurze Anfrage vs. langer
+    realer Produktname" getuned ist. Der Score bleibt in [0, 1]-Skalierung,
+    damit aufrufende Stellen den Schwellenvergleich nicht anfassen muessen.
+
+    Fallback: Wenn material_normalizer aus irgendeinem Grund nicht
+    importiert werden kann, nutzen wir stdlib SequenceMatcher wie zuvor.
+    """
     best = None
     best_ratio = 0.0
     target_norm = _norm(target)
     if not target_norm:
         return None, 0.0
+    try:
+        from app.services.material_normalizer import score_query_against_candidate
+        _use_normalizer = True
+    except ImportError:  # pragma: no cover
+        _use_normalizer = False
     for it in items:
-        candidate = _norm(key_fn(it))
-        if not candidate:
+        raw_candidate = key_fn(it)
+        if not raw_candidate:
             continue
-        r = SequenceMatcher(None, target_norm, candidate).ratio()
+        if _use_normalizer:
+            score_pct = score_query_against_candidate(target, raw_candidate)
+            r = score_pct / 100.0
+        else:
+            r = SequenceMatcher(None, target_norm, _norm(raw_candidate)).ratio()
         if r > best_ratio:
             best_ratio = r
             best = it
