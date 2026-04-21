@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from sqlalchemy import DateTime, String
+from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -28,6 +28,13 @@ class Tenant(Base):
     bgk_prozent: Mapped[float] = mapped_column(default=10.0)
     agk_prozent: Mapped[float] = mapped_column(default=12.0)
     wg_prozent: Mapped[float] = mapped_column(default=5.0)
+
+    # Feature-Flag: aktiviert die neue Pricing-Pipeline (SupplierPriceEntry +
+    # price_lookup.py) fuer diesen Tenant. Default False -- Integration in die
+    # Kalkulation erfolgt erst in einem spaeteren Sub-Block.
+    use_new_pricing: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
