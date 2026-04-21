@@ -1,12 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { Save } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { api, User } from "@/lib/api";
+import { api, ApiError, getPricingReadiness, User } from "@/lib/api";
 
 type Form = {
   firma: string;
@@ -20,6 +21,7 @@ export default function EinstellungenPage() {
   const [user, setUser] = useState<User | null>(null);
   const [form, setForm] = useState<Form | null>(null);
   const [busy, setBusy] = useState(false);
+  const [togglingFlag, setTogglingFlag] = useState(false);
 
   useEffect(() => {
     api<User>("/auth/me").then((u) => {
@@ -36,6 +38,49 @@ export default function EinstellungenPage() {
 
   function update<K extends keyof Form>(k: K, v: Form[K]) {
     setForm((f) => (f ? { ...f, [k]: v } : f));
+  }
+
+  async function toggleNewPricing(next: boolean) {
+    if (togglingFlag) return;
+    setTogglingFlag(true);
+    try {
+      if (next) {
+        // Vorab-Check: Daten vorhanden?
+        const r = await getPricingReadiness();
+        if (!r.ready_for_new_pricing) {
+          toast.error(
+            "Keine aktive Lieferanten-Preisliste und kein Preis-Override vorhanden.",
+            {
+              description:
+                "Bitte zuerst eine Preisliste hochladen oder einen Override anlegen.",
+              action: {
+                label: "Zur Preislisten-Verwaltung",
+                onClick: () => {
+                  window.location.href = "/dashboard/pricing";
+                },
+              },
+            },
+          );
+          return;
+        }
+      }
+      const updated = await api<User>("/auth/me/tenant", {
+        method: "PATCH",
+        body: { use_new_pricing: next },
+      });
+      setUser(updated);
+      toast.success(
+        next
+          ? "Neue Preis-Engine aktiviert"
+          : "Neue Preis-Engine deaktiviert",
+      );
+    } catch (err: unknown) {
+      const detail =
+        err instanceof ApiError ? err.detail : "Umschalten fehlgeschlagen";
+      toast.error(detail || "Umschalten fehlgeschlagen");
+    } finally {
+      setTogglingFlag(false);
+    }
   }
 
   async function save(e: FormEvent) {
@@ -131,6 +176,35 @@ export default function EinstellungenPage() {
               Gesamt-Zuschlag auf (Material + Lohn):{" "}
               <strong className="text-slate-900">{gesamtZuschlag.toFixed(1)} %</strong>
             </p>
+          </div>
+
+          <div className="rounded-xl bg-white border border-slate-200 p-6 space-y-3">
+            <h2 className="font-semibold text-slate-900">Preis-Engine</h2>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-bauplan-600 focus:ring-bauplan-500"
+                checked={user.use_new_pricing}
+                disabled={togglingFlag}
+                onChange={(e) => toggleNewPricing(e.target.checked)}
+              />
+              <span className="text-sm">
+                <span className="font-medium text-slate-900">
+                  Neue Preis-Engine verwenden (Lieferanten-Preislisten)
+                </span>
+                <span className="block text-slate-500 mt-0.5">
+                  Aktiviert das neue Matching gegen importierte Lieferanten-
+                  Preislisten. Ohne aktive Preisliste oder Preis-Override kann
+                  die Engine nicht aktiviert werden.
+                </span>
+                <Link
+                  href="/dashboard/pricing"
+                  className="text-bauplan-600 hover:text-bauplan-700 text-xs inline-block mt-1"
+                >
+                  Zur Preislisten-Verwaltung →
+                </Link>
+              </span>
+            </label>
           </div>
 
           <div className="flex items-center gap-3">
