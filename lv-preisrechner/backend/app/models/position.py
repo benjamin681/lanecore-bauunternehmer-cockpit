@@ -53,6 +53,12 @@ class Position(Base):
     manuell_korrigiert: Mapped[bool] = mapped_column(Boolean, default=False)
     warnung: Mapped[str] = mapped_column(Text, default="")  # z.B. "Kein Match für GKF 15mm"
 
+    # B+4.2: aggregierte Preis-Herkunft (pro Material im JSON-Detail)
+    needs_price_review: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    price_source_summary: Mapped[str] = mapped_column(String(300), default="")
+
     # Optional-Flags — Position faellt aus der Angebotssumme raus
     # (bleibt aber im Output zur Info sichtbar).
     # Beide koennen gleichzeitig True sein (Bedarfs-Alternative).
