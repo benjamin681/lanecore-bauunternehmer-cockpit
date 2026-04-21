@@ -66,32 +66,35 @@ def test_normalize_keeps_digits_after_unit_strip():
 
 
 def test_normalize_package_units_to_kg_token():
-    """'30 kg/Sack' soll mind. Token '30kg' oder separat '30' + 'kg' liefern
-    — je nach Design. Beides ist akzeptabel solange es in token_set_ratio
-    gegen das DNA-Pattern-Token '30kg' trifft."""
+    """'30 kg/Sack' soll in beiden Seiten identisch erscheinen — entweder
+    als '30kg' kombiniert oder als '30' + 'kg' getrennt. Der Normalizer
+    wendet die gleiche Regel auf Produktname und DNA-Pattern an, d. h.
+    Prod- und Pattern-Token muessen gleich normalisiert sein."""
     from app.services.material_normalizer import normalize_product_name, normalize_dna_pattern
     prod = normalize_product_name("Knauf Goldband neu 30 kg/Sack")
     pat = normalize_dna_pattern("Knauf|Gips-Grundputz|Goldband|30kg|")
-    # Entweder kombiniertes Token "30kg" oder zwei Tokens "30", "kg"
     prod_tokens = set(prod.split())
     pat_tokens = set(pat.split())
-    # Mindestens die Zahl muss in beiden vorkommen
-    assert "30" in prod_tokens
-    assert "30" in pat_tokens
-    # Hersteller + Produkt-Kern
+    # Hersteller + Produkt-Kern muessen in beiden vorkommen
     assert "knauf" in prod_tokens
     assert "knauf" in pat_tokens
     assert "goldband" in prod_tokens
     assert "goldband" in pat_tokens
+    # Das Paketgewicht muss in IDENTISCHER Form in beiden Tokenlisten sein
+    assert "30kg" in prod_tokens, f"30kg expected in prod tokens: {prod_tokens}"
+    assert "30kg" in pat_tokens, f"30kg expected in pat tokens: {pat_tokens}"
 
 
-def test_normalize_dna_pattern_splits_pipes():
+def test_normalize_dna_pattern_splits_pipes_and_drops_category():
+    """Design-Entscheidung: Kategorie (Slot 1) wird verworfen, weil sie
+    in realen Produktnamen nicht vorkommt. Hersteller (Slot 0) bleibt."""
     from app.services.material_normalizer import normalize_dna_pattern
     out = normalize_dna_pattern("Knauf|Gipskarton|GKFI|12.5|")
     tokens = set(out.split())
     assert "knauf" in tokens
     assert "gkfi" in tokens
     assert "12.5" in tokens
+    assert "gipskarton" not in tokens, "Kategorie muss entfernt sein"
 
 
 def test_normalize_dna_pattern_empty_manufacturer_ok():
@@ -105,11 +108,15 @@ def test_normalize_dna_pattern_empty_manufacturer_ok():
 
 def test_normalize_fl_asche_quirk():
     """Kemmler-Eigenart 'Fl.asche' — der Punkt darf nicht die Tokenisierung
-    sabotieren; 'fl' und 'asche' getrennt oder 'flasche' als ein Token
-    sind beides OK, solange keine Zahlen verloren gehen."""
+    sabotieren. '800 g/Fl.asche' wird zu '800g' (Gramm-Packung kondensiert)
+    und die Artikelnummer verschwindet. Das ist gewollt: DNA-Pattern
+    fuehrt das Paketgewicht als '800g'."""
     from app.services.material_normalizer import normalize_product_name
     out = normalize_product_name("Knauf Brio Falzkleber - 800 g/Fl.asche Nr. 00088533")
-    assert "800" in out.split()
+    tokens = out.split()
+    # Gewicht in kondensierter Form
+    assert "800g" in tokens, f"800g expected in {tokens}"
+    # Artikelnummer weg
     assert "00088533" not in out
 
 

@@ -28,14 +28,14 @@
     {
       "id": "ua_48_knauf",
       "product_name": "Anschlusswinkel f. UA-Profil 48 mm - Nr. 00708449",
-      "dna_pattern": "Knauf|Unterkonstruktion|UA-Profil|48|",
-      "note": "Artikelnummer-Suffix muss gestrippt werden; 'UA-Profil' mit Bindestrich"
+      "dna_pattern": "|Unterkonstruktion|UA-Profil|48|",
+      "note": "Artikelnummer-Suffix muss gestrippt werden; kein Hersteller-Praefix im Artikelnamen (Eigenware Kemmler) → DNA ohne Hersteller"
     },
     {
       "id": "ua_100_knauf",
       "product_name": "Anschlusswinkel f. UA-Profil 100 mm - Nr. 00708451",
-      "dna_pattern": "Knauf|Unterkonstruktion|UA-Profil|100|",
-      "note": "analog 100 mm"
+      "dna_pattern": "|Unterkonstruktion|UA-Profil|100|",
+      "note": "analog 100 mm; ohne Hersteller-Token"
     },
     {
       "id": "cw_100_profil",

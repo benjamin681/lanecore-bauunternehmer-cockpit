@@ -1,0 +1,215 @@
+"""Material-Namen-Normalisierung fuer Fuzzy-Matching (B+4.2.5).
+
+Problem: Reale Kemmler-Artikelnamen ("Knauf DIAMANT Hartgipspl. GKFI
+2000x1250x12,5 mm") und interne DNA-Pattern ("Knauf|Gipskarton|GKFI|12.5|")
+haben dieselbe Produkt-DNA, aber wegen Klammer-Inhalt, Artikelnummern-
+Suffixen, Einheitensuffixen und Formatierungsvarianten liegt die
+`SequenceMatcher.ratio()` der Rohstrings bei ~0.45 — unter der Schwelle
+0.85, die price_lookup.py als Fuzzy-Trefferkriterium nutzt.
+
+Loesung: Beide Seiten auf eine kanonische Token-Form reduzieren und
+anschliessend `rapidfuzz.fuzz.token_set_ratio` rechnen. token_set_ratio
+ist reihenfolge- und duplikat-invariant und ignoriert das zusaetzliche
+"Rauschen" in einem der Strings (z. B. "Hartgipspl.").
+
+Design:
+- `normalize_product_name(s)` fuer freie Produktbezeichnungen.
+- `normalize_dna_pattern(p)` fuer DNA-Pattern der Form A|B|C|D|E.
+- Beide erzeugen eine raumgetrennte Token-Liste in Kleinbuchstaben.
+- `fuzzy_match_score(product_name, dna_pattern)` kombiniert beide und
+  liefert den token_set_ratio-Score in [0, 100].
+
+Nicht enthalten: aggressive Synonymisierung (GKF↔GKB, GKFI↔GKBI). Das
+waere eine Falschinformation — GKFI ist Feuerschutz imprägniert, GKB
+ist die Standardplatte. Nur *identische* Codes werden als Token
+behalten.
+"""
+
+from __future__ import annotations
+
+import re
+from functools import lru_cache
+
+try:
+    from rapidfuzz import fuzz as _fuzz  # type: ignore
+
+    _HAS_RAPIDFUZZ = True
+except ImportError:  # pragma: no cover
+    from difflib import SequenceMatcher
+
+    _HAS_RAPIDFUZZ = False
+
+
+# ---------------------------------------------------------------------------
+# Regex-Werkzeuge (kompiliert, modulweit wiederverwendet)
+# ---------------------------------------------------------------------------
+
+# Artikelnummern-Suffix: "Nr. 00123456" / "Art.-Nr. 12345"
+_ARTICLE_NR_RE = re.compile(r"\b(?:nr\.?|art\.?\s*-?\s*nr\.?)\s*\d{3,}\b", re.IGNORECASE)
+
+# Package/Bundle-Marker, die nichts zur Identifikation beitragen:
+# "100 St./Pak.", "100 Stk/Ktn.", "8 St./Bd.", "BL=2600 mm"
+_PACKAGE_MARKER_RE = re.compile(
+    r"\b(?:\d+\s*(?:stk|st|pak|bd|bund|ktn|karton|rolle|rol|sack|pal)[\./]*\.?|bl\s*=\s*\d+\s*mm)\b",
+    re.IGNORECASE,
+)
+
+# Masse: "12,5 mm" / "12.5mm" / "2000 mm" / "1250x12,5 mm"
+# Entfernt die "mm"-Einheit nach einer Zahl und normalisiert Komma zu Punkt.
+_MM_UNIT_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s*mm\b", re.IGNORECASE)
+
+# Kilogramm-Paketung: "30 kg/Sack" oder "25 kg" -> behalten wir als "30kg"
+# Wichtig: der Schraegstrich + "Sack|Eimer|Fl.|Flasche|Rolle" darf weg.
+_KG_PACK_RE = re.compile(
+    r"(\d+(?:[.,]\d+)?)\s*kg(?:\s*/\s*[a-zäöüß\.]+)?",
+    re.IGNORECASE,
+)
+
+# Gramm-Paketung: "800 g/Fl.asche" / "165 g/m²"
+_G_PACK_RE = re.compile(
+    r"(\d+(?:[.,]\d+)?)\s*g(?:\s*/\s*[a-zäöüß\.\²\³0-9]+)?",
+    re.IGNORECASE,
+)
+
+# Klammer-Inhalte: "(HRAK)", "(LaMassiv - GKF)", "(Haftputz)"
+# Den INHALT behalten wir, aber ohne Klammern — token_set_ratio kommt damit klar.
+_PAREN_RE = re.compile(r"[()]")
+
+# Komma in Dezimalzahlen zu Punkt: "12,5" -> "12.5"
+_DECIMAL_COMMA_RE = re.compile(r"(\d),(\d)")
+
+# Mehrfach-Whitespace kollabieren
+_WS_RE = re.compile(r"\s+")
+
+# Nicht-alphanumerische Trenner entfernen (ausser Punkt in "12.5" und Bindestrich
+# bei "UA-Profil"): wir reduzieren auf Token-Grenzen. Bindestriche werden zu
+# Leerzeichen, damit "UA-Profil" in Tokens "ua" + "profil" zerfaellt — das
+# erhoeht token_set_ratio-Trefferwahrscheinlichkeit gegen DNA-Pattern, die
+# Produktname und Variante separat fuehren.
+_NON_TOKEN_CHARS_RE = re.compile(r"[_/,;:=\-–—+\[\]\{\}\|\"'`*]")
+
+# Abmessungstupel "2000x1250x12.5" → "2000 1250 12.5" (x zwischen Zahlen splitten)
+_DIM_X_RE = re.compile(r"(?<=\d)[x×](?=\d)", re.IGNORECASE)
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+@lru_cache(maxsize=2048)
+def normalize_product_name(name: str) -> str:
+    """Bereitet einen freien Produktnamen fuer Fuzzy-Matching vor.
+
+    Beispiele:
+      >>> normalize_product_name("Knauf DIAMANT Hartgipspl. GKFI 2000x1250x12,5 mm")
+      'knauf diamant hartgipspl. gkfi 2000x1250x12.5'
+      >>> normalize_product_name("Anschlusswinkel f. UA-Profil 48 mm - Nr. 00708449")
+      'anschlusswinkel f. ua profil 48'
+
+    Schritte:
+      1. lowercase
+      2. Artikelnummern-Suffixe entfernen
+      3. Package-Marker entfernen ("100 St./Pak.", "BL=2600 mm")
+      4. Dezimal-Komma zu Punkt
+      5. "mm"-Einheit hinter Zahlen entfernen (Zahl bleibt)
+      6. "kg"/"g"-Packung kondensieren ("30 kg/Sack" -> "30kg")
+      7. Klammern entfernen (Inhalt bleibt als Tokens)
+      8. Nicht-Token-Zeichen durch Leerzeichen ersetzen
+      9. Whitespace kollabieren
+    """
+    if not name:
+        return ""
+    s = name.lower()
+
+    # 2. Artikelnummer
+    s = _ARTICLE_NR_RE.sub(" ", s)
+
+    # 3. Package-Marker
+    s = _PACKAGE_MARKER_RE.sub(" ", s)
+
+    # 4. Dezimal-Komma zu Punkt (wiederholt anwenden, falls 3-stellige Dezimalen)
+    s = _DECIMAL_COMMA_RE.sub(r"\1.\2", s)
+    s = _DECIMAL_COMMA_RE.sub(r"\1.\2", s)
+
+    # 4b. "2000x1250x12.5" -> "2000 1250 12.5" (damit alle Zahlen eigene
+    # Tokens werden; das verbessert token_set_ratio erheblich)
+    s = _DIM_X_RE.sub(" ", s)
+
+    # 6. kg/g-Packung (vor mm, sonst wuerde "800 g/Fl.asche" durchschlupfen)
+    s = _KG_PACK_RE.sub(lambda m: f" {m.group(1)}kg ", s)
+    s = _G_PACK_RE.sub(lambda m: f" {m.group(1)}g ", s)
+
+    # 5. mm-Einheit
+    s = _MM_UNIT_RE.sub(lambda m: f" {m.group(1)} ", s)
+
+    # 7. Klammern raus
+    s = _PAREN_RE.sub(" ", s)
+
+    # 8. sonstige Trennzeichen zu Leerzeichen
+    s = _NON_TOKEN_CHARS_RE.sub(" ", s)
+
+    # 9. whitespace kollabieren
+    s = _WS_RE.sub(" ", s).strip()
+    return s
+
+
+@lru_cache(maxsize=2048)
+def normalize_dna_pattern(pattern: str) -> str:
+    """Normalisiert einen DNA-Pattern ("Hersteller|Kategorie|Produktname|
+    Abmessungen|Variante") zur gleichen Token-Form wie `normalize_product_name`.
+
+    **Kategorie wird absichtlich verworfen**, weil sie ein internes Meta-
+    Attribut ist und in realen Produktnamen nicht vorkommt (z. B. ein
+    "Knauf DIAMANT Hartgipspl. GKFI 12,5 mm" enthaelt das Wort
+    "Gipskarton" nicht explizit). Hersteller bleibt erhalten.
+
+    Beispiele:
+      >>> normalize_dna_pattern("Knauf|Gipskarton|GKFI|12.5|")
+      'knauf gkfi 12.5'
+      >>> normalize_dna_pattern("|Trockenbauprofile|CW|100|")
+      'cw 100'
+    """
+    if not pattern:
+        return ""
+    parts = pattern.split("|")
+    # Struktur: [hersteller, kategorie, produktname, abmessungen, variante]
+    keep: list[str] = []
+    for idx, raw in enumerate(parts):
+        if idx == 1:  # Kategorie ueberspringen
+            continue
+        s = raw.strip()
+        if s:
+            keep.append(s)
+    return normalize_product_name(" ".join(keep))
+
+
+def fuzzy_match_score(*, product_name: str, dna_pattern: str) -> float:
+    """Liefert einen asymmetrischen Coverage-Score in [0, 100].
+
+    Definition:
+      score = 100 * |Schnittmenge(pat_tokens, prod_tokens)| / |pat_tokens|
+
+    Das heisst: "Wie viel Prozent der Pattern-Tokens sind im Produktnamen
+    enthalten?" Asymmetrisch deshalb, weil der reale Produktname haeufig
+    zusaetzliche Tokens enthaelt (Abmessungen, Verpackungshinweise,
+    Artikelnummern), die das Matching nicht stoeren duerfen.
+
+    Entspricht dem "asymmetrischen token-set coverage" und ist deutlich
+    praeziser als rapidfuzz.token_set_ratio, weil letzteres bei stark
+    unterschiedlichen String-Laengen den Score drueckt.
+
+    rapidfuzz wird nicht direkt fuer das Ratio genutzt, aber wir benoetigen
+    die Bibliothek als Signal fuer den Import-Fallback (stdlib-Coverage ist
+    identisch; die Funktion bleibt funktionsfaehig ohne rapidfuzz).
+
+    Rueckgabe: 0.0 wenn eine Seite leer, sonst in [0, 100].
+    """
+    prod = normalize_product_name(product_name)
+    pat = normalize_dna_pattern(dna_pattern)
+    if not prod or not pat:
+        return 0.0
+    prod_tokens = set(prod.split())
+    pat_tokens = set(pat.split())
+    if not pat_tokens:
+        return 0.0
+    matched = sum(1 for t in pat_tokens if t in prod_tokens)
+    return 100.0 * matched / len(pat_tokens)
