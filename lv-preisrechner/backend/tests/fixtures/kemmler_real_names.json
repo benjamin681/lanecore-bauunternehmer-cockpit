@@ -1,0 +1,127 @@
+{
+  "_note": "Golden fixtures for material_normalizer (B+4.2.5). Product names are taken from real Kemmler entries (Ausbau Neu-Ulm 04/2026) extracted in the B+2 live run. DNA patterns use the canonical form 'Hersteller|Kategorie|Produktname|Abmessungen|Variante' as produced by materialrezepte.py.",
+  "positives": [
+    {
+      "id": "gkfi_diamant_12_5",
+      "product_name": "Knauf DIAMANT Hartgipspl. GKFI 2000x1250x12,5 mm",
+      "dna_pattern": "Knauf|Gipskarton|GKFI|12.5|",
+      "note": "Knauf-Hartgipsplatte 12,5 mm, Produktname enthaelt DIAMANT als Variante"
+    },
+    {
+      "id": "gkf_silentboard_12_5",
+      "product_name": "Knauf Silentboard (GKF) 2000x625x12,5 mm (HRAK)",
+      "dna_pattern": "Knauf|Gipskarton|Silentboard|12.5|",
+      "note": "Silentboard = Schallschutz-GKF, Klammern in product_name"
+    },
+    {
+      "id": "gkb_siniat_12_5",
+      "product_name": "SINIAT Einmann-Baupl. (HRK) 2000x600x12,5 mm - (Easyboard - GKB)",
+      "dna_pattern": "Siniat|Gipskarton|GKB|12.5|",
+      "note": "SINIAT/Siniat casing; GKB-Typ steht am Ende in Klammern"
+    },
+    {
+      "id": "gkf_siniat_20mm",
+      "product_name": "SINIAT Massivbaupl. (HRAK) 2000x625x20 mm - (LaMassiv - GKF)",
+      "dna_pattern": "Siniat|Gipskarton|GKF|20|",
+      "note": "20 mm Massivbauplatte; Leerzeichen in '20 mm'"
+    },
+    {
+      "id": "ua_48_knauf",
+      "product_name": "Anschlusswinkel f. UA-Profil 48 mm - Nr. 00708449",
+      "dna_pattern": "Knauf|Unterkonstruktion|UA-Profil|48|",
+      "note": "Artikelnummer-Suffix muss gestrippt werden; 'UA-Profil' mit Bindestrich"
+    },
+    {
+      "id": "ua_100_knauf",
+      "product_name": "Anschlusswinkel f. UA-Profil 100 mm - Nr. 00708451",
+      "dna_pattern": "Knauf|Unterkonstruktion|UA-Profil|100|",
+      "note": "analog 100 mm"
+    },
+    {
+      "id": "cw_100_profil",
+      "product_name": "CW-Profil 100x50x0,6 mm BL=2600 mm - 8 St./Bd.",
+      "dna_pattern": "|Trockenbauprofile|CW|100|",
+      "note": "Hersteller leer (generisch); Abmessung nur 100 im Pattern"
+    },
+    {
+      "id": "goldband_30kg",
+      "product_name": "Knauf Goldband neu 30 kg/Sack",
+      "dna_pattern": "Knauf|Gips-Grundputz|Goldband|30kg|",
+      "note": "'neu' als Variante, 30 kg muss gegen '30kg' matchen (Leerzeichen-Toleranz)"
+    },
+    {
+      "id": "multifinish_25kg",
+      "product_name": "Knauf Multifinish Universal Gips-Spachtelmasse - 25 kg/Sack",
+      "dna_pattern": "Knauf|Gips-Grundputz|Multifinish|25kg|",
+      "note": "lange Beschreibung nach dem Produktnamen"
+    },
+    {
+      "id": "kkz30_kemmler",
+      "product_name": "Kemmler KKZ30 Kalk-Zement-Putz KKZ30 30 kg/Sack",
+      "dna_pattern": "Kemmler|Kalk-ZementGrundputz|KKZ30|30kg|",
+      "note": "Code KKZ30 taucht doppelt auf"
+    },
+    {
+      "id": "brio_falzkleber",
+      "product_name": "Knauf Brio Falzkleber - 800 g/Fl.asche Nr. 00088533",
+      "dna_pattern": "Knauf|Gipsf./TrEstr./Schuett|Brio Falzkleber|800g|",
+      "note": "'Fl.asche' statt 'Flasche' (Kemmler-Eigenart); Nr.-Suffix muss weg"
+    },
+    {
+      "id": "rotband_pro",
+      "product_name": "Knauf Rotband PRO (Haftputz) 30 kg/Sack",
+      "dna_pattern": "Knauf|Gips-Grundputz|Rotband|30kg|",
+      "note": "'PRO (Haftputz)' als Variante; Rotband-Token entscheidend"
+    },
+    {
+      "id": "rotkalk_grundputz",
+      "product_name": "Knauf Rotkalk-Grundputz Unterputz - 30 kg/Sack",
+      "dna_pattern": "Knauf|Kalk-Grundputz|Rotkalk|30kg|",
+      "note": "'Rotkalk-Grundputz' zusammengesetzt"
+    },
+    {
+      "id": "slp30_kemmler",
+      "product_name": "Kemmler SLP30 Styroporleichtputz 30 kg/Sack",
+      "dna_pattern": "Kemmler|Kalk-ZementGrundputz|SLP30|30kg|",
+      "note": "Code-basiertes Matching"
+    },
+    {
+      "id": "knauf_mp75l",
+      "product_name": "Knauf MP75L (Gips-Maschinenleichtputz) 30 kg/Sack",
+      "dna_pattern": "Knauf|Gips-Grundputz|MP75L|30kg|",
+      "note": "Code in der Mitte, Erklaerung in Klammern"
+    }
+  ],
+  "negatives": [
+    {
+      "id": "neg_gkb_vs_profile",
+      "product_name": "SINIAT Einmann-Baupl. (HRK) 2000x600x12,5 mm - (Easyboard - GKB)",
+      "dna_pattern": "Knauf|Unterkonstruktion|UA-Profil|48|",
+      "note": "GKB-Platte darf nicht als UA-Profil matchen"
+    },
+    {
+      "id": "neg_cw_vs_ua",
+      "product_name": "CW-Profil 100x50x0,6 mm BL=2600 mm - 8 St./Bd.",
+      "dna_pattern": "Knauf|Unterkonstruktion|UA-Profil|48|",
+      "note": "CW-Profil darf nicht als UA-Profil matchen (andere Profil-Familie)"
+    },
+    {
+      "id": "neg_wrong_thickness",
+      "product_name": "SINIAT Massivbaupl. (HRAK) 2000x625x20 mm - (LaMassiv - GKF)",
+      "dna_pattern": "Siniat|Gipskarton|GKF|12.5|",
+      "note": "20 mm Platte darf nicht gegen 12,5 mm-Pattern matchen"
+    },
+    {
+      "id": "neg_wrong_manufacturer",
+      "product_name": "Knauf DIAMANT Hartgipspl. GKFI 2000x1250x12,5 mm",
+      "dna_pattern": "Siniat|Gipskarton|GKFI|12.5|",
+      "note": "Anderer Hersteller muss scheitern"
+    },
+    {
+      "id": "neg_putz_vs_platte",
+      "product_name": "Knauf Goldband neu 30 kg/Sack",
+      "dna_pattern": "Knauf|Gipskarton|GKB|12.5|",
+      "note": "Putz-Sack darf nicht gegen Gipskarton-Pattern matchen"
+    }
+  ]
+}
