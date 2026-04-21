@@ -322,25 +322,27 @@ def _try_supplier_price(
 
     # c) Fuzzy auf Produktname + Einheit (ggf. + Hersteller)
     # Seit B+4.2.5: der asymmetrische Normalizer scored sehr aggressiv auf
-    # Token-Coverage; deshalb muessen wir den manufacturer-Filter auch hier
-    # durchziehen, sobald ein Hersteller in der Query bekannt ist. Ohne
-    # diesen Filter wuerde z. B. "Siniat GKFI 12.5"-Anfrage auf eine
-    # Knauf-Platte trompeten.
+    # Token-Coverage; deshalb ziehen wir den manufacturer-Filter auch hier
+    # durch, sobald ein Hersteller in der Query bekannt ist.
+    # Seit B+4.2.6: der Unit-Filter ist tolerant — "m" und "lfm" sind
+    # z. B. gleichwertig. Da das DB-seitig nicht praktikabel ist (keine
+    # Funktion in SQL), fischen wir die mfr-gefilterten Kandidaten und
+    # filtern die Einheit anschliessend in Python via unit_matches().
     if match is None:
-        cand_q = base_q.filter(SupplierPriceEntry.unit == unit)
+        from app.services.unit_normalizer import unit_matches
+
+        cand_q = base_q
         if manufacturer:
             cand_q = cand_q.filter(SupplierPriceEntry.manufacturer == manufacturer)
-        candidates = cand_q.all()
-        if not candidates:
-            # auch effective_unit probieren (mit demselben mfr-Filter)
-            alt_q = base_q.filter(SupplierPriceEntry.effective_unit == unit)
-            if manufacturer:
-                alt_q = alt_q.filter(SupplierPriceEntry.manufacturer == manufacturer)
-            candidates = alt_q.all()
+        all_mfr_candidates = cand_q.all()
+        candidates = [
+            c for c in all_mfr_candidates
+            if unit_matches(unit, c.unit) or unit_matches(unit, c.effective_unit)
+        ]
         best, ratio = _best_fuzzy(candidates, material_name, lambda e: e.product_name)
         if best is not None and ratio >= FUZZY_MATCH_THRESHOLD:
             match = best
-            how = f"Fuzzy ({ratio:.2f}) auf Produktname + Einheit {unit}"
+            how = f"Fuzzy ({ratio:.2f}) auf Produktname + Einheit ~{unit}"
             confidence = ratio
 
     if match is None:
@@ -427,6 +429,18 @@ def _try_legacy_price(
     if not candidates:
         details.append({"stage": "legacy_price", "matched": False, "reason": "keine aktive Legacy-Liste"})
         return None
+
+    # B+4.2.6: Einheiten-Filter tolerant (SQL kann unit_matches nicht; in
+    # Python nachfiltern). Nur anwenden, wenn die Query eine Einheit traegt.
+    if unit:
+        from app.services.unit_normalizer import unit_matches
+        candidates = [
+            c for c in candidates
+            if unit_matches(unit, c.basis_einheit) or unit_matches(unit, c.einheit)
+        ]
+        if not candidates:
+            details.append({"stage": "legacy_price", "matched": False, "reason": f"keine Kandidaten mit Einheit ~{unit}"})
+            return None
 
     best, ratio = _best_fuzzy(candidates, material_name, lambda e: e.produktname)
     if best is None or ratio < FUZZY_MATCH_THRESHOLD:
