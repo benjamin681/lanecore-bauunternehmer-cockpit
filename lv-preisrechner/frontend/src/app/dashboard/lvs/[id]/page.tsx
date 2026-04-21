@@ -9,12 +9,14 @@ import {
   FileDown,
   Pencil,
   Play,
+  Search,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { StageBadge } from "@/components/ui/stage-badge";
 import { api, Job, LVDetail, Position, pollJob } from "@/lib/api";
 import { fmtEur, fmtNum } from "@/lib/format";
 
@@ -232,6 +234,7 @@ export default function LvDetailPage() {
                 <Th className="text-right">Zuschl.</Th>
                 <Th className="text-right">EP</Th>
                 <Th className="text-right">GP</Th>
+                <Th>Preisquelle</Th>
                 <Th></Th>
               </tr>
             </thead>
@@ -256,7 +259,7 @@ export default function LvDetailPage() {
                 <td className="px-4 py-3 text-right font-bold text-success-600 text-base">
                   {fmtEur(lv.angebotssumme_netto)}
                 </td>
-                <td></td>
+                <td colSpan={2}></td>
               </tr>
             </tfoot>
           </table>
@@ -353,6 +356,16 @@ function PosRow({
         {cell("ep", fmtNum(pos.ep, 2), String(pos.ep))}
       </Td>
       <Td className="text-right font-semibold text-slate-900">{fmtNum(pos.gp, 2)}</Td>
+      <Td>
+        <div className="flex items-center gap-1">
+          <StageBadge summary={pos.price_source_summary} />
+          {pos.needs_price_review && (
+            <span title="Manuelle Prüfung empfohlen" aria-label="Review empfohlen">
+              <Search className="w-3.5 h-3.5 text-warning-600" />
+            </span>
+          )}
+        </div>
+      </Td>
       <Td>
         <div className="flex items-center gap-1">
           {pos.manuell_korrigiert && <Pencil className="w-3.5 h-3.5 text-bauplan-600" />}
