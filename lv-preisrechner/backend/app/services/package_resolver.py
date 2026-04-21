@@ -178,6 +178,39 @@ def resolve_package(
     return (unit, p)
 
 
+def resolve_pieces_per_length(entry) -> tuple[str, Decimal] | None:
+    """B+4.2.7 — Entpackt Bundle-Preise fuer **Laengen-Produkte**.
+
+    Greift fuer Entries, deren Einheit bereits eine Laenge (m/lfm/lfdm)
+    angibt, bei denen aber `price_net` den Gesamt-Bundle-Preis traegt
+    (statt des Laufmeter-Preises), weil das Produkt in einem Bund mit
+    N Stangen a `package_size` Laenge verkauft wird.
+
+    Muster:
+      unit     = "€/m" | "€/lfm" | "€/lfdm"
+      pieces_per_package = N  (Anzahl Stangen je Bund)
+      package_size       = L  (Laenge je Stange)
+      package_unit       = "m" | "mm"
+
+      price_per_effective_unit = price_net / (N * L_in_m)
+      effective_unit           = "m"
+
+    Rueckgabe:
+      (effective_unit, price_per_effective_unit) wenn alle Bedingungen
+      erfuellt sind, sonst None (dann ist dieser Entry fuer andere
+      Resolver-Pfade oder Default-Verhalten vorgesehen).
+
+    Der Caller ist `backfill_effective_units`. Diese Funktion ist pure
+    und schreibt nichts auf den Entry — Commit-Verantwortung liegt bei
+    `backfill_effective_units`.
+
+    NOTE (Phase 2 — Stub): Die Implementierung folgt in Phase 3. Aktuell
+    gibt die Funktion None zurueck, um die Golden-Tests auf Vertragsebene
+    zu definieren.
+    """
+    return None
+
+
 def _parse_decimal(s: str) -> Decimal:
     """'7,5' -> Decimal('7.5'); '100' -> Decimal('100'); leer -> 0."""
     if not s:
