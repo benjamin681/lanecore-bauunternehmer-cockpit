@@ -66,8 +66,10 @@ PATTERNS: list[dict] = [
     {"id": "MP75 30kg", "dna": "Knauf|Gips-Grundputz|MP75|30kg|", "unit": "Sack"},
     # Kleinteile
     {"id": "Kreuzverbinder CD", "dna": "|Unterkonstruktion|Kreuzverbinder|60|", "unit": "Stk."},
-    {"id": "Direktabhaenger 125", "dna": "|Unterkonstruktion|Direktabhaenger|125|", "unit": "Stk."},
-    {"id": "Noniusabhaenger", "dna": "Kemmler|Unterkonstruktion|Noniusabhaenger||", "unit": "Stk."},
+    # Pattern bewusst mit Umlauten, da der reale Kemmler-Katalog Umlaute fuehrt
+    # und material_normalizer keine Umlaut-Mapping hat (wuerde Re-Tuning sein).
+    {"id": "Direktabhänger 125", "dna": "|Unterkonstruktion|Direktabhänger|125|", "unit": "Stk."},
+    {"id": "Noniusabhänger", "dna": "Kemmler|Unterkonstruktion|Noniusabhänger||", "unit": "Stk."},
 ]
 
 
@@ -104,7 +106,15 @@ def _prepare_snapshot() -> Path:
 
 def _run_smoke(snap: Path) -> dict:
     """Konfiguriert SQLAlchemy auf die Snapshot-DB und ruft lookup_price
-    fuer alle Pattern auf."""
+    fuer alle Pattern auf.
+
+    Seit B+4.2.7:
+    - Backfill der effective_unit/price_per_effective_unit fuer alle
+      Entries via `package_resolver.backfill_effective_units` VOR dem
+      Lookup. Das Ergebnis wird in die Snapshot-DB geschrieben.
+    - Bei Stages ∈ {estimated, not_found} werden zusaetzlich die
+      Top-3 naechst-aehnlichen Candidates mit Score-Breakdown ermittelt.
+    """
     # DB-URL ueberschreiben, bevor Models importieren
     os.environ["DATABASE_URL"] = f"sqlite:///{snap}"
     # late imports
@@ -115,8 +125,11 @@ def _run_smoke(snap: Path) -> dict:
     db_mod.engine = create_engine(f"sqlite:///{snap}", connect_args={"check_same_thread": False})
     db_mod.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=db_mod.engine)
 
-    from app.models.pricing import SupplierPriceList
+    from app.models.pricing import SupplierPriceEntry, SupplierPriceList
+    from app.services.material_normalizer import score_query_against_candidate
+    from app.services.package_resolver import backfill_effective_units
     from app.services.price_lookup import lookup_price
+    from app.services.unit_normalizer import unit_matches
 
     session = db_mod.SessionLocal()
     try:
@@ -125,6 +138,20 @@ def _run_smoke(snap: Path) -> dict:
             raise SystemExit("Keine aktive Kemmler-Preisliste im Snapshot.")
         tenant_id = pl.tenant_id
 
+        # --- Backfill der effective_units ------------------------------
+        all_entries = session.query(SupplierPriceEntry).filter(
+            SupplierPriceEntry.tenant_id == tenant_id
+        ).all()
+        total_entries = len(all_entries)
+        changed = backfill_effective_units(all_entries)
+        session.commit()
+        backfill_stats = {
+            "total_entries": total_entries,
+            "backfilled": changed,
+            "backfill_pct": round(100 * changed / max(total_entries, 1), 1),
+        }
+
+        # --- Lookup + Near-Miss ---------------------------------------
         results: list[dict] = []
         t0 = time.time()
         for p in PATTERNS:
@@ -143,19 +170,77 @@ def _run_smoke(snap: Path) -> dict:
                 manufacturer=mfr,
                 category=cat,
             )
+            near_miss: list[dict] = []
+            if r.price_source in ("estimated", "not_found"):
+                near_miss = _collect_near_misses(
+                    all_entries,
+                    material=material,
+                    query_unit=p["unit"],
+                    query_mfr=mfr,
+                    score_fn=score_query_against_candidate,
+                    unit_match_fn=unit_matches,
+                )
             results.append({
                 "id": p["id"],
                 "dna": p["dna"],
+                "material_name": material,
+                "query_unit": p["unit"],
+                "query_mfr": mfr,
                 "price_source": r.price_source,
                 "price": float(r.price) if r.price else None,
+                "result_unit": r.unit,
                 "confidence": round(r.match_confidence, 2),
                 "needs_review": r.needs_review,
                 "source_description": r.source_description,
+                "near_miss": near_miss,
             })
         elapsed = time.time() - t0
-        return {"results": results, "elapsed_s": round(elapsed, 2)}
+        return {"results": results, "elapsed_s": round(elapsed, 2), "backfill": backfill_stats}
     finally:
         session.close()
+
+
+def _collect_near_misses(entries, *, material, query_unit, query_mfr,
+                         score_fn, unit_match_fn, top_n=3):
+    """Bewertet ALLE Entries (ohne Filter) anhand Token-Coverage gegen
+    `material` und gibt die Top-N zurueck, inklusive Unit-/Mfr-Status."""
+    scored: list[tuple[float, object]] = []
+    for e in entries:
+        if not e.product_name:
+            continue
+        s = score_fn(material, e.product_name)
+        if s <= 0:
+            continue
+        scored.append((s, e))
+    scored.sort(key=lambda x: -x[0])
+    out = []
+    for s, e in scored[:top_n]:
+        # Unit-Status
+        if e.unit == query_unit or e.effective_unit == query_unit:
+            unit_status = "exact"
+        elif unit_match_fn(query_unit, e.unit) or unit_match_fn(query_unit, e.effective_unit):
+            unit_status = "synonym"
+        else:
+            unit_status = "mismatch"
+        # Mfr-Status
+        if not query_mfr:
+            mfr_status = "none-in-query"
+        elif (e.manufacturer or "").strip().lower() == query_mfr.strip().lower():
+            mfr_status = "exact"
+        else:
+            mfr_status = "mismatch"
+        out.append({
+            "product_name": e.product_name,
+            "score": round(s, 1),
+            "entry_unit": e.unit,
+            "entry_effective_unit": e.effective_unit,
+            "unit_status": unit_status,
+            "entry_manufacturer": e.manufacturer,
+            "mfr_status": mfr_status,
+            "price_per_effective_unit": float(e.price_per_effective_unit) if e.price_per_effective_unit else None,
+            "entry_id": e.id,
+        })
+    return out
 
 
 def _report(out: dict) -> None:
@@ -171,6 +256,12 @@ def _report(out: dict) -> None:
     print("=" * 72)
     print("SMOKE-LOOKUP gegen Kemmler Ausbau 04/2026")
     print(f"Snapshot: {SNAP_DB}")
+    if "backfill" in out:
+        bf = out["backfill"]
+        print(
+            f"Backfill: {bf['backfilled']} von {bf['total_entries']} Entries "
+            f"({bf['backfill_pct']}%) auf effective_unit entpackt"
+        )
     print(f"Pattern gesamt: {total}")
     print(f"Laufzeit: {out['elapsed_s']}s")
     print()
@@ -188,6 +279,31 @@ def _report(out: dict) -> None:
     for r in rows:
         desc = r["source_description"][:58]
         print(f"  {r['id']:<22} {r['price_source']:<15} {r['confidence']:>5.2f}  {desc}")
+    print()
+    print("=" * 72)
+    print("NEAR-MISS-DIAGNOSE (nur estimated / not_found)")
+    print("=" * 72)
+    for r in rows:
+        if r["price_source"] not in ("estimated", "not_found"):
+            continue
+        print()
+        print(f"  [{r['id']}]  query='{r['material_name']}'  unit='{r['query_unit']}'  mfr='{r['query_mfr']}'")
+        if not r["near_miss"]:
+            print("    (keine Kandidaten mit Overlap)")
+            continue
+        for nm in r["near_miss"]:
+            name = (nm["product_name"] or "")[:60]
+            u = nm["entry_unit"] or ""
+            eu = nm["entry_effective_unit"] or ""
+            mfr = nm["entry_manufacturer"] or ""
+            price = nm["price_per_effective_unit"]
+            price_s = f"{price:.4f}" if price is not None else "-"
+            print(
+                f"    score={nm['score']:5.1f}  unit='{u}'/'{eu}' [{nm['unit_status']}]"
+                f"  mfr='{mfr}' [{nm['mfr_status']}]"
+                f"  price/eff={price_s}"
+            )
+            print(f"        {name}")
 
 
 def main() -> int:

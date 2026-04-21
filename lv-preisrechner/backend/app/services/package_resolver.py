@@ -211,12 +211,13 @@ def backfill_effective_units(entries: Iterable) -> int:
         # und der Entry derzeit "neutral" steht.
         if eff_unit == unit and eff_price == Decimal(str(price)):
             continue
-        # Safety-Check: nur ueberschreiben, wenn effective_unit bisher
-        # dem unit entspricht (d. h. der Parser hat nichts eigenes
-        # gesetzt). Verhindert, dass wir bewusste Parser-Entscheidungen
-        # ueberfahren.
+        # Safety-Check: nur ueberschreiben, wenn die aktuelle
+        # effective_unit noch ein Gebinde ist. Wenn der Parser die
+        # Einheit bereits auf Stk./m/m²/kg/... reduziert hat, lassen
+        # wir seine Entscheidung stehen. "€/Ktn." und "€/Karton" sind
+        # beide Gebinde (nur sprachliche Varianten) → weiterentpacken.
         current_eff = getattr(e, "effective_unit", None)
-        if current_eff and current_eff != unit:
+        if current_eff and current_eff != unit and not _is_gebinde(current_eff):
             continue
         e.effective_unit = eff_unit
         e.price_per_effective_unit = eff_price
