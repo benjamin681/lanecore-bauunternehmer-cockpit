@@ -204,11 +204,58 @@ def resolve_pieces_per_length(entry) -> tuple[str, Decimal] | None:
     und schreibt nichts auf den Entry — Commit-Verantwortung liegt bei
     `backfill_effective_units`.
 
-    NOTE (Phase 2 — Stub): Die Implementierung folgt in Phase 3. Aktuell
-    gibt die Funktion None zurueck, um die Golden-Tests auf Vertragsebene
-    zu definieren.
+    Die Funktion ist pure und mutiert den Entry nicht.
     """
-    return None
+    # 1. unit muss ein Laengen-Typ sein
+    unit = getattr(entry, "unit", None) or ""
+    if _canon_unit(unit) not in ("m", "lfm", "lfdm"):
+        return None
+
+    # 2. pieces_per_package: int > 0
+    pieces = getattr(entry, "pieces_per_package", None)
+    try:
+        pieces_int = int(pieces) if pieces is not None else 0
+    except (TypeError, ValueError):
+        return None
+    if pieces_int <= 0:
+        return None
+
+    # 3. package_size: numerisch > 0
+    size_raw = getattr(entry, "package_size", None)
+    if size_raw is None:
+        return None
+    try:
+        size = Decimal(str(size_raw))
+    except Exception:
+        return None
+    if size <= 0:
+        return None
+
+    # 4. package_unit: "m" oder "mm"
+    pkg_unit = (getattr(entry, "package_unit", None) or "").strip().lower()
+    if pkg_unit not in ("m", "mm"):
+        return None
+
+    # 5. mm -> m Normalisierung
+    size_in_m = size / Decimal(1000) if pkg_unit == "mm" else size
+    if size_in_m <= 0:
+        return None
+
+    # 6. Einzelpreis berechnen
+    price_raw = getattr(entry, "price_net", None)
+    if price_raw is None:
+        return None
+    try:
+        price = Decimal(str(price_raw))
+    except Exception:
+        return None
+
+    total_length = Decimal(pieces_int) * size_in_m
+    if total_length <= 0:  # redundant, aber Schutz vor DivisionByZero
+        return None
+
+    ppe = price / total_length
+    return ("m", ppe)
 
 
 def _parse_decimal(s: str) -> Decimal:
