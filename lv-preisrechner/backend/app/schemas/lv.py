@@ -29,6 +29,11 @@ class PositionOut(BaseModel):
     manuell_korrigiert: bool
     warnung: str
 
+    # B+4.2: Preis-Herkunft (aggregiert pro Position). Details stecken im
+    # `materialien`-JSON pro Material-Item.
+    needs_price_review: bool = False
+    price_source_summary: str = ""
+
 
 class PositionUpdate(BaseModel):
     menge: float | None = None
