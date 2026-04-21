@@ -106,13 +106,46 @@ Eingabezeile:
    1 Sa = 0,025 T"
 
 Analyse:
-  - Berechnungsmenge: 1,050 T (Tonnen)
-  - Preis 669,00 E = pro 1 T = pro Tonne
-  - Querrechnung: 669 * 1,050 = 702,45 OK
-  - Auf Sack umgerechnet: 669 * 0,025 = 16,73 €/Sa
+  - Berechnungsmenge: 1,050 T (Tonnen) ODER 42 Sa (Säcke) — beides ist
+    dieselbe Menge
+  - Rohpreis: 669,00 mit Code E
+  - E-Code bedeutet: "pro 1 Berechnungseinheit"
+  - Die Berechnungseinheit ist T (Tonne)
+  - Also: 669 € pro 1 Tonne
+  - Querrechnung: 669 × 1,050 = 702,45 OK (Gesamt stimmt, der E-Code ist
+    korrekt angewandt)
 
-Bevorzugte Ausgabe (auf der Verpackungs-/Lieferform normalisieren, wenn in
-der Zeile explizit genannt):
+WICHTIG: Der E-Code schaltet KEINE Skalierung frei — 669 bleibt 669 pro
+Berechnungseinheit. Nur H, T, Z skalieren durch 100, 1000, 10.
+
+Normalisierung auf Sack:
+  - Der Kunde kauft in Säcken, nicht in Tonnen
+  - 1 Sa = 0,025 T (laut Zeile)
+  - Sack-Preis: 669 × 0,025 = 16,73 €/Sa
+  - Verifikation: 16,73 × 42 = 702,66 ≈ 702,45 (Rundung in PDF)
+
+
+NORMALISIERUNGS-REGEL bei Mehrfach-Einheiten:
+
+Wenn eine Zeile mehrere Mengen-Angaben zeigt (z.B. "1,050 T" UND "42 Sa"
+UND "=1 PAL"), waehle die Einheit der kleinsten verkaufbaren Packung:
+
+Reihenfolge (kleinste zuerst, nimm die erste die passt):
+  1. Stueck, St, Stk
+  2. Sack, Sa, S.
+  3. Paket, Pak, Ktn, Eim, Rol
+  4. Buendel, Bnd
+  5. Palette, PAL
+  6. Tonne, T
+
+Begruendung: Das ist die Einheit, die der Kunde im Angebot tatsaechlich
+kauft. Die Tonnen-/Paletten-Angabe ist nur Meta-Info fuer den Lieferanten.
+
+BEISPIEL: "1,050 T" + "42 Sa" + "1 Sa = 0,025 T"
+→ Waehle Sa (Sack). Rechne Preis um falls noetig.
+
+
+Ausgabe (auf die kleinste verkaufbare Packung normalisiert — hier Sack):
   {
     "article_number": "30109160",
     "manufacturer": "Baumit",
@@ -200,6 +233,12 @@ Wenn ein Flag greift, setze:
 Wenn du selbst eine Korrektur mit hoher Sicherheit vornehmen kannst
 (z.B. H-Code klar sichtbar und ratio zeigt genau 0,01), korrigiere den
 price_net UND setze den Warning-Flag (zur Nachvollziehbarkeit).
+WICHTIG: Der Original-Wert bleibt in attributes.raw_price stehen, NICHT
+ueberschreiben. So kann ein Review-Mensch die Korrektur nachvollziehen:
+  - price_net: korrigierter Wert
+  - attributes.raw_price: Original-Wert aus PDF
+  - attributes.validation_warning: Flag
+  - attributes.auto_corrected: true (neu hinzufuegen)
 
 Wenn Menge oder Gesamtpreis nicht eindeutig lesbar sind: UEBERSPRINGE die
 Validierung, aber setze parser_confidence hoechstens 0,7.
