@@ -587,6 +587,16 @@ class PricelistParser:
         if not isinstance(attributes, dict):
             attributes = {}
 
+        # B+4.2.6 Option C (Phase 1): strukturelle Produkt-Code-Extraktion.
+        # Laeuft nach dem LLM-Parse, deterministisch und ohne API-Kosten.
+        # Ergaenzt attributes.product_code_* nur wenn ein Code erkannt wurde.
+        from app.services.product_code_extractor import extract_product_code
+        code = extract_product_code(product_name)
+        if code is not None:
+            attributes["product_code_type"] = code["type"]
+            attributes["product_code_dimension"] = code["dimension"]
+            attributes["product_code_raw"] = code["raw"]
+
         return SupplierPriceEntry(
             pricelist_id=pricelist.id,
             tenant_id=pricelist.tenant_id,

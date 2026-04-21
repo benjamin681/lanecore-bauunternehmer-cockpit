@@ -101,16 +101,41 @@ welche ignoriert werden (WLG = Wärmeleitgruppe, keine Matching-Relevanz).
 
 ## Kern-Regeln für den Extraktor
 
-1. **Basis-Regex:** `[A-Z]{2,3}\d+(?:/\d+)?` (Typ = 2–3 Großbuchstaben,
-   direkt gefolgt von Zahlen, optional `/Zahlen` für CD60/27).
-2. **Bindestrich-Toleranz:** `[A-Z]{2,3}-?\d+` matcht auch `CW-75` →
-   normalisiert zu `CW75`.
-3. **Leerzeichen-Toleranz:** nur wenn Typ-Tokens direkt von Zahl gefolgt
-   sind (`CW 75` ist ein Grenzfall; konservativ: **nein**, weil ein
-   freiverlaufender Satz „CW Profil 75 mm" nicht als Code zählen soll).
-4. **Erstes Vorkommen gewinnt** — bei mehreren Matches im Namen.
-5. **Kein Match → Keys fehlen in `attributes`** (nicht `None`, nicht
+1. **Basis-Regex:** `[A-Z]{2,3}\d+` (Typ = 2–3 Großbuchstaben, direkt
+   gefolgt von Zahlen). **Keine Spezialbehandlung von `/27`-Suffixen**
+   (siehe Trade-off unten).
+2. **Trennzeichen-Toleranz:** vor dem Regex-Match werden im Produktnamen
+   `-` und `_` zwischen Alpha und Digit entfernt; `"CW-75"` und
+   `"CW_75"` werden somit beide zu `CW75`. Leerzeichen bleiben
+   **erhalten** (Trennung erfolgt bei Wort-Grenzen) — aber der Regex
+   matcht auch `CW 75`, wenn die Leerstelle zwischen Alpha-Token und
+   Digit-Token trivial überbrückbar ist (siehe Implementierung).
+3. **Erstes Vorkommen gewinnt** — bei mehreren Matches im Namen.
+4. **Kein Match → Keys fehlen in `attributes`** (nicht `None`, nicht
    leerer String).
+
+### Design-Trade-off: CD60/27 wird auf CD60 verkürzt
+
+Kemmler-Pattern wie `CD60/27` (Metrik: 60 mm Kopf, 27 mm Steg) werden
+vom Extraktor bewusst auf `type="CD"`, `dimension="60"`, `raw="CD60"`
+verkürzt. Der `/27`-Teil fällt weg.
+
+**Begründung:**
+
+- Der Regex bleibt einfach (`[A-Z]{2,3}\d+`, kein optionales
+  `(?:/\d+)?`-Tail).
+- Der Matcher-Lookup morgen kann ohne `/27`-Genauigkeit funktionieren:
+  `CD60` reicht als Typ-Identifier, die genaue CD-Variante liest der
+  Matcher aus `package_size`/`package_unit` oder der Produktbeschreibung
+  nach, wenn tatsächlich Bedarf besteht.
+- In der Praxis liefert Kemmler nur einen CD-Profil-Typ (CD 60/27), es
+  gibt keine konkurrierenden Varianten wie `CD 50/27` oder `CD 60/30`.
+  Der Information-Verlust ist produktseitig unproblematisch.
+
+**Wenn später doch gebraucht:** Matcher kann bei Bedarf aus
+`package_size` (z. B. 2,6 m) oder einer Regex-Nachlese auf dem
+Produktnamen den `/27`-Suffix rekonstruieren. Heute: nicht nötig, nicht
+gebaut.
 
 ## Edge-Cases für die Test-Suite (Phase 1c)
 
