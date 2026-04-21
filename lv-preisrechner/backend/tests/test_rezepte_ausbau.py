@@ -74,7 +74,8 @@ def test_gk_schwert_rezept_existiert_mit_sinnvoller_materialliste():
     # Silentboard + CW-Profil sind Pflicht-Materialien (nicht optional)
     pflicht = [m for m in r.materialien if not m.optional]
     assert any("Silentboard" in m.dna_pattern for m in pflicht)
-    assert any("CW50" in m.dna_pattern for m in pflicht)
+    # B+4.2.6: Pattern getrennt als "|Profile|CW|50|"
+    assert any("|Profile|CW|50|" in m.dna_pattern for m in pflicht)
     # Alias-Resolver muss greifen
     assert resolve_rezept("GK-Schwert", "", "") is r
     assert resolve_rezept("Fassadenschwertanschluss", "", "") is r

@@ -57,8 +57,8 @@ REZEPTE: dict[str, Rezept] = {
         zeit_h_pro_einheit=0.55,
         materialien=[
             MaterialBedarf("|Gipskarton|GKB|12.5mm|", 2.10, "m²"),
-            MaterialBedarf("|Profile|CW75|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW75|", 0.80, "lfm", optional=True),
+            MaterialBedarf("|Profile|CW|75|", 1.80, "lfm"),
+            MaterialBedarf("|Profile|UW|75|", 0.80, "lfm", optional=True),
             MaterialBedarf("|Daemmung||40mm|", 1.00, "m²", optional=True),
             MaterialBedarf("|Schrauben||3.5x25|", 0.05, "Stk", optional=True),  # ~25 Stk/m²; Faktor 0.05 = 25/500
             MaterialBedarf("|Spachtel||Universal|", 0.40, "kg", optional=True),
@@ -77,8 +77,8 @@ REZEPTE: dict[str, Rezept] = {
         zeit_h_pro_einheit=0.85,  # zwischen W112 (0.55) und W115 (0.75) mit mehr Material
         materialien=[
             MaterialBedarf("|Gipskarton|GKB|12.5mm|", 3.15, "m²"),  # 3 Lagen gesamt (1.5 je Seite, oder 2+1)
-            MaterialBedarf("|Profile|CW75|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW75|", 0.80, "lfm", optional=True),
+            MaterialBedarf("|Profile|CW|75|", 1.80, "lfm"),
+            MaterialBedarf("|Profile|UW|75|", 0.80, "lfm", optional=True),
             MaterialBedarf("|Daemmung||60mm|", 1.00, "m²", optional=True),
             MaterialBedarf("|Schrauben||3.5x25|", 0.06, "Stk", optional=True),
             MaterialBedarf("|Schrauben||3.5x45|", 0.03, "Stk", optional=True),
@@ -92,8 +92,8 @@ REZEPTE: dict[str, Rezept] = {
         zeit_h_pro_einheit=0.75,
         materialien=[
             MaterialBedarf("|Gipskarton|GKB|12.5mm|", 4.20, "m²"),
-            MaterialBedarf("|Profile|CW75|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW75|", 0.80, "lfm", optional=True),
+            MaterialBedarf("|Profile|CW|75|", 1.80, "lfm"),
+            MaterialBedarf("|Profile|UW|75|", 0.80, "lfm", optional=True),
             MaterialBedarf("|Daemmung||60mm|", 1.00, "m²", optional=True),
             MaterialBedarf("|Schrauben||3.5x25|", 0.06, "Stk", optional=True),
             MaterialBedarf("|Schrauben||3.5x45|", 0.03, "Stk", optional=True),
@@ -111,8 +111,8 @@ REZEPTE: dict[str, Rezept] = {
         zeit_h_pro_einheit=0.95,
         materialien=[
             MaterialBedarf("|Gipskarton|GKB|12.5mm|", 4.20, "m²"),
-            MaterialBedarf("|Profile|CW75|", 3.60, "lfm"),
-            MaterialBedarf("|Profile|UW75|", 1.60, "lfm", optional=True),
+            MaterialBedarf("|Profile|CW|75|", 3.60, "lfm"),
+            MaterialBedarf("|Profile|UW|75|", 1.60, "lfm", optional=True),
             MaterialBedarf("|Daemmung||60mm|", 1.00, "m²", optional=True),
             MaterialBedarf("|Schrauben||3.5x45|", 0.06, "Stk", optional=True),
             MaterialBedarf("|Spachtel||Universal|", 0.70, "kg", optional=True),
@@ -125,8 +125,8 @@ REZEPTE: dict[str, Rezept] = {
         zeit_h_pro_einheit=0.85,
         materialien=[
             MaterialBedarf("|Gipskarton|GKF|12.5mm|", 4.20, "m²"),
-            MaterialBedarf("|Profile|CW75|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW75|", 0.80, "lfm", optional=True),
+            MaterialBedarf("|Profile|CW|75|", 1.80, "lfm"),
+            MaterialBedarf("|Profile|UW|75|", 0.80, "lfm", optional=True),
             MaterialBedarf("|Daemmung||60mm|", 1.00, "m²", optional=True),
             MaterialBedarf("|Schrauben||3.5x25|", 0.06, "Stk", optional=True),
             MaterialBedarf("|Schrauben||3.5x45|", 0.03, "Stk", optional=True),
@@ -145,8 +145,8 @@ REZEPTE: dict[str, Rezept] = {
         zeit_h_pro_einheit=1.10,  # wg. Stahlblech-Handling (wie vormals W135_Stahlblech)
         materialien=[
             MaterialBedarf("|Gipskarton|GKF|12.5mm|", 4.20, "m²"),  # 2x beidseitig
-            MaterialBedarf("|Profile|CW75|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW75|", 0.80, "lfm", optional=True),
+            MaterialBedarf("|Profile|CW|75|", 1.80, "lfm"),
+            MaterialBedarf("|Profile|UW|75|", 0.80, "lfm", optional=True),
             MaterialBedarf("|Stahlblech|Einlage|0.5mm|", 2.00, "m²"),  # je Seite
             MaterialBedarf("|Daemmung||60mm|", 1.00, "m²", optional=True),
             MaterialBedarf("|Schrauben||3.5x45|", 0.06, "Stk", optional=True),
@@ -167,7 +167,7 @@ REZEPTE: dict[str, Rezept] = {
         zeit_h_pro_einheit=0.45,
         materialien=[
             MaterialBedarf("|Gipskarton|GKB|12.5mm|", 1.05, "m²"),
-            MaterialBedarf("|Profile|CD60/27|", 2.00, "lfm"),
+            MaterialBedarf("|Profile|CD|60/27|", 2.00, "lfm"),
             MaterialBedarf("|Daemmung||40mm|", 1.00, "m²", optional=True),
             MaterialBedarf("|Schrauben||3.5x25|", 0.03, "Stk", optional=True),
             MaterialBedarf("|Spachtel||Universal|", 0.25, "kg", optional=True),
@@ -180,8 +180,8 @@ REZEPTE: dict[str, Rezept] = {
         zeit_h_pro_einheit=0.50,
         materialien=[
             MaterialBedarf("|Gipskarton|GKB|12.5mm|", 1.05, "m²"),
-            MaterialBedarf("|Profile|CW50|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW50|", 0.80, "lfm", optional=True),
+            MaterialBedarf("|Profile|CW|50|", 1.80, "lfm"),
+            MaterialBedarf("|Profile|UW|50|", 0.80, "lfm", optional=True),
             MaterialBedarf("|Daemmung||40mm|", 1.00, "m²", optional=True),
             MaterialBedarf("|Schrauben||3.5x25|", 0.03, "Stk", optional=True),
             MaterialBedarf("|Spachtel||Universal|", 0.25, "kg", optional=True),
@@ -207,8 +207,8 @@ REZEPTE: dict[str, Rezept] = {
         zeit_h_pro_einheit=0.90,
         materialien=[
             MaterialBedarf("Knauf|Gipskarton|Fireboard|20mm|", 2.10, "m²"),
-            MaterialBedarf("|Profile|CW75|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW75|", 0.80, "lfm", optional=True),
+            MaterialBedarf("|Profile|CW|75|", 1.80, "lfm"),
+            MaterialBedarf("|Profile|UW|75|", 0.80, "lfm", optional=True),
             MaterialBedarf("|Daemmung||40mm|", 1.00, "m²", optional=True),
             MaterialBedarf("|Schrauben||3.5x45|", 0.04, "Stk", optional=True),
             MaterialBedarf("|Spachtel||Universal|", 0.60, "kg", optional=True),
@@ -224,8 +224,8 @@ REZEPTE: dict[str, Rezept] = {
         zeit_h_pro_einheit=0.95,
         materialien=[
             MaterialBedarf("Knauf|Gipskarton|Fireboard|20mm|", 2.10, "m²"),
-            MaterialBedarf("|Profile|CW100|", 1.80, "lfm"),  # 100mm wegen groesserer Spannweite
-            MaterialBedarf("|Profile|UW100|", 0.80, "lfm", optional=True),
+            MaterialBedarf("|Profile|CW|100|", 1.80, "lfm"),  # 100mm wegen groesserer Spannweite
+            MaterialBedarf("|Profile|UW|100|", 0.80, "lfm", optional=True),
             MaterialBedarf("|Daemmung||60mm|", 1.00, "m²", optional=True),
             MaterialBedarf("|Schrauben||3.5x45|", 0.05, "Stk", optional=True),
             MaterialBedarf("|Spachtel||Universal|", 0.60, "kg", optional=True),
@@ -240,8 +240,8 @@ REZEPTE: dict[str, Rezept] = {
         zeit_h_pro_einheit=1.05,  # hoeherer Aufwand wg. Doppelstaender
         materialien=[
             MaterialBedarf("Knauf|Gipskarton|Fireboard|20mm|", 2.10, "m²"),
-            MaterialBedarf("|Profile|CW100|", 3.60, "lfm"),  # doppelte Profilreihe
-            MaterialBedarf("|Profile|UW100|", 1.60, "lfm", optional=True),
+            MaterialBedarf("|Profile|CW|100|", 3.60, "lfm"),  # doppelte Profilreihe
+            MaterialBedarf("|Profile|UW|100|", 1.60, "lfm", optional=True),
             MaterialBedarf("|Daemmung||80mm|", 1.00, "m²", optional=True),
             MaterialBedarf("|Schrauben||3.5x45|", 0.06, "Stk", optional=True),
             MaterialBedarf("|Spachtel||Universal|", 0.65, "kg", optional=True),
@@ -256,8 +256,8 @@ REZEPTE: dict[str, Rezept] = {
         zeit_h_pro_einheit=1.00,
         materialien=[
             MaterialBedarf("Knauf|Gipskarton|Fireboard|20mm|", 2.10, "m²"),
-            MaterialBedarf("|Profile|UW75|", 3.60, "lfm"),  # doppelte Reihe aus UW
-            MaterialBedarf("|Profile|UW75|", 0.80, "lfm", optional=True),
+            MaterialBedarf("|Profile|UW|75|", 3.60, "lfm"),  # doppelte Reihe aus UW
+            MaterialBedarf("|Profile|UW|75|", 0.80, "lfm", optional=True),
             MaterialBedarf("|Daemmung||60mm|", 1.00, "m²", optional=True),
             MaterialBedarf("|Schrauben||3.5x45|", 0.05, "Stk", optional=True),
             MaterialBedarf("|Spachtel||Universal|", 0.60, "kg", optional=True),
@@ -280,7 +280,7 @@ REZEPTE: dict[str, Rezept] = {
         zeit_h_pro_einheit=0.55,
         materialien=[
             MaterialBedarf("|Gipskarton|GKB|12.5mm|", 1.05, "m²"),
-            MaterialBedarf("|Profile|CD60|27|", 3.20, "lfm"),
+            MaterialBedarf("|Profile|CD|60/27|", 3.20, "lfm"),
             MaterialBedarf("|Profile|UD|", 0.60, "lfm"),
             # Abhänger/Clip pauschal pro m² (häufig nicht in Preisliste — ggf. kein Match)
             MaterialBedarf("|Daemmung||40mm|", 0.60, "m²", optional=True),
@@ -296,7 +296,7 @@ REZEPTE: dict[str, Rezept] = {
             # Beplankung 1-lagig als Default. Bei F90/F60 Anforderung verdoppelt die
             # Kalkulation (TODO: over feuerwiderstand-Feld).
             MaterialBedarf("|Gipskarton|GKB|12.5mm|", 1.05, "m²"),
-            MaterialBedarf("|Profile|CD60|27|", 3.20, "lfm"),
+            MaterialBedarf("|Profile|CD|60/27|", 3.20, "lfm"),
             MaterialBedarf("|Profile|UD|", 0.60, "lfm"),
             MaterialBedarf("|Daemmung||40mm|", 0.60, "m²", optional=True),
             MaterialBedarf("|Spachtel||Universal|", 0.35, "kg", optional=True),
@@ -312,7 +312,7 @@ REZEPTE: dict[str, Rezept] = {
         materialien=[
             MaterialBedarf("|Gipskarton|GKB|12.5mm|", 1.05, "m²"),
             MaterialBedarf("|Profile|UA|50|", 1.20, "lfm"),  # Grundprofil UA 50
-            MaterialBedarf("|Profile|CD60|27|", 3.20, "lfm"),  # Tragprofil
+            MaterialBedarf("|Profile|CD|60/27|", 3.20, "lfm"),  # Tragprofil
             MaterialBedarf("|Daemmung||40mm|", 0.60, "m²", optional=True),
             MaterialBedarf("|Spachtel||Universal|", 0.35, "kg", optional=True),
         ],
@@ -328,8 +328,8 @@ REZEPTE: dict[str, Rezept] = {
         zeit_h_pro_einheit=0.85,  # aufwendig wg. Wandbefestigung, Spannweite
         materialien=[
             MaterialBedarf("|Gipskarton|GKF|12.5mm|", 2.10, "m²"),  # typisch 2-lagig GKF
-            MaterialBedarf("|Profile|CW75|", 2.50, "lfm"),  # Tragprofile spannen frei
-            MaterialBedarf("|Profile|UW75|", 1.00, "lfm", optional=True),
+            MaterialBedarf("|Profile|CW|75|", 2.50, "lfm"),  # Tragprofile spannen frei
+            MaterialBedarf("|Profile|UW|75|", 1.00, "lfm", optional=True),
             MaterialBedarf("|Daemmung||60mm|", 1.00, "m²", optional=True),
             MaterialBedarf("|Spachtel||Universal|", 0.55, "kg", optional=True),
         ],
@@ -361,8 +361,8 @@ REZEPTE: dict[str, Rezept] = {
         zeit_h_pro_einheit=1.10,  # erhoeht wegen Stahlblech-Handling
         materialien=[
             MaterialBedarf("|Gipskarton|GKF|12.5mm|", 4.20, "m²"),  # 2-lagig beidseitig
-            MaterialBedarf("|Profile|CW100|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW100|", 0.80, "lfm", optional=True),
+            MaterialBedarf("|Profile|CW|100|", 1.80, "lfm"),
+            MaterialBedarf("|Profile|UW|100|", 0.80, "lfm", optional=True),
             MaterialBedarf("|Stahlblech|Einlage|0.5mm|", 2.00, "m²"),  # je Seite, Pflicht
             MaterialBedarf("|Daemmung||80mm|", 1.00, "m²", optional=True),
             MaterialBedarf("|Spachtel||Universal|", 0.70, "kg", optional=True),
@@ -384,8 +384,8 @@ REZEPTE: dict[str, Rezept] = {
         zeit_h_pro_einheit=1.25,  # 3-lagig + Stahlblech = hoechster Aufwand
         materialien=[
             MaterialBedarf("|Gipskarton|GKF|12.5mm|", 6.30, "m²"),  # 3x beidseitig = 6 m²/m²
-            MaterialBedarf("|Profile|CW100|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW100|", 0.80, "lfm", optional=True),
+            MaterialBedarf("|Profile|CW|100|", 1.80, "lfm"),
+            MaterialBedarf("|Profile|UW|100|", 0.80, "lfm", optional=True),
             MaterialBedarf("|Stahlblech|Einlage|0.5mm|", 2.00, "m²"),
             MaterialBedarf("|Daemmung||80mm|", 1.00, "m²", optional=True),
             MaterialBedarf("|Spachtel||Universal|", 0.85, "kg", optional=True),
@@ -398,8 +398,8 @@ REZEPTE: dict[str, Rezept] = {
         zeit_h_pro_einheit=0.80,
         materialien=[
             MaterialBedarf("|Aquapanel||12.5mm|", 1.05, "m²"),
-            MaterialBedarf("|Profile|CW75|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW75|", 0.80, "lfm", optional=True),
+            MaterialBedarf("|Profile|CW|75|", 1.80, "lfm"),
+            MaterialBedarf("|Profile|UW|75|", 0.80, "lfm", optional=True),
             MaterialBedarf("|Daemmung||40mm|", 1.00, "m²", optional=True),
         ],
     ),
@@ -475,7 +475,7 @@ REZEPTE: dict[str, Rezept] = {
         zeit_h_pro_einheit=0.65,
         materialien=[
             MaterialBedarf("|Gipskarton|GKB|12.5mm|", 1.70, "m²"),
-            MaterialBedarf("|Profile|CW50|", 2.50, "lfm"),
+            MaterialBedarf("|Profile|CW|50|", 2.50, "lfm"),
             MaterialBedarf("|Daemmung||60mm|", 0.40, "m²", optional=True),
             MaterialBedarf("|Spachtel||Universal|", 0.30, "kg", optional=True),
         ],
@@ -494,7 +494,7 @@ REZEPTE: dict[str, Rezept] = {
         zeit_h_pro_einheit=0.9,
         materialien=[
             MaterialBedarf("|Gipskarton|GKF|12.5mm|", 1.20, "m²"),
-            MaterialBedarf("|Profile|CW50|", 2.50, "lfm"),
+            MaterialBedarf("|Profile|CW|50|", 2.50, "lfm"),
             MaterialBedarf("|Daemmung||40mm|", 0.60, "m²", optional=True),
             MaterialBedarf("|Spachtel||Universal|", 0.40, "kg", optional=True),
         ],
@@ -626,8 +626,8 @@ REZEPTE: dict[str, Rezept] = {
             # TODO: Mengen gegen DIN 18181 / Knauf-Verarbeitungsrichtlinie verifizieren
             MaterialBedarf("|Gipskarton|Silentboard|12.5mm|", 0.50, "m²"),
             MaterialBedarf("|Daemmung||20mm|", 0.20, "m²", optional=True),
-            MaterialBedarf("|Profile|CW50|", 2.00, "lfm"),
-            MaterialBedarf("|Profile|UW50|", 0.40, "lfm", optional=True),
+            MaterialBedarf("|Profile|CW|50|", 2.00, "lfm"),
+            MaterialBedarf("|Profile|UW|50|", 0.40, "lfm", optional=True),
             MaterialBedarf("|Profile|Eckschutzschiene||", 2.00, "lfm", optional=True),
             MaterialBedarf("|Spachtel||Uniflott|", 0.30, "kg", optional=True),
             MaterialBedarf("|Schrauben||3.5x25|", 15.0, "Stk", optional=True),

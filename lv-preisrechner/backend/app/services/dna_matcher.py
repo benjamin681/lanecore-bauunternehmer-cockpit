@@ -38,14 +38,25 @@ def _score_entry(entry: PriceEntry, pattern_parts: dict[str, str]) -> float:
     Das verhindert dass z.B. UA-Anfrage zu CW75 matcht.
     """
     wanted_prod = pattern_parts.get("produktname", "").lower()
+    wanted_dim = pattern_parts.get("abmessungen", "").lower().strip()
     have_prod = entry.produktname.lower()
+
+    # B+4.2.6: Neue Rezept-Patterns liefern Typ und Dimension getrennt
+    # (|Profile|CW|75|). Fuer den bestehenden Hard-Code-Check fusionieren
+    # wir sie rueckwaerts auf den klassischen Namen ("cw75"), solange
+    # produktname einer der bekannten Typ-Codes ist. So bleibt die
+    # Legacy-Logik unveraendert.
+    if wanted_prod.strip() in {"cw", "uw", "cd"} and wanted_dim:
+        effective_hard = (wanted_prod.strip() + wanted_dim).replace(" ", "").replace("/", "")
+    else:
+        effective_hard = wanted_prod.strip()
 
     # Hard-Match-Produktnamen: wenn spezifischer Code wie "UA", "CW50", "CD60/27" usw.
     # gefordert, MUSS dieser Teil in entry.produktname oder entry.abmessungen vorkommen.
     hard_codes = {"ua", "cw50", "cw75", "cw100", "cw150", "uw50", "uw75", "uw100",
                   "cd60", "ud", "fireboard", "diamant", "silentboard", "aquapanel"}
     for code in hard_codes:
-        if wanted_prod and code == wanted_prod.strip().lower():
+        if effective_hard and code == effective_hard:
             combined = f"{entry.produktname} {entry.abmessungen} {entry.variante}".lower()
             if code not in combined:
                 return 0.0

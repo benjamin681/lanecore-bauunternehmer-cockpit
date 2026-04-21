@@ -52,7 +52,8 @@ def test_w623_ist_direkt_befestigt_mit_cd_profil():
     r = REZEPTE["W623"]
     assert "direkt" in r.beschreibung.lower()
     # Rezept muss CD60/27 als Profil fordern (nicht CW)
-    cd_profile = [m for m in r.materialien if "CD60" in m.dna_pattern]
+    # B+4.2.6: Pattern getrennt als "|Profile|CD|60/27|"
+    cd_profile = [m for m in r.materialien if "|CD|" in m.dna_pattern]
     assert cd_profile, f"W623 muss CD60-Profil fordern, aktuelle Materialien: {[m.dna_pattern for m in r.materialien]}"
 
 
@@ -60,7 +61,8 @@ def test_w625_ist_freistehend_mit_cw_profil():
     """W625.de = freistehend mit CW-Profil (einlagig beplankt)."""
     r = REZEPTE["W625"]
     assert "freistehend" in r.beschreibung.lower()
-    cw_profile = [m for m in r.materialien if "CW50" in m.dna_pattern or "CW75" in m.dna_pattern]
+    # B+4.2.6: Pattern getrennt als "|Profile|CW|50|" / "|Profile|CW|75|"
+    cw_profile = [m for m in r.materialien if "|Profile|CW|" in m.dna_pattern]
     assert cw_profile, f"W625 muss CW-Profil fordern, aktuelle Materialien: {[m.dna_pattern for m in r.materialien]}"
 
 

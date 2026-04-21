@@ -218,9 +218,83 @@ def score_query_against_candidate(query: str, candidate: str) -> float:
 
     Rueckgabe: 0.0 wenn Anfrage leer, sonst in [0, 100].
     """
-    q_tokens = set(normalize_product_name(query).split())
-    c_tokens = set(normalize_product_name(candidate).split())
+    q_norm = normalize_product_name(query)
+    c_norm = normalize_product_name(candidate)
+    # B+4.2.6: Verschmolzene Typ+Dim-Tokens ("cw75") in zwei Tokens zerlegen,
+    # bevor wir mit dem Token-Set arbeiten. Das trifft die Rezept-Eingaben
+    # aus kalkulation._resolve_material_via_lookup, wo material_name ohne
+    # Leerzeichen gejoint wird.
+    q_norm = _explode_alnum(q_norm)
+    c_norm = _explode_alnum(c_norm)
+    q_tokens_list = q_norm.split()
+    c_tokens_list = c_norm.split()
+    q_tokens = set(q_tokens_list)
+    c_tokens = set(c_tokens_list)
     if not q_tokens:
         return 0.0
+
+    # Baseline-Score (asymmetrische Coverage) -- bleibt als Fallback-Signal.
     matched = sum(1 for t in q_tokens if t in c_tokens)
-    return 100.0 * matched / len(q_tokens)
+    residual = 100.0 * matched / len(q_tokens)
+
+    # B+4.2.6: Die Typ-/Dimensions-Spezial-Logik greift nur fuer
+    # *Profil-Code-Anfragen* (kurzer Typ-Code wie "cw"/"uw"/"ua"/"cd"/"ud"
+    # + genau eine numerische Dimension). Produktnamen wie "Rotband Pro"
+    # oder "Knauf Diamant" bleiben beim urspruenglichen Coverage-Score.
+    q_dims = {t for t in q_tokens if _is_numeric_token(t)}
+    q_alpha = [t for t in q_tokens_list if t.isalpha()]
+    # B+4.2.6-Iteration 3: Harte Typ-Priorisierung nur fuer bekannte
+    # Trockenbau-Profil-Codes. Andere 2-Token-Anfragen (z. B. "GKB 12.5",
+    # "Rotband Pro") fallen zurueck auf den urspruenglichen Coverage-Score,
+    # damit hier kein False-Negative entsteht.
+    _STRICT_TYPE_CODES = {"cw", "uw", "ua", "cd", "ud"}
+    is_profile_code = (
+        len(q_tokens_list) == 2
+        and len(q_alpha) == 1
+        and q_alpha[0] in _STRICT_TYPE_CODES
+        and len(q_dims) == 1
+    )
+    if not is_profile_code:
+        return residual
+
+    q_type = q_alpha[0]
+    c_type = _leading_alpha_token(c_tokens_list)
+    type_match = 100.0 if q_type == c_type else 0.0
+
+    c_dims = {t for t in c_tokens if _is_numeric_token(t)}
+    dim_match = 100.0 if q_dims & c_dims else 0.0
+
+    # Gewichtung: 60 % Typ / 25 % Dim / 15 % Residual (B+4.2.6-Iteration 2)
+    return 0.60 * type_match + 0.25 * dim_match + 0.15 * residual
+
+
+# --------------------------------------------------------------------------- #
+# Interne Helfer fuer B+4.2.6-Scoring
+# --------------------------------------------------------------------------- #
+_ALNUM_SPLIT_RE = re.compile(r"([a-z]+)(\d)")
+
+
+def _explode_alnum(text: str) -> str:
+    """Zerlegt verschmolzene Typ+Zahl-Tokens: "cw75" -> "cw 75".
+
+    Greift nur bei lowercase Buchstaben gefolgt von einer Ziffer, damit
+    Produktnamen mit Groesserpaketen wie "DIN4103" erhalten bleiben.
+    """
+    return _ALNUM_SPLIT_RE.sub(r"\1 \2", text)
+
+
+def _leading_alpha_token(tokens: list[str]) -> str | None:
+    """Erstes rein-alphabetisches Token mit mind. 2 Zeichen."""
+    for tok in tokens:
+        if len(tok) >= 2 and tok.isalpha():
+            return tok
+    return None
+
+
+def _is_numeric_token(tok: str) -> bool:
+    """True, wenn der Token eine Zahl (auch Dezimal mit Punkt) ist."""
+    try:
+        float(tok)
+        return True
+    except ValueError:
+        return False
