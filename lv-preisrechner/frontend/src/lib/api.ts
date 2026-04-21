@@ -130,7 +130,19 @@ export type User = {
   bgk_prozent: number;
   agk_prozent: number;
   wg_prozent: number;
+  // B+4.3.1: Neue Preis-Engine (Lookup gegen SupplierPriceList / Overrides)
+  use_new_pricing: boolean;
 };
+
+export type PricingReadiness = {
+  has_active_pricelist: boolean;
+  has_overrides: boolean;
+  ready_for_new_pricing: boolean;
+};
+
+export async function getPricingReadiness(): Promise<PricingReadiness> {
+  return api<PricingReadiness>("/pricing/readiness");
+}
 
 export type PriceList = {
   id: string;
@@ -185,6 +197,11 @@ export type Position = {
   konfidenz: number;
   manuell_korrigiert: boolean;
   warnung: string;
+  // B+4.2: Preis-Herkunft (aggregiert pro Position, Details im
+  // materialien-JSON). Default-Strings/false fuer Legacy-Backends,
+  // die das Feld nicht liefern.
+  needs_price_review?: boolean;
+  price_source_summary?: string;
 };
 
 export type LV = {
