@@ -48,10 +48,15 @@ def test_detect_format_kemmler_by_first_page_text():
     assert _detect_format("/tmp/generic.pdf", first_page_text=text) == "kemmler"
 
 
-def test_detect_format_unknown_returns_none():
-    assert _detect_format("/tmp/hornbach-2026.pdf") is None
-    assert _detect_format("/tmp/random.pdf", supplier_hint="Obi") is None
-    assert _detect_format("/tmp/random.pdf", first_page_text="Bauhaus AG") is None
+def test_detect_format_unknown_falls_back_to_kemmler_prompt():
+    """B+4.3: unbekannte Haendler fallen auf den Kemmler-Prompt als
+    generischen deutschen Preislisten-Prompt. Siehe _detect_format-
+    Docstring."""
+    from app.services.pricelist_parser import UNSUPPORTED_FORMAT_FALLBACK
+    assert UNSUPPORTED_FORMAT_FALLBACK == "kemmler"
+    assert _detect_format("/tmp/hornbach-2026.pdf") == UNSUPPORTED_FORMAT_FALLBACK
+    assert _detect_format("/tmp/random.pdf", supplier_hint="Obi") == UNSUPPORTED_FORMAT_FALLBACK
+    assert _detect_format("/tmp/random.pdf", first_page_text="Bauhaus AG") == UNSUPPORTED_FORMAT_FALLBACK
 
 
 # ---------------------------------------------------------------------------

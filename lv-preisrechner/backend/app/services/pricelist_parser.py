@@ -70,6 +70,12 @@ class UnitInfo:
 # ---------------------------------------------------------------------------
 _KEMMLER_FILENAME_HINTS = ("kemmler", "ausbau-", "a-liste", "a+-liste", "a_liste")
 
+# B+4.3-Entscheidung: Preislisten unbekannter Haendler sollen nicht hart
+# scheitern. Wir nutzen den Kemmler-Prompt als "generischer deutscher
+# Preislisten-Prompt". Das ist ein pragmatischer Zwischenschritt, bis ein
+# echter lieferanten-agnostischer Prompt existiert.
+UNSUPPORTED_FORMAT_FALLBACK: "SupplierFormat" = "kemmler"
+
 # Pricelist-Parsing braucht mehr Output-Budget als der Default (16k),
 # weil Multi-Image-Batches komplexe JSON-Strukturen liefern (pages + entries +
 # attributes pro Zeile). Live-Messung auf Kemmler (Batch 5): Claude
@@ -86,9 +92,13 @@ def _detect_format(
 ) -> SupplierFormat | None:
     """Erkennt das Preislisten-Format anhand von Dateiname + optionalem Text.
 
-    Heute unterstuetzt: Kemmler.
-    Return None wenn nicht sicher erkennbar -> Caller muss entscheiden
-    ob abbrechen oder generischen Fallback-Parser nutzen.
+    Heute dediziert unterstuetzt: Kemmler.
+
+    Fuer andere Haendler (Woelpert, Hornbach, …) geben wir
+    UNSUPPORTED_FORMAT_FALLBACK zurueck — aktuell der Kemmler-Prompt als
+    generischer Start. Der Prompt ist so formuliert, dass er bei deutschen
+    Preislisten allgemein funktioniert (Produktname / Einheit / Preis).
+    Ein echter haendler-agnostischer Prompt kommt in einer spaeteren Runde.
     """
     fn = str(file_path).lower()
     hint = (supplier_hint or "").lower()
@@ -107,7 +117,9 @@ def _detect_format(
         if "kemmler" in text_lower:
             return "kemmler"
 
-    return None
+    # B+4.3: Fallback statt None — wir versuchen, auch unbekannte Formate
+    # zu parsen (siehe Modul-Docstring).
+    return UNSUPPORTED_FORMAT_FALLBACK
 
 
 # ---------------------------------------------------------------------------
