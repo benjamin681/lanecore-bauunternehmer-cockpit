@@ -362,7 +362,22 @@ def _try_supplier_price(
         today=today,
     )
 
-    original = Decimal(str(match.price_net))
+    # B+4.2.7: wenn der Entry eine abweichende `effective_unit` traegt
+    # (z. B. Karton-Preis wurde auf Stueckpreis entpackt), nehmen wir den
+    # effektiven Preis + die effektive Einheit als Basis. Andernfalls
+    # bleibt alles wie bisher (price_net + unit).
+    use_effective = (
+        match.effective_unit
+        and match.effective_unit != match.unit
+        and match.price_per_effective_unit is not None
+    )
+    if use_effective:
+        original = Decimal(str(match.price_per_effective_unit))
+        result_unit = match.effective_unit
+    else:
+        original = Decimal(str(match.price_net))
+        result_unit = match.unit
+
     if discount_rule is not None:
         factor = Decimal("1") - (Decimal(str(discount_rule.discount_percent)) / Decimal("100"))
         final_price = original * factor
@@ -383,13 +398,14 @@ def _try_supplier_price(
             "match_criterion": how,
             "supplier": supplier_name,
             "discount_applied": disc_pct is not None,
+            "used_effective_unit": use_effective,
         }
     )
 
     return PriceLookupResult(
         price=final_price.quantize(Decimal("0.0001")),
         currency=match.currency or "EUR",
-        unit=match.unit,
+        unit=result_unit,
         price_source="supplier_price",
         source_description=desc,
         original_price=original,
