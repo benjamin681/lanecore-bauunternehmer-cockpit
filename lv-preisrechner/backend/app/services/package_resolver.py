@@ -270,13 +270,21 @@ def _parse_decimal(s: str) -> Decimal:
 # ---------------------------------------------------------------------------
 def backfill_effective_units(entries: Iterable) -> int:
     """Setzt `effective_unit` + `price_per_effective_unit` auf jedem Entry
-    der uebergebenen Iterable anhand der `resolve_package`-Logik.
+    anhand der `resolve_package`-Logik und — seit B+4.2.7 — zusaetzlich
+    `resolve_pieces_per_length` als Fallback.
 
-    Wird NUR angewandt, wenn der Entry aktuell `effective_unit == unit`
-    und `price_per_effective_unit == price_net` (also offenbar ohne
-    Paket-Auflösung geparst wurde).
+    Pfad A (bestehend, R1..R4): Greift bei Gebinde-Einheiten mit
+    Stk./Ktn.-, m/Rolle- oder m²/Pak.-Mustern im Produktnamen.
 
-    Gibt die Anzahl geaenderter Einträge zurück. Der Caller entscheidet
+    Pfad B (NEU, B+4.2.7): Greift bei Laengen-Einheiten (€/m, €/lfm,
+    €/lfdm), deren `price_net` noch den Gesamt-Bundle-Preis traegt
+    (typisch: CW-Profil 167,40 EUR fuer 8 Stangen a 2,60 m). Nutzt die
+    bereits strukturell gefuellten Felder `pieces_per_package` +
+    `package_size` + `package_unit`.
+
+    Pfad A hat Vorrang. Pfad B greift nur, wenn A nichts geaendert hat.
+
+    Gibt die Anzahl geaenderter Einträge zurueck. Der Caller entscheidet
     ueber commit().
     """
     changed = 0
@@ -286,20 +294,38 @@ def backfill_effective_units(entries: Iterable) -> int:
         price = getattr(e, "price_net", None)
         if unit is None or price is None:
             continue
+
+        # ---- Pfad A: bestehende R1..R4 ---------------------------------
         eff_unit, eff_price = resolve_package(unit, name, price)
-        # Nur ueberschreiben, wenn sich tatsaechlich etwas aendert
-        # und der Entry derzeit "neutral" steht.
-        if eff_unit == unit and eff_price == Decimal(str(price)):
+        a_hit = not (eff_unit == unit and eff_price == Decimal(str(price)))
+        if a_hit:
+            current_eff = getattr(e, "effective_unit", None)
+            if current_eff and current_eff != unit and not _is_gebinde(current_eff):
+                # Parser hat bereits auf Stk./m/m²/... normalisiert — Pfad A skip.
+                a_hit = False
+            else:
+                e.effective_unit = eff_unit
+                e.price_per_effective_unit = eff_price
+                changed += 1
+                continue  # Pfad B nur als Fallback, nicht kombinieren
+
+        # ---- Pfad B: Pieces-per-Length (B+4.2.7) -----------------------
+        ppl = resolve_pieces_per_length(e)
+        if ppl is None:
             continue
-        # Safety-Check: nur ueberschreiben, wenn die aktuelle
-        # effective_unit noch ein Gebinde ist. Wenn der Parser die
-        # Einheit bereits auf Stk./m/m²/kg/... reduziert hat, lassen
-        # wir seine Entscheidung stehen. "€/Ktn." und "€/Karton" sind
-        # beide Gebinde (nur sprachliche Varianten) → weiterentpacken.
-        current_eff = getattr(e, "effective_unit", None)
-        if current_eff and current_eff != unit and not _is_gebinde(current_eff):
-            continue
-        e.effective_unit = eff_unit
-        e.price_per_effective_unit = eff_price
+        ppl_unit, ppl_price = ppl
+        # Safety: nur ueberschreiben, wenn noch kein echter Einzelpreis
+        # gesetzt wurde (d. h. ppe == price_net oder ppe is None).
+        current_ppe = getattr(e, "price_per_effective_unit", None)
+        if current_ppe is not None:
+            try:
+                if Decimal(str(current_ppe)) != Decimal(str(price)):
+                    # Parser oder frueherer Backfill hat bereits einen
+                    # anderen Einzelpreis gesetzt — nicht ueberschreiben.
+                    continue
+            except Exception:
+                continue
+        e.effective_unit = ppl_unit
+        e.price_per_effective_unit = ppl_price
         changed += 1
     return changed

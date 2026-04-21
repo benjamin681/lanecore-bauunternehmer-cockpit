@@ -515,7 +515,27 @@ class PricelistParser:
         if confidences:
             result.avg_confidence = sum(confidences) / len(confidences)
 
-        # 5. Summen aufs Pricelist-Model zurueckschreiben
+        # 5. B+4.2.7: Gebinde-Backfill fuer die gerade geparsten Entries.
+        # Setzt effective_unit + price_per_effective_unit auf Entries, die
+        # der Parser zwar normiert hat, deren Bundle-Preis aber noch als
+        # Gesamt-Preis stehenbleibt (CW-Profil 167,40 EUR fuer 8 Stangen).
+        from app.services.package_resolver import backfill_effective_units
+        from app.models.pricing import SupplierPriceEntry
+        self.db.flush()  # sicherstellen, dass die Entries in der Session sind
+        entries_in_pricelist = (
+            self.db.query(SupplierPriceEntry)
+            .filter(SupplierPriceEntry.pricelist_id == pricelist_id)
+            .all()
+        )
+        backfilled = backfill_effective_units(entries_in_pricelist)
+        if backfilled:
+            log.info(
+                "pricelist_backfill_applied",
+                pricelist_id=pricelist_id,
+                entries_updated=backfilled,
+            )
+
+        # 6. Summen aufs Pricelist-Model zurueckschreiben
         pricelist.entries_total = result.parsed_entries
         pricelist.entries_reviewed = 0  # wird im Review-Flow spaeter erhoeht
         self.db.commit()
