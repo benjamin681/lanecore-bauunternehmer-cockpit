@@ -320,12 +320,23 @@ def _try_supplier_price(
                 confidence = 0.95
                 break
 
-    # c) Fuzzy auf Produktname + Einheit
+    # c) Fuzzy auf Produktname + Einheit (ggf. + Hersteller)
+    # Seit B+4.2.5: der asymmetrische Normalizer scored sehr aggressiv auf
+    # Token-Coverage; deshalb muessen wir den manufacturer-Filter auch hier
+    # durchziehen, sobald ein Hersteller in der Query bekannt ist. Ohne
+    # diesen Filter wuerde z. B. "Siniat GKFI 12.5"-Anfrage auf eine
+    # Knauf-Platte trompeten.
     if match is None:
-        candidates = base_q.filter(SupplierPriceEntry.unit == unit).all()
+        cand_q = base_q.filter(SupplierPriceEntry.unit == unit)
+        if manufacturer:
+            cand_q = cand_q.filter(SupplierPriceEntry.manufacturer == manufacturer)
+        candidates = cand_q.all()
         if not candidates:
-            # auch effective_unit probieren
-            candidates = base_q.filter(SupplierPriceEntry.effective_unit == unit).all()
+            # auch effective_unit probieren (mit demselben mfr-Filter)
+            alt_q = base_q.filter(SupplierPriceEntry.effective_unit == unit)
+            if manufacturer:
+                alt_q = alt_q.filter(SupplierPriceEntry.manufacturer == manufacturer)
+            candidates = alt_q.all()
         best, ratio = _best_fuzzy(candidates, material_name, lambda e: e.product_name)
         if best is not None and ratio >= FUZZY_MATCH_THRESHOLD:
             match = best
