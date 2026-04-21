@@ -345,7 +345,10 @@ def kalkuliere_lv(db: Session, lv_id: str, tenant_id: str) -> LV:
     lv.gesamtsumme_inklusive_optional = round(summe_gesamt, 2)
     lv.positionen_gematcht = gematcht
     lv.positionen_unsicher = unsicher
-    lv.price_list_id = pl.id if pl else None
+    # LV.price_list_id ist NOT NULL (Legacy-Schema). Im neuen Pfad ohne
+    # Legacy-Liste setzen wir den leeren String als Platzhalter; die echte
+    # Preisquelle steht pro Material im materialien-JSON.
+    lv.price_list_id = pl.id if pl else ""
     lv.status = "calculated"
     db.commit()
     db.refresh(lv)
