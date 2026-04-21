@@ -82,8 +82,9 @@ Code ohne zusätzliche Normalisierung.
 
 | Produktname | type | dimension | raw | Bemerkung |
 |---|---|---|---|---|
-| `CW-Profil 100x50x0,6 mm BL=2600 mm 8 St./Bd.` | `CW` | `100` | `CW100` | Bindestrich wird weggekürzt |
-| `CW 75x50x0,6 mm` | `CW` | `75` | `CW75` | Leerzeichen-getrennt |
+| `CW-Profil 100x50x0,6 mm BL=2600 mm 8 St./Bd.` | — | — | — | **KEIN Code extrahiert — siehe Korrektur unten** |
+| `CW 75x50x0,6 mm` | `CW` | `75` | `CW75` | Leerzeichen zwischen Alpha und Digit toleriert |
+| `CW-75 Profil` | `CW` | `75` | `CW75` | Bindestrich **direkt** zwischen Alpha und Digit: erkannt |
 | `Trennwandpl. Sonorock WLG040, 1000x625x40 mm` | `WLG` | `040` | `WLG040` | ¹ |
 | `PE-Folie S=0,20 mm - 4000 mm x 50 m/Ro. farbstichig - UT40` | `UT` | `40` | `UT40` | Suffix-Code wird als Typ behandelt — bewusst, die Semantik entscheidet der Matcher |
 | `Baumit Multicontact 25 kg/Sack` | — | — | — | Kein Pattern `[A-Z]{2,3}\d+` |
@@ -161,6 +162,36 @@ gebaut.
 - ✓ Parser-Prompt erweitert (informell, kein semantischer Konflikt).
 - ✓ Python-Post-Processor mit Unit-Tests.
 - ✓ Integration in `_build_entry` (nach Attribut-Übernahme).
+
+## Korrektur zum CW-Profil-Beispiel (nachgetragen Phase 1c)
+
+Die erste Version dieses Dokuments suggerierte, `CW-Profil 100x50x0,6 mm
+BL=2600 mm 8 St./Bd.` würde als `CW100` extrahiert werden. **Das war
+irreführend.** Zwischen dem Alpha-Token `CW` und der Zahl `100` stehen
+in diesem String zwei Zeichen mehr als die Toleranz erlaubt: der
+Bindestrich plus das Wort `Profil` plus ein Leerzeichen. Die Regex
+`[A-Z]{2,3}\d+` mit einer Ein-Zeichen-Toleranz (Bindestrich **oder**
+Leerzeichen) erkennt das **bewusst nicht**.
+
+**Warum die strenge Regex die richtige Wahl ist:**
+
+- False-Positive-Verhinderung: ein Satz wie „Knauf GK Platten 12,5 mm
+  dünn" würde sonst als Code `GK12` oder ähnlich fälschlich
+  interpretiert werden. Die strenge Direkt-Adjacency schützt davor.
+- Signal-Qualität: ein extrahierter Code soll `confidence ≈ 1` haben,
+  weil der Matcher morgen darauf in einer Whitelist filtert. Ein
+  „wahrscheinlicher Code" wäre wertlos.
+- Matcher-Strategie Option A fängt den Fall auf: wenn
+  `attributes.product_code_type` fehlt, fällt der Matcher auf seinen
+  klassischen Fuzzy-Pfad (aus B+4.2.6) zurück — wie heute für den
+  CW-Profil-Eintrag.
+
+**Für den Matcher in Phase 2 bedeutet das:**
+
+- **Primär:** `attributes.product_code_type ∈ Whitelist` (löst u. a. die
+  UT40-Regression, weil `UT` nicht in der Whitelist steht).
+- **Fallback:** wenn kein Code vorhanden, bleibt die bisherige Fuzzy-
+  Logik aktiv (liefert CW-Profil-Matches genauso wie heute).
 
 ## Nächste Phasen
 
