@@ -1,43 +1,41 @@
-"""Material-Namen-Normalisierung fuer Fuzzy-Matching (B+4.2.5).
+"""Material-Namen-Normalisierung fuer Fuzzy-Matching (B+4.2.5 / 4.2.6).
 
 Problem: Reale Kemmler-Artikelnamen ("Knauf DIAMANT Hartgipspl. GKFI
 2000x1250x12,5 mm") und interne DNA-Pattern ("Knauf|Gipskarton|GKFI|12.5|")
 haben dieselbe Produkt-DNA, aber wegen Klammer-Inhalt, Artikelnummern-
-Suffixen, Einheitensuffixen und Formatierungsvarianten liegt die
-`SequenceMatcher.ratio()` der Rohstrings bei ~0.45 — unter der Schwelle
-0.85, die price_lookup.py als Fuzzy-Trefferkriterium nutzt.
+Suffixen, Einheitensuffixen und Formatierungsvarianten liegt eine naive
+Ratio bei ~0.45 — unter der Schwelle 0.85, die price_lookup.py als
+Fuzzy-Trefferkriterium nutzt.
 
 Loesung: Beide Seiten auf eine kanonische Token-Form reduzieren und
-anschliessend `rapidfuzz.fuzz.token_set_ratio` rechnen. token_set_ratio
-ist reihenfolge- und duplikat-invariant und ignoriert das zusaetzliche
-"Rauschen" in einem der Strings (z. B. "Hartgipspl.").
+asymmetrische Token-Coverage rechnen ("Wie viel Prozent der Pattern-
+Tokens sind im Produktnamen enthalten?"). Reihenfolge-invariant und
+robust gegen zusaetzliches Rauschen in einem der Strings.
 
 Design:
 - `normalize_product_name(s)` fuer freie Produktbezeichnungen.
-- `normalize_dna_pattern(p)` fuer DNA-Pattern der Form A|B|C|D|E.
-- Beide erzeugen eine raumgetrennte Token-Liste in Kleinbuchstaben.
-- `fuzzy_match_score(product_name, dna_pattern)` kombiniert beide und
-  liefert den token_set_ratio-Score in [0, 100].
+- `normalize_dna_pattern(p)` fuer DNA-Pattern der Form A|B|C|D|E
+  (Kategorie wird bewusst verworfen; siehe Docstring).
+- `fuzzy_match_score(product_name, dna_pattern)` und
+  `score_query_against_candidate(query, candidate)` liefern beide den
+  asymmetrischen Coverage-Score in [0, 100].
 
 Nicht enthalten: aggressive Synonymisierung (GKF↔GKB, GKFI↔GKBI). Das
 waere eine Falschinformation — GKFI ist Feuerschutz imprägniert, GKB
 ist die Standardplatte. Nur *identische* Codes werden als Token
 behalten.
+
+rapidfuzz-Entscheidung (B+4.2.6 Scope C): wurde aus den Abhaengigkeiten
+entfernt. Die Coverage-Metrik braucht rapidfuzz nicht; der stdlib-
+SequenceMatcher-Fallback in price_lookup._best_fuzzy reicht als zweite
+Sicherung voellig aus. Wiedereinfuehrung waere trivial, sobald ein
+echter Rechtschreibfehler-Case auftritt, der Coverage nicht loest.
 """
 
 from __future__ import annotations
 
 import re
 from functools import lru_cache
-
-try:
-    from rapidfuzz import fuzz as _fuzz  # type: ignore
-
-    _HAS_RAPIDFUZZ = True
-except ImportError:  # pragma: no cover
-    from difflib import SequenceMatcher
-
-    _HAS_RAPIDFUZZ = False
 
 
 # ---------------------------------------------------------------------------
@@ -192,14 +190,6 @@ def fuzzy_match_score(*, product_name: str, dna_pattern: str) -> float:
     enthalten?" Asymmetrisch deshalb, weil der reale Produktname haeufig
     zusaetzliche Tokens enthaelt (Abmessungen, Verpackungshinweise,
     Artikelnummern), die das Matching nicht stoeren duerfen.
-
-    Entspricht dem "asymmetrischen token-set coverage" und ist deutlich
-    praeziser als rapidfuzz.token_set_ratio, weil letzteres bei stark
-    unterschiedlichen String-Laengen den Score drueckt.
-
-    rapidfuzz wird nicht direkt fuer das Ratio genutzt, aber wir benoetigen
-    die Bibliothek als Signal fuer den Import-Fallback (stdlib-Coverage ist
-    identisch; die Funktion bleibt funktionsfaehig ohne rapidfuzz).
 
     Rueckgabe: 0.0 wenn eine Seite leer, sonst in [0, 100].
     """
