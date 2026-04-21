@@ -437,8 +437,15 @@ class PricelistParser:
             batch_size=self._batch_size,
         )
 
-        # 4. Batch-weise durch Claude Vision
-        from app.prompts.kemmler_parser_prompt import SYSTEM_PROMPT
+        # 4. Batch-weise durch Claude Vision.
+        # B+4.3: Prompt-Auswahl per Feature-Flag. Default ist der neue
+        # generische Prompt (Code-Aufloesung H/T/Z/E, Rabatt, Plausibilitaet).
+        # Bei Regression: Settings.use_generic_prompt=False.
+        from app.core.config import settings as _settings
+        if getattr(_settings, "use_generic_prompt", True):
+            from app.prompts.generic_parser_prompt import SYSTEM_PROMPT
+        else:
+            from app.prompts.kemmler_parser_prompt import SYSTEM_PROMPT
 
         confidences: list[float] = []
         for start in range(0, len(images), self._batch_size):

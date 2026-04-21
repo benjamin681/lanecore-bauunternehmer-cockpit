@@ -83,6 +83,12 @@ class Settings(BaseSettings):
     # Seiten pro Vision-Batch — kleiner = mehr Calls, aber saubereres JSON
     claude_pages_per_batch: int = 5
 
+    # --- Parser-Prompt ------------------------------------------------------
+    # Generischer Prompt (H/T/Z/E-Codes, Rabatt-Extraktion, Plausibilitaets-
+    # Check) ist Default seit B+4.3. Bei Regression: auf False setzen und die
+    # betroffenen Pricelists auf PENDING_PARSE zuruecksetzen + Re-Parse.
+    use_generic_prompt: bool = True
+
     # --- CORS --------------------------------------------------------------
     # Aus ENV: JSON-Array `["https://foo.com"]` ODER Komma-Liste.
     cors_origins: list[str] = [
