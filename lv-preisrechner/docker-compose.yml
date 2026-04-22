@@ -1,0 +1,64 @@
+# B+4.3.2b-1: Docker-Compose fuer Self-Hosted Deployment.
+#
+# Drei Services:
+#   * postgres — Managed via benanntem Volume; nur intern erreichbar
+#     (kein Host-Port-Mapping, um mit einem lokalen Host-Postgres auf
+#     5432 nicht zu kollidieren).
+#   * backend  — Built from ./backend/Dockerfile, wartet auf Postgres-
+#     Health, laeuft Alembic-Migrationen beim Start.
+#   * frontend — Built from ./frontend/Dockerfile, Next.js standalone.
+#
+# Host-Ports sind bewusst auf 127.0.0.1 gebunden: spaeter kommt Caddy
+# davor und der Traffic laeuft nur ueber dessen TLS-Endpoint. Wenn
+# Caddy noch nicht da ist, wird extern nichts exponiert.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - lvp_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      SECRET_KEY: ${SECRET_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      CLAUDE_MODEL_PRIMARY: ${CLAUDE_MODEL_PRIMARY:-claude-sonnet-4-6}
+      CLAUDE_MODEL_FALLBACK: ${CLAUDE_MODEL_FALLBACK:-claude-opus-4-6}
+      APP_ENV: ${APP_ENV:-production}
+      PORT: 8000
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL}
+      BACKEND_URL: ${BACKEND_URL}
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+    ports:
+      - "127.0.0.1:3000:3000"
+
+volumes:
+  lvp_postgres_data:

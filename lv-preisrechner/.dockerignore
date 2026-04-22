@@ -1,0 +1,39 @@
+# B+4.3.2b-1: Compose-Build-Context-Filter.
+#
+# docker compose build nutzt ./backend bzw. ./frontend als Context;
+# die service-spezifischen .dockerignore-Dateien (backend/.dockerignore,
+# frontend/.dockerignore) greifen dort. Diese Datei hier ist fuer den
+# Fall, dass ein Compose-Stack später das Repo-Root als Context nutzt
+# (aktuell nicht der Fall, aber harmlos zu haben).
+
+.git
+.gitignore
+docs
+*.md
+!README.md
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+.venv
+.pytest_cache
+.ruff_cache
+.mypy_cache
+
+# Node
+node_modules
+.next
+
+# Env & secrets
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+.idea
+.DS_Store
+
+# Tests
+tests
