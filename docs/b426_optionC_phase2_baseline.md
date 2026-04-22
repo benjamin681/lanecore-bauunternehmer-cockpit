@@ -189,6 +189,74 @@ separate Runde gelöst werden.
   Unterscheidung. Die 126 sind kein Fehler, sondern vollständige
   Strukturierung des Katalogs.
 
+## Blacklist-Verifikation (nachgetragen)
+
+Bevor die Blacklist `{UT, TC, DA}` festgeschrieben wird, Einzel-Review
+aller Kemmler-Entries pro Code-Typ. Ziel: echte **Suffixe** (wie UT als
+Varianten-Kennzeichner) von **echten Typ-Produkten** (wie Direktabhänger
+DA) unterscheiden, damit wir nichts versehentlich herausfiltern, was
+legitimer Match-Kandidat ist.
+
+### UT — 3 Treffer, alle PE-Folien-Suffixe ✓
+
+| raw | dim | unit | product_name |
+|---|---|---|---|
+| UT40 | 40 | €/m² | PE-Folie S=0,20 mm - 4000 mm x 50 m/Ro. farbstichig - UT40 |
+| UT40 | 40 | €/m² | PE-Folie S=0,30 mm - 4000 mm x 25 m/Ro. farbstichig - UT40 |
+| UT20 | 20 | €/m² | PE-Folie S=0,20 mm - 4000 mm x 50 m/Ro. farbstichig - UT20 |
+
+**Semantik:** „UT" steht bei PE-Folien am Namensende als Varianten-
+Kennzeichner (vermutlich „Untertyp"). Keines der drei Produkte ist ein
+„UT-Produkt" im Sinne eines eigenen Typs — die PE-Folie ist der Haupt-
+Typ. Dimensionen 40 und 20 sind **hoch kollisionsgefährdet** mit
+Dämmungs-Rezept-Queries (40mm, 20mm sind gängige Dämmstärken).
+**Blacklist: Ja.**
+
+### TC — 3 Treffer, alle Kemmler-Artikelnummern-Präfix ⚠
+
+| raw | dim | unit | product_name |
+|---|---|---|---|
+| TC7700 | 7700 | €/Rolle | TC7700 Zellvlies 130 g/m² 750 mm breit x 25 m/Rol |
+| TC4303 | 4303 | €/Eimer | TC4303 Mineral-Streichputz Korn 0,8 mm – 20 kg/Eimer |
+| TC4303 | 4303 | €/Eimer | TC4303 Mineral-Streichputz Korn 0,8 mm – 7 kg/Eimer |
+
+**Semantik:** „TC" ist Kemmler-interne Artikelnummern-Serie (technische
+Kennung, kein Produkt-Typ). Die Dimensionen 7700 und 4303 sind
+**unrealistisch** als Rezept-Dimensionen (7,7 m bzw. 4,3 m — keine
+typische mm-Angabe). Eine Kollision mit einer Rezept-Query ist extrem
+unwahrscheinlich. **Blacklist: Ja** — harmlos, weil keine Kollision
+erwartet, aber schützt gegen künftige Rezepte mit ungewöhnlichen
+Dimensionen.
+
+### DA — 2 Treffer, **echtes Typ-Produkt** (Direktabhänger) ✗
+
+| raw | dim | unit | product_name |
+|---|---|---|---|
+| DA125 | 125 | €/Ktn. | DA125 Direktabhänger 125 mm gestreckt – für CD 60/27 – 100 Stk/Ktn. |
+| DA200 | 200 | €/Ktn. | DA200 Direktabhänger 200 mm gestreckt, für CD 60/27 – 100 Stk/Ktn. |
+
+**Semantik:** „DA" = Direktabhänger, ein echtes Trockenbau-Produkt (kein
+Suffix). DA125 und DA200 sind zwei Varianten eines eigenständigen
+Bauteils. Dimensionen 125 und 200 mm sind zwar **realistisch** als
+Abhänge-Längen, aber nicht als gängige Rezept-Dimensionen (Rezepte
+fragen nach Profil-Maßen 50/75/100 oder Dämmungs-Dicken 30/40/60).
+
+**Blacklist: NEIN.** Ein Blacklist-Eintrag würde bei einer hypothetischen
+zukünftigen Rezept-Query mit `dim=125` oder `dim=200` den einzigen
+legitimen Direktabhänger-Kandidaten aus dem Pool werfen. Das ist
+kein akzeptables Design.
+
+### Angepasste Blacklist: `{UT, TC}`
+
+Für Phase 2: Blacklist wird auf **`{UT, TC}`** reduziert. DA wird
+explizit **nicht** blacklistet. Falls morgen eine Rezept-Kollision mit
+DA125/DA200 auftaucht, wird das separat adressiert — aber niemals über
+eine pauschale DA-Blacklist, weil DA als Produkttyp legitim ist.
+
+**Scope-Konsequenz für Phase 2-Tests:** Test 1 (UT40-Regression) bleibt
+wie geplant. Test 3 (Nicht-Blacklist) nutzt WLG040 (unverändert). Alle
+anderen Tests unabhängig von der Entscheidung hier.
+
 ## Scope-Bilanz Phase 2
 
 - ✗ Kein Parser-Touch.
