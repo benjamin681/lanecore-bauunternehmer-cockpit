@@ -23,6 +23,7 @@ Designentscheidungen:
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from decimal import Decimal
@@ -77,11 +78,32 @@ def should_exclude_by_blacklist(
     Das stellt sicher, dass echte Produkt-Varianten (DA125, WLG040,
     TC-Codes usw.) **nicht** gefiltert werden.
 
-    Phase 2a — **Stub**: gibt aktuell noch immer False zurueck. Die
-    echte Filter-Logik kommt in Phase 2b. Die Golden-Tests definieren
-    jetzt schon den Vertrag.
     """
-    return False
+    if not candidate_attrs:
+        return False
+    candidate_type = candidate_attrs.get("product_code_type")
+    if not candidate_type or candidate_type not in PRODUCT_CODE_BLACKLIST:
+        return False
+    candidate_dim_raw = candidate_attrs.get("product_code_dimension")
+    if candidate_dim_raw is None:
+        return False
+    # Dimension normieren: "40" / "040" / 40 → int 40.
+    try:
+        candidate_dim_int = int(str(candidate_dim_raw).lstrip("0") or "0")
+    except (TypeError, ValueError):
+        return False
+    if candidate_dim_int == 0:
+        return False
+    if not query_material_name:
+        return False
+    # Alle Zahlen-Tokens aus der Query als int extrahieren.
+    query_numbers = set()
+    for raw in re.findall(r"\d+", query_material_name):
+        try:
+            query_numbers.add(int(raw.lstrip("0") or "0"))
+        except ValueError:  # pragma: no cover
+            continue
+    return candidate_dim_int in query_numbers
 
 
 PriceSource = Literal[
@@ -376,6 +398,15 @@ def _try_supplier_price(
         candidates = [
             c for c in all_mfr_candidates
             if unit_matches(unit, c.unit) or unit_matches(unit, c.effective_unit)
+        ]
+        # B+4.2.6 Option C Phase 2: Blacklist-Pre-Filter vor dem Scoring.
+        # Kandidaten mit `attributes.product_code_type` in PRODUCT_CODE_BLACKLIST
+        # und Dimension-Kollision mit der Query werden hier ausgeschlossen,
+        # bevor der Fuzzy-Scorer sie zufällig als Gewinner wählt. Loest die
+        # PE-Folie-UT40-Regression aus dem E2E-Lauf vom 21.04.2026.
+        candidates = [
+            c for c in candidates
+            if not should_exclude_by_blacklist(c.attributes, material_name)
         ]
         best, ratio = _best_fuzzy(candidates, material_name, lambda e: e.product_name)
         if best is not None and ratio >= FUZZY_MATCH_THRESHOLD:
