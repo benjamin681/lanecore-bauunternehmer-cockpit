@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { StageBadge } from "@/components/ui/stage-badge";
 import { api, Job, LVDetail, Position, pollJob } from "@/lib/api";
 import { fmtEur, fmtNum } from "@/lib/format";
+import { NearMissDrawer } from "@/components/NearMissDrawer";
 
 type Edit = { field: "menge" | "einheit" | "kurztext" | "erkanntes_system" | "ep"; value: string } | null;
 
@@ -30,6 +31,22 @@ export default function LvDetailPage() {
   const [editingPos, setEditingPos] = useState<string | null>(null);
   const [edit, setEdit] = useState<Edit>(null);
   const [busy, setBusy] = useState(false);
+
+  // B+4.3.1b: Near-Miss-Drawer-State. active* bleiben nach Close
+  // erhalten, damit die Slide-out-Animation nicht flackert; sie werden
+  // ueberschrieben, sobald ein neuer Drawer geoeffnet wird.
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [activePosId, setActivePosId] = useState<string | null>(null);
+  const [activeCurrentEp, setActiveCurrentEp] = useState<number | null>(null);
+
+  function openDrawer(p: Position) {
+    setActivePosId(p.id);
+    setActiveCurrentEp(p.ep);
+    setDrawerOpen(true);
+  }
+  function closeDrawer() {
+    setDrawerOpen(false);
+  }
 
   async function load() {
     setLoading(true);
@@ -248,6 +265,7 @@ export default function LvDetailPage() {
                   setEdit={(v) => setEdit(v)}
                   setEditingPos={(v) => setEditingPos(v)}
                   onSave={() => savePosition(p.id)}
+                  onOpenDrawer={() => openDrawer(p)}
                 />
               ))}
             </tbody>
@@ -265,6 +283,16 @@ export default function LvDetailPage() {
           </table>
         </div>
       </div>
+
+      {/* B+4.3.1b: Near-Miss-Drawer, getriggert via StageBadge-Click in PosRow */}
+      <NearMissDrawer
+        open={drawerOpen}
+        onClose={closeDrawer}
+        lvId={id}
+        posId={activePosId}
+        currentEp={activeCurrentEp}
+        onUpdated={load}
+      />
     </div>
   );
 }
@@ -276,6 +304,7 @@ function PosRow({
   setEdit,
   setEditingPos,
   onSave,
+  onOpenDrawer,
 }: {
   pos: Position;
   editingPos: string | null;
@@ -283,6 +312,7 @@ function PosRow({
   setEdit: (e: Edit) => void;
   setEditingPos: (id: string | null) => void;
   onSave: () => void;
+  onOpenDrawer: () => void;
 }) {
   const isEditing = editingPos === pos.id;
   const hasWarn = !!pos.warnung;
@@ -358,7 +388,15 @@ function PosRow({
       <Td className="text-right font-semibold text-slate-900">{fmtNum(pos.gp, 2)}</Td>
       <Td>
         <div className="flex items-center gap-1">
-          <StageBadge summary={pos.price_source_summary} />
+          <button
+            type="button"
+            onClick={onOpenDrawer}
+            aria-label={`Preis-Details fuer Position ${pos.oz}`}
+            title="Preis-Details anzeigen"
+            className="inline-flex items-center gap-1 rounded-md px-1 py-0.5 -mx-1 hover:bg-slate-100 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-bauplan-500"
+          >
+            <StageBadge summary={pos.price_source_summary} />
+          </button>
           {pos.needs_price_review && (
             <span title="Manuelle Prüfung empfohlen" aria-label="Review empfohlen">
               <Search className="w-3.5 h-3.5 text-warning-600" />

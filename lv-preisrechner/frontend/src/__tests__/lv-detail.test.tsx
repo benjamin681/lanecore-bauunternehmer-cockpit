@@ -29,6 +29,8 @@ const mocks = vi.hoisted(() => ({
   toastError: vi.fn(),
   toastInfo: vi.fn(),
   apiMock: vi.fn(),
+  fetchCandidates: vi.fn(),
+  updatePositionEp: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -55,6 +57,12 @@ vi.mock("@/lib/api", () => ({
   clearToken: vi.fn(),
   hasToken: () => true,
   getPricingReadiness: vi.fn(),
+}));
+
+// B+4.3.1b Integration: NearMissDrawer im LV-Detail nutzt candidatesApi
+vi.mock("@/lib/candidatesApi", () => ({
+  fetchCandidates: mocks.fetchCandidates,
+  updatePositionEp: mocks.updatePositionEp,
 }));
 
 // eslint-disable-next-line import/first
@@ -166,6 +174,8 @@ describe("LV-Detail + Kalkulation Flow", () => {
     mocks.toastError.mockReset();
     mocks.toastInfo.mockReset();
     mocks.apiMock.mockReset();
+    mocks.fetchCandidates.mockReset();
+    mocks.updatePositionEp.mockReset();
   });
 
   test("happy path: loads LV, runs kalkulation, renders positions with StageBadge", async () => {
@@ -259,5 +269,100 @@ describe("LV-Detail + Kalkulation Flow", () => {
     // Page ist weiterhin renderbar (kein Crash)
     expect(screen.getByRole("table")).toBeInTheDocument();
     expect(mocks.routerReplace).not.toHaveBeenCalled();
+  });
+
+  // ---------------------------------------------------------------------
+  // B+4.3.1b Integration: Near-Miss-Drawer
+  // ---------------------------------------------------------------------
+  test("clicking a position's StageBadge opens the NearMissDrawer", async () => {
+    mocks.apiMock.mockResolvedValue(makeLv("calculated"));
+    mocks.fetchCandidates.mockResolvedValueOnce({
+      position_id: "pos-1",
+      position_name: "W112",
+      materials: [
+        {
+          material_name: "Gipskarton",
+          required_amount: 2.1,
+          unit: "m\u00b2",
+          candidates: [
+            {
+              pricelist_name: "Kemmler",
+              candidate_name: "Knauf GKB",
+              match_confidence: 0.95,
+              stage: "supplier_price",
+              price_net: 3.3,
+              unit: "m\u00b2",
+              match_reason: "Produktcode exakt",
+            },
+          ],
+        },
+      ],
+    });
+
+    const user = userEvent.setup();
+    render(<LvDetailPage />);
+    await screen.findByRole("heading", { name: /e2e-test/i });
+
+    // Finde den StageBadge-Trigger fuer die erste Position (oz=1.1)
+    const trigger = screen.getByRole("button", {
+      name: /preis-details fuer position 1\.1/i,
+    });
+    await user.click(trigger);
+
+    // Drawer mountet (role=dialog aus Drawer-Primitive), Fetch startet
+    await waitFor(() =>
+      expect(mocks.fetchCandidates).toHaveBeenCalledWith("lv-1", "pos-1", 3),
+    );
+    const dlg = await screen.findByRole("dialog");
+    expect(dlg).toBeInTheDocument();
+    // Kandidaten-Liste rendert
+    await screen.findByText(/Knauf GKB/i);
+  });
+
+  test("drawer onUpdated triggers LV reload via PATCH + refetch", async () => {
+    // Erster GET, dann beliebig viele weitere GETs fuer Reload
+    mocks.apiMock.mockImplementation(async () => makeLv("calculated"));
+    mocks.fetchCandidates.mockResolvedValueOnce({
+      position_id: "pos-1",
+      position_name: "W112",
+      materials: [],
+    });
+    mocks.updatePositionEp.mockResolvedValueOnce(undefined);
+
+    const user = userEvent.setup();
+    render(<LvDetailPage />);
+    await screen.findByRole("heading", { name: /e2e-test/i });
+
+    // Initialer GET wurde schon gemacht
+    const initialGets = mocks.apiMock.mock.calls.filter(
+      ([, o]) => (o?.method ?? "GET") === "GET",
+    ).length;
+
+    // Drawer öffnen
+    await user.click(
+      screen.getByRole("button", {
+        name: /preis-details fuer position 1\.1/i,
+      }),
+    );
+    await screen.findByRole("dialog");
+
+    // EP eingeben + submitten
+    const input = await screen.findByTestId("nm-ep-input");
+    await user.clear(input);
+    await user.type(input, "50");
+    await user.click(
+      screen.getByRole("button", { name: /preis selbst eintragen/i }),
+    );
+
+    // updatePositionEp lief, danach triggert onUpdated den LV-Reload
+    await waitFor(() =>
+      expect(mocks.updatePositionEp).toHaveBeenCalledWith("lv-1", "pos-1", 50),
+    );
+    await waitFor(() => {
+      const getsAfter = mocks.apiMock.mock.calls.filter(
+        ([, o]) => (o?.method ?? "GET") === "GET",
+      ).length;
+      expect(getsAfter).toBeGreaterThan(initialGets);
+    });
   });
 });
