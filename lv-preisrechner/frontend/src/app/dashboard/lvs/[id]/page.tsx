@@ -20,6 +20,7 @@ import { StageBadge } from "@/components/ui/stage-badge";
 import { api, Job, LVDetail, Position, pollJob } from "@/lib/api";
 import { fmtEur, fmtNum } from "@/lib/format";
 import { NearMissDrawer } from "@/components/NearMissDrawer";
+import { CatalogGapsPanel } from "@/components/CatalogGapsPanel";
 
 type Edit = { field: "menge" | "einheit" | "kurztext" | "erkanntes_system" | "ep"; value: string } | null;
 
@@ -46,6 +47,25 @@ export default function LvDetailPage() {
   }
   function closeDrawer() {
     setDrawerOpen(false);
+  }
+
+  // B+4.3.1c: Tab + Gaps-Panel-State. dataToken triggert Refetch im
+  // Panel nach Drawer-Save via useEffect-Dep.
+  const [activeTab, setActiveTab] = useState<"result" | "gaps">("result");
+  const [dataToken, setDataToken] = useState(0);
+
+  async function handleDrawerUpdated() {
+    await load();
+    setDataToken((t) => t + 1);
+  }
+
+  function handleGapsOpenPosition(positionId: string) {
+    const target = lv?.positions.find((p) => p.id === positionId);
+    if (!target) {
+      toast.error("Position nicht gefunden — bitte Seite neu laden.");
+      return;
+    }
+    openDrawer(target);
   }
 
   async function load() {
@@ -235,7 +255,50 @@ export default function LvDetailPage() {
         </div>
       </div>
 
-      {/* Positions-Tabelle */}
+      {/* B+4.3.1c: Tab-Switcher zwischen Ergebnis-Tabelle und Gaps-Panel */}
+      <div
+        role="tablist"
+        aria-label="Ansichten"
+        className="flex gap-2 border-b border-slate-200"
+      >
+        <button
+          role="tab"
+          aria-pressed={activeTab === "result"}
+          aria-selected={activeTab === "result"}
+          onClick={() => setActiveTab("result")}
+          className={
+            "relative px-4 py-2 text-sm font-medium transition-colors " +
+            (activeTab === "result"
+              ? "text-bauplan-700 border-b-2 border-bauplan-600 -mb-px"
+              : "text-slate-500 hover:text-slate-700")
+          }
+        >
+          Ergebnis
+        </button>
+        <button
+          role="tab"
+          aria-pressed={activeTab === "gaps"}
+          aria-selected={activeTab === "gaps"}
+          onClick={() => setActiveTab("gaps")}
+          className={
+            "relative px-4 py-2 text-sm font-medium transition-colors " +
+            (activeTab === "gaps"
+              ? "text-bauplan-700 border-b-2 border-bauplan-600 -mb-px"
+              : "text-slate-500 hover:text-slate-700")
+          }
+        >
+          Katalog-Lücken
+        </button>
+      </div>
+
+      {activeTab === "gaps" ? (
+        <CatalogGapsPanel
+          lvId={id}
+          dataToken={dataToken}
+          onOpenPosition={handleGapsOpenPosition}
+        />
+      ) : (
+      /* Positions-Tabelle */
       <div className="rounded-xl bg-white border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -283,6 +346,7 @@ export default function LvDetailPage() {
           </table>
         </div>
       </div>
+      )}
 
       {/* B+4.3.1b: Near-Miss-Drawer, getriggert via StageBadge-Click in PosRow */}
       <NearMissDrawer
@@ -291,7 +355,7 @@ export default function LvDetailPage() {
         lvId={id}
         posId={activePosId}
         currentEp={activeCurrentEp}
-        onUpdated={load}
+        onUpdated={handleDrawerUpdated}
       />
     </div>
   );

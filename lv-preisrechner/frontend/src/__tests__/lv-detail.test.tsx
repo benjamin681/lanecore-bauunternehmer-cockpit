@@ -31,6 +31,7 @@ const mocks = vi.hoisted(() => ({
   apiMock: vi.fn(),
   fetchCandidates: vi.fn(),
   updatePositionEp: vi.fn(),
+  fetchGaps: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -64,6 +65,17 @@ vi.mock("@/lib/candidatesApi", () => ({
   fetchCandidates: mocks.fetchCandidates,
   updatePositionEp: mocks.updatePositionEp,
 }));
+
+// B+4.3.1c Integration: CatalogGapsPanel nutzt gapsApi
+vi.mock("@/lib/gapsApi", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/gapsApi")>(
+    "@/lib/gapsApi",
+  );
+  return {
+    ...actual,
+    fetchGaps: mocks.fetchGaps,
+  };
+});
 
 // eslint-disable-next-line import/first
 import LvDetailPage from "@/app/dashboard/lvs/[id]/page";
@@ -176,6 +188,7 @@ describe("LV-Detail + Kalkulation Flow", () => {
     mocks.apiMock.mockReset();
     mocks.fetchCandidates.mockReset();
     mocks.updatePositionEp.mockReset();
+    mocks.fetchGaps.mockReset();
   });
 
   test("happy path: loads LV, runs kalkulation, renders positions with StageBadge", async () => {
@@ -364,5 +377,99 @@ describe("LV-Detail + Kalkulation Flow", () => {
       ).length;
       expect(getsAfter).toBeGreaterThan(initialGets);
     });
+  });
+
+  // ---------------------------------------------------------------------
+  // B+4.3.1c Integration: Katalog-Lücken-Tab
+  // ---------------------------------------------------------------------
+  test("tab switch to 'Katalog-Luecken' mounts CatalogGapsPanel", async () => {
+    mocks.apiMock.mockResolvedValue(makeLv("calculated"));
+    mocks.fetchGaps.mockResolvedValueOnce({
+      lv_id: "lv-1",
+      total_positions: 2,
+      total_materials: 4,
+      gaps_count: 0,
+      missing_count: 0,
+      estimated_count: 0,
+      low_confidence_count: 0,
+      gaps: [],
+    });
+
+    const user = userEvent.setup();
+    render(<LvDetailPage />);
+    await screen.findByRole("heading", { name: /e2e-test/i });
+
+    // Initial: Ergebnis-Tab aktiv, Tabelle sichtbar.
+    expect(screen.getByRole("table")).toBeInTheDocument();
+
+    // Tab wechseln
+    await user.click(
+      screen.getByRole("tab", { name: /katalog-l\u00fccken/i }),
+    );
+
+    // fetchGaps wurde getriggert, Panel rendert
+    await waitFor(() =>
+      expect(mocks.fetchGaps).toHaveBeenCalledWith("lv-1", false),
+    );
+    await screen.findByTestId("catalog-gaps-panel");
+
+    // Ergebnis-Tabelle ist weg
+    expect(screen.queryByRole("table")).toBeNull();
+    // Empty-State sichtbar (gaps_count=0)
+    expect(screen.getByTestId("gaps-empty")).toBeInTheDocument();
+  });
+
+  test("gap click opens NearMissDrawer for resolved position", async () => {
+    mocks.apiMock.mockResolvedValue(makeLv("calculated"));
+    mocks.fetchGaps.mockResolvedValueOnce({
+      lv_id: "lv-1",
+      total_positions: 2,
+      total_materials: 4,
+      gaps_count: 1,
+      missing_count: 1,
+      estimated_count: 0,
+      low_confidence_count: 0,
+      gaps: [
+        {
+          position_id: "pos-1",
+          position_oz: "1.1",
+          position_name: "W112",
+          material_name: "GKB 12,5 mm",
+          material_dna: "Knauf|Gipskarton|GKB|12.5|",
+          required_amount: 2.1,
+          unit: "m\u00b2",
+          severity: "missing",
+          price_source: "not_found",
+          match_confidence: null,
+          source_description: "Kein Katalog-Eintrag",
+          needs_review: true,
+        },
+      ],
+    });
+    mocks.fetchCandidates.mockResolvedValueOnce({
+      position_id: "pos-1",
+      position_name: "W112",
+      materials: [],
+    });
+
+    const user = userEvent.setup();
+    render(<LvDetailPage />);
+    await screen.findByRole("heading", { name: /e2e-test/i });
+
+    // Tab wechseln
+    await user.click(
+      screen.getByRole("tab", { name: /katalog-l\u00fccken/i }),
+    );
+    await screen.findByTestId("catalog-gaps-panel");
+
+    // Auf "Kandidaten pruefen" der einzigen Gap-Zeile klicken
+    const openBtn = await screen.findByTestId("gap-open-button");
+    await user.click(openBtn);
+
+    // Drawer oeffnet und laedt Kandidaten fuer pos-1
+    await screen.findByRole("dialog");
+    await waitFor(() =>
+      expect(mocks.fetchCandidates).toHaveBeenCalledWith("lv-1", "pos-1", 3),
+    );
   });
 });
