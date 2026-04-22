@@ -45,6 +45,44 @@ log = structlog.get_logger()
 
 FUZZY_MATCH_THRESHOLD = 0.85
 
+# B+4.2.6 Option C Phase 2: Produkt-Code-Blacklist fuer Stage-2c-Pre-Filter.
+# Kandidaten, deren `attributes.product_code_type` in dieser Liste steht UND
+# deren `product_code_dimension` mit einer numerischen Dimension aus der
+# Query uebereinstimmt, werden aus dem Match-Pool ausgeschlossen, bevor der
+# Fuzzy-Scorer ueber sie entscheidet.
+#
+# Design: minimal, nur konkrete Regressions-Faelle mit Test-Case werden
+# aufgenommen. Siehe docs/b426_optionC_phase2_baseline.md.
+#
+# {"UT"} deckt die PE-Folien-Regression (UT40 gewinnt gegen 40mm-Daemmung)
+# aus dem E2E-Lauf vom 21.04.2026.
+PRODUCT_CODE_BLACKLIST: frozenset[str] = frozenset({"UT"})
+
+
+def should_exclude_by_blacklist(
+    candidate_attrs: dict | None,
+    query_material_name: str | None,
+) -> bool:
+    """Pure Pre-Filter-Funktion fuer Stage 2c (B+4.2.6 Option C Phase 2).
+
+    Gibt True zurueck, wenn der Kandidat aus dem Match-Pool ausgeschlossen
+    werden soll, weil
+
+      1. sein `attributes.product_code_type` in
+         :data:`PRODUCT_CODE_BLACKLIST` steht **und**
+      2. seine `attributes.product_code_dimension` (numerisch) mit einer
+         numerischen Dimension im `query_material_name` uebereinstimmt.
+
+    Ohne beide Bedingungen zusammen: keine Filterung (return False).
+    Das stellt sicher, dass echte Produkt-Varianten (DA125, WLG040,
+    TC-Codes usw.) **nicht** gefiltert werden.
+
+    Phase 2a — **Stub**: gibt aktuell noch immer False zurueck. Die
+    echte Filter-Logik kommt in Phase 2b. Die Golden-Tests definieren
+    jetzt schon den Vertrag.
+    """
+    return False
+
 
 PriceSource = Literal[
     "override",
