@@ -183,6 +183,7 @@ export default function PricingUploadPage() {
                 accept={ALLOWED_EXT.join(",")}
                 className="hidden"
                 onChange={(e) => setFileSafe(e.target.files?.[0] ?? null)}
+                data-testid="pricelist-dropzone-input"
               />
               {file ? (
                 <>
