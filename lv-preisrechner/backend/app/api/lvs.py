@@ -17,8 +17,10 @@ from app.schemas.candidates import (
     MaterialWithCandidates,
     PositionCandidatesOut,
 )
+from app.schemas.gaps import LVGapsReport
 from app.schemas.job import JobOut
 from app.schemas.lv import LVDetail, LVOut, PositionOut, PositionUpdate
+from app.services.catalog_gaps import compute_lv_gaps
 from app.services.jobs import enqueue_job, run_parse_lv
 from app.services.kalkulation import kalkuliere_lv
 from app.services.lv_parser import parse_and_store
@@ -340,3 +342,34 @@ def list_position_candidates(
         position_name=pos.erkanntes_system or pos.kurztext or "",
         materials=materials,
     )
+
+
+@router.get("/{lv_id}/gaps", response_model=LVGapsReport)
+def get_lv_gaps(
+    lv_id: str,
+    user: CurrentUser,
+    db: DbSession,
+    include_low_confidence: bool = Query(
+        False,
+        description=(
+            "Wenn True, enthaelt der Report zusaetzlich supplier_price-"
+            "Matches mit match_confidence < 0.5 als severity=low_confidence."
+        ),
+    ),
+) -> LVGapsReport:
+    """B+4.3.0c — Katalog-Luecken-Report fuer ein LV.
+
+    Liefert eine strukturierte Liste aller Material-Zeilen des LVs,
+    deren price_source nicht zu einem sauberen Katalog-Match gehoert
+    (not_found, estimated; optional low_confidence). Nutzt
+    ausschliesslich die persistierten materialien-JSONs der Positionen
+    und berechnet keine neuen Lookups.
+    """
+    lv = (
+        db.query(LV)
+        .filter(LV.id == lv_id, LV.tenant_id == user.tenant_id)
+        .first()
+    )
+    if not lv:
+        raise HTTPException(status_code=404, detail="LV nicht gefunden")
+    return compute_lv_gaps(lv, include_low_confidence=include_low_confidence)
