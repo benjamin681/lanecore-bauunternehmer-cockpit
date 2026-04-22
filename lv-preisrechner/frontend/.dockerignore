@@ -1,0 +1,22 @@
+# B+4.3.2b-1: Was NICHT in den Docker-Build-Context kopiert wird.
+# Spart Zeit + Memory beim Build und vermeidet host-spezifische Artefakte
+# im Image.
+
+node_modules
+.next
+.git
+.gitignore
+Dockerfile
+.dockerignore
+*.md
+README*
+.env
+.env.*
+.vscode
+.idea
+coverage
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
