@@ -633,6 +633,221 @@ def _try_estimate(
 
 
 # ---------------------------------------------------------------------------
+# B+4.3.0b — Candidates-Endpoint-Support (Variante 2: alle Materialien)
+# ---------------------------------------------------------------------------
+def list_candidates_for_position(
+    *,
+    db: Session,
+    tenant_id: str,
+    erkanntes_system: str | None,
+    feuerwiderstand: str | None = None,
+    plattentyp: str | None = None,
+    limit: int = 3,
+) -> list[dict]:
+    """Liefert pro Material der Position eine Top-N + estimated-Liste.
+
+    Nutzt das bestehende Rezept-System (`resolve_rezept`) zur Ermittlung
+    der Materialien und die Stage-2c-Mechanik (Unit-Match,
+    Blacklist-Filter, Fuzzy-Scoring) zur Bewertung aller Kandidaten.
+
+    Rueckgabe: Liste von Dicts mit Form
+        {material_name, required_amount, unit, candidates}
+    Der Caller mappt auf :class:`MaterialWithCandidates`.
+
+    Null-safe: wenn das Rezept nicht aufloesbar ist oder keine
+    Materialien hat, wird eine leere Liste zurueckgegeben.
+    """
+    from app.services.material_normalizer import score_query_against_candidate
+    from app.services.materialrezepte import resolve_rezept
+    from app.services.unit_normalizer import unit_matches
+
+    if not erkanntes_system:
+        return []
+    rezept = resolve_rezept(
+        erkanntes_system, feuerwiderstand or "", plattentyp or ""
+    )
+    if not rezept or not rezept.materialien:
+        return []
+
+    # Alle aktiven Pricelists einmalig laden (fuer supplier_name-Mapping).
+    active_lists = (
+        db.query(SupplierPriceList)
+        .filter(
+            SupplierPriceList.tenant_id == tenant_id,
+            SupplierPriceList.is_active.is_(True),
+            SupplierPriceList.status != PricelistStatus.ARCHIVED.value,
+        )
+        .all()
+    )
+    list_by_id = {pl.id: pl for pl in active_lists}
+    active_ids = list(list_by_id.keys())
+
+    # Alle Entries aller aktiven Listen — einmalig laden, danach pro
+    # Material filtern (spart Roundtrips).
+    all_entries: list[SupplierPriceEntry] = []
+    if active_ids:
+        all_entries = (
+            db.query(SupplierPriceEntry)
+            .filter(
+                SupplierPriceEntry.tenant_id == tenant_id,
+                SupplierPriceEntry.pricelist_id.in_(active_ids),
+            )
+            .all()
+        )
+
+    results: list[dict] = []
+    for mb in rezept.materialien:
+        parts = _dna_parts(mb.dna_pattern)
+        material_name = " ".join(
+            p for p in (parts["produktname"], parts["abmessungen"], parts["variante"]) if p
+        ).strip() or parts["produktname"] or ""
+        query_unit = mb.basis_einheit or ""
+        query_manufacturer = parts["hersteller"] or None
+        query_category = parts["kategorie"] or None
+
+        # Pool pro Material filtern: Unit-Match + Blacklist
+        pool = [
+            e for e in all_entries
+            if (unit_matches(query_unit, e.unit) or unit_matches(query_unit, e.effective_unit))
+            and not should_exclude_by_blacklist(e.attributes, material_name)
+        ]
+
+        scored: list[tuple[SupplierPriceEntry, float]] = []
+        for e in pool:
+            score_pct = score_query_against_candidate(material_name, e.product_name or "")
+            score = score_pct / 100.0
+            scored.append((e, score))
+        # Sortierung: hoechster Score zuerst
+        scored.sort(key=lambda s: -s[1])
+
+        # Top-N echte Kandidaten
+        top = scored[:limit]
+        candidates: list[dict] = []
+        for e, score in top:
+            if score <= 0.0:
+                continue  # reine Noise-Treffer rauslassen
+            pl = list_by_id.get(e.pricelist_id)
+            supplier = (pl.supplier_name if pl else "") or ""
+            list_name = (pl.list_name if pl else "") or ""
+            pricelist_name = (
+                f"{supplier} — {list_name}" if (supplier and list_name) else (supplier or list_name or "—")
+            )
+            stage = "supplier_price" if score >= FUZZY_MATCH_THRESHOLD else "fuzzy"
+            # price + unit aus effektivem Einzelpreis, wenn vorhanden
+            if e.effective_unit and e.price_per_effective_unit is not None:
+                price_out = float(e.price_per_effective_unit)
+                unit_out = e.effective_unit
+            else:
+                price_out = float(e.price_net)
+                unit_out = e.unit or ""
+            match_reason = f"Fuzzy-Aehnlichkeit {score*100:.0f}%"
+            candidates.append({
+                "pricelist_name": pricelist_name,
+                "candidate_name": e.product_name or "",
+                "match_confidence": round(score, 3),
+                "stage": stage,
+                "price_net": price_out,
+                "unit": unit_out,
+                "match_reason": match_reason,
+            })
+
+        # Virtueller Estimated-Eintrag — immer, auch wenn supplier_price-
+        # Matches existieren (Design-Entscheidung d). Wenn kein Kategorie-
+        # Durchschnitt berechenbar ist (fehlende Datenbasis), wird ein
+        # Platzhalter-Eintrag mit Preis 0 zurueckgegeben, damit die
+        # Invariante "letzter Eintrag = estimated" erhalten bleibt.
+        estimated = _build_estimated_candidate(
+            db=db,
+            tenant_id=tenant_id,
+            category=query_category,
+            unit=query_unit,
+        )
+        if estimated is None:
+            estimated = {
+                "pricelist_name": "(Schaetzung)",
+                "candidate_name": f"O Kategorie {query_category or '?'}",
+                "match_confidence": 0.0,
+                "stage": "estimated",
+                "price_net": 0.0,
+                "unit": query_unit or "",
+                "match_reason": "Kein Katalog-Durchschnitt verfuegbar",
+            }
+        candidates.append(estimated)
+
+        results.append({
+            "material_name": material_name,
+            "required_amount": float(mb.menge_pro_einheit),
+            "unit": query_unit,
+            "candidates": candidates,
+        })
+    return results
+
+
+def _dna_parts(pattern: str) -> dict[str, str]:
+    """Zerlegt DNA-Pattern in die fuenf Felder.
+
+    Duplikat aus kalkulation._parse_dna_pattern — bewusst lokal
+    gehalten, damit price_lookup nicht auf kalkulation importiert.
+    """
+    parts = (pattern or "").split("|")
+    keys = ["hersteller", "kategorie", "produktname", "abmessungen", "variante"]
+    out = {k: "" for k in keys}
+    for k, v in zip(keys, parts, strict=False):
+        out[k] = v.strip()
+    return out
+
+
+def _build_estimated_candidate(
+    *,
+    db: Session,
+    tenant_id: str,
+    category: str | None,
+    unit: str | None,
+) -> dict | None:
+    """Erzeugt den virtuellen Kategorie-Mittelwert-Kandidaten.
+
+    Analog zu `_try_estimate`, aber liefert ein Dict fuer die Kandidaten-
+    Liste statt ein PriceLookupResult. Nutzt toleranten Unit-Match
+    (`unit_matches` aus unit_normalizer) — sonst wuerde eine lfm-Query
+    keinen Durchschnitt aus m-Entries bekommen.
+    """
+    if not category or not unit:
+        return None
+    from app.services.unit_normalizer import unit_matches
+
+    today = date.today()
+    year_ago = today - timedelta(days=365)
+    rows = (
+        db.query(SupplierPriceEntry)
+        .join(SupplierPriceList, SupplierPriceEntry.pricelist_id == SupplierPriceList.id)
+        .filter(
+            SupplierPriceEntry.tenant_id == tenant_id,
+            SupplierPriceEntry.category == category,
+            SupplierPriceList.valid_from >= year_ago,
+        )
+        .all()
+    )
+    prices: list[float] = []
+    for r in rows:
+        if unit_matches(unit, r.effective_unit) and r.price_per_effective_unit is not None:
+            prices.append(float(r.price_per_effective_unit))
+        elif unit_matches(unit, r.unit):
+            prices.append(float(r.price_net))
+    if not prices:
+        return None
+    avg = sum(prices) / len(prices)
+    return {
+        "pricelist_name": "(Schaetzung)",
+        "candidate_name": f"O Kategorie {category}",
+        "match_confidence": 0.5,
+        "stage": "estimated",
+        "price_net": round(avg, 4),
+        "unit": unit,
+        "match_reason": f"O aus Kategorie {category} ({len(prices)} Eintraege, 12 Monate)",
+    }
+
+
+# ---------------------------------------------------------------------------
 # Rabatt-Regel
 # ---------------------------------------------------------------------------
 def _find_discount_rule(

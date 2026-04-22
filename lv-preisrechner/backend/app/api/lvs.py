@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 
 from app.core.config import settings
@@ -12,6 +12,11 @@ from app.core.deps import CurrentUser, DbSession
 from app.models.lv import LV
 from app.models.position import Position
 from app.models.tenant import Tenant
+from app.schemas.candidates import (
+    CandidateOut,
+    MaterialWithCandidates,
+    PositionCandidatesOut,
+)
 from app.schemas.job import JobOut
 from app.schemas.lv import LVDetail, LVOut, PositionOut, PositionUpdate
 from app.services.jobs import enqueue_job, run_parse_lv
@@ -19,6 +24,7 @@ from app.services.kalkulation import kalkuliere_lv
 from app.services.lv_parser import parse_and_store
 from app.services.pdf_filler import generate_filled_pdf
 from app.services.pdf_utils import compute_sha256, save_upload
+from app.services.price_lookup import list_candidates_for_position
 
 router = APIRouter(prefix="/lvs", tags=["lvs"])
 
@@ -279,3 +285,58 @@ def delete_lv(lv_id: str, user: CurrentUser, db: DbSession) -> None:
         raise HTTPException(status_code=404, detail="LV nicht gefunden")
     db.delete(lv)
     db.commit()
+
+
+@router.get(
+    "/{lv_id}/positions/{position_id}/candidates",
+    response_model=PositionCandidatesOut,
+)
+def list_position_candidates(
+    lv_id: str,
+    position_id: str,
+    user: CurrentUser,
+    db: DbSession,
+    limit: int = Query(3, ge=1, le=5),
+) -> PositionCandidatesOut:
+    """B+4.3.0b — Near-Miss-Drawer-Daten fuer eine LV-Position.
+
+    Liefert pro Material der Position eine sortierte Kandidaten-Liste
+    (Top-N echte Treffer + 1 virtueller Kategorie-Mittelwert). UT-
+    Blacklist wird angewandt; Kandidaten-Reihenfolge je Material
+    ist deterministisch (Rezept-Reihenfolge).
+    """
+    pos = (
+        db.query(Position)
+        .join(LV, Position.lv_id == LV.id)
+        .filter(
+            Position.id == position_id,
+            LV.id == lv_id,
+            LV.tenant_id == user.tenant_id,
+        )
+        .first()
+    )
+    if not pos:
+        raise HTTPException(status_code=404, detail="Position nicht gefunden")
+
+    material_dicts = list_candidates_for_position(
+        db=db,
+        tenant_id=user.tenant_id,
+        erkanntes_system=pos.erkanntes_system,
+        feuerwiderstand=pos.feuerwiderstand,
+        plattentyp=pos.plattentyp,
+        limit=limit,
+    )
+    materials = [
+        MaterialWithCandidates(
+            material_name=m["material_name"],
+            required_amount=m["required_amount"],
+            unit=m["unit"],
+            candidates=[CandidateOut(**c) for c in m["candidates"]],
+        )
+        for m in material_dicts
+    ]
+    return PositionCandidatesOut(
+        position_id=str(pos.id),
+        position_name=pos.erkanntes_system or pos.kurztext or "",
+        materials=materials,
+    )
