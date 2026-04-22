@@ -246,16 +246,29 @@ zukünftigen Rezept-Query mit `dim=125` oder `dim=200` den einzigen
 legitimen Direktabhänger-Kandidaten aus dem Pool werfen. Das ist
 kein akzeptables Design.
 
-### Angepasste Blacklist: `{UT, TC}`
+### Finale Blacklist: `{UT}`
 
-Für Phase 2: Blacklist wird auf **`{UT, TC}`** reduziert. DA wird
-explizit **nicht** blacklistet. Falls morgen eine Rezept-Kollision mit
-DA125/DA200 auftaucht, wird das separat adressiert — aber niemals über
-eine pauschale DA-Blacklist, weil DA als Produkttyp legitim ist.
+Für Phase 2 wird die Blacklist auf **`{UT}` allein** festgelegt.
 
-**Scope-Konsequenz für Phase 2-Tests:** Test 1 (UT40-Regression) bleibt
-wie geplant. Test 3 (Nicht-Blacklist) nutzt WLG040 (unverändert). Alle
-anderen Tests unabhängig von der Entscheidung hier.
+**Warum nicht auch TC?** Diskussion im Team-Review: TC hat aktuell
+**keinen konkreten Bug** und **keinen Test-Case**, der Filterung
+verlangt. Eine präventive Aufnahme widerspricht der „do the minimum"-
+Disziplin. Wenn ein TC-Matching-Fall echte Probleme macht, wird er mit
+konkretem Test-Case in einem späteren Block behandelt.
+
+**Warum nicht DA?** DA ist ein **echtes Typ-Produkt** (Direktabhänger
+DA125/DA200). Blacklist würde legitime Match-Kandidaten blockieren.
+
+**Erweiterungsregel:** Jede zukünftige Blacklist-Erweiterung braucht
+(a) einen konkret reproduzierten Regressions-Fall **und** (b) einen
+Golden-Test, der den Filter erzwingt. Keine präventiven Einträge.
+
+**Scope-Konsequenz für Phase 2-Tests:**
+
+- Test 1 (UT-Filter + TC-Guard) prüft beides: UT wird gefiltert,
+  TC bleibt im Pool.
+- Test 3 (Nicht-Blacklist) nutzt WLG040 (unverändert).
+- Alle anderen Tests unabhängig von der finalen Blacklist-Grösse.
 
 ## Scope-Bilanz Phase 2
 
