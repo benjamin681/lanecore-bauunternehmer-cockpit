@@ -53,6 +53,7 @@ export function Dropzone({ onFile, accept = "application/pdf", hint, busy }: Pro
         accept={accept}
         onChange={(e) => handleFiles(e.target.files)}
         className="hidden"
+        data-testid="dropzone-input"
       />
       <Upload className="w-10 h-10 text-bauplan-500 mb-3" />
       <div className="text-slate-900 font-medium">
