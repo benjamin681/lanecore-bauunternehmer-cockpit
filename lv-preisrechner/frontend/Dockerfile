@@ -29,6 +29,8 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+ARG BACKEND_URL=http://backend:8000
+ENV BACKEND_URL=${BACKEND_URL}
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production
 
