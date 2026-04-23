@@ -1,0 +1,26 @@
+{
+    email benjamin@lanecore-ai.de
+}
+
+kalkulane.lanecore-ai.de {
+    encode zstd gzip
+
+    # Frontend (Next.js)
+    @api path /api/*
+    reverse_proxy @api backend:8000
+    reverse_proxy frontend:3000
+
+    # Optionale Security-Header
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    # Client-Upload-Limit (für LV-PDFs)
+    request_body {
+        max_size 50MB
+    }
+}

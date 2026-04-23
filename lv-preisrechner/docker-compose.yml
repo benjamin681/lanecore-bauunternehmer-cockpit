@@ -44,8 +44,6 @@ services:
       CLAUDE_MODEL_FALLBACK: ${CLAUDE_MODEL_FALLBACK:-claude-opus-4-6}
       APP_ENV: ${APP_ENV:-production}
       PORT: 8000
-    ports:
-      - "127.0.0.1:8000:8000"
 
   frontend:
     build:
@@ -60,8 +58,23 @@ services:
       BACKEND_URL: ${BACKEND_URL}
       HOSTNAME: 0.0.0.0
       PORT: 3000
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
     ports:
-      - "127.0.0.1:3000:3000"
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - frontend
 
 volumes:
   lvp_postgres_data:
+  caddy_data:
+  caddy_config:

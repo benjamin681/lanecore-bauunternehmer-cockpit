@@ -410,6 +410,71 @@ docker compose exec -T postgres psql -U lvpuser lvpreisrechner < /home/appuser/b
 - [ ] Root-SSH-Login kann jetzt deaktiviert werden (optional,
       empfohlen)
 
-**Nächster Sub-Block:** B+4.3.2b-2 (Caddyfile + TLS) + B+4.3.2d
-(Domain + DNS-Einträge) → macht den Stack ohne SSH-Tunnel
-öffentlich erreichbar.
+**Nächster Sub-Block:** §13 TLS + Domain aktivieren.
+
+---
+
+## 13. TLS + Domain aktivieren (nach Caddy-Integration)
+
+Ab Commit `feat(deploy): add Caddy reverse proxy with Let's Encrypt TLS`
+ist der Caddy-Service Teil des Stacks. Port 80/443 sind public, 8000/3000
+nur intern im Docker-Netzwerk. Workflow:
+
+**(a) DNS-Eintrag setzen.** A-Record der gewählten Subdomain auf die
+Server-IP (z. B. `kalkulane.lanecore-ai.de` → `178.104.229.191`) beim
+Registrar (Squarespace, Hetzner DNS, Cloudflare, …). Propagation ~5–30 min,
+prüfbar mit `dig +short <domain>`.
+
+**(b) Caddyfile auf die Domain anpassen.** Im Host-Block die Domain
+eintragen und unter `{ email ... }` die ACME-Kontakt-Adresse:
+
+```
+{
+    email admin@deine-domain.de
+}
+
+deine-domain.de {
+    encode zstd gzip
+    @api path /api/*
+    reverse_proxy @api backend:8000
+    reverse_proxy frontend:3000
+    header { ... }
+    request_body { max_size 50MB }
+}
+```
+
+**(c) `.env` auf https umstellen** (auf dem Server, als `appuser`):
+
+```
+CORS_ORIGINS=["https://deine-domain.de"]
+NEXT_PUBLIC_BACKEND_URL=https://deine-domain.de
+```
+
+`BACKEND_URL=http://backend:8000` bleibt unverändert — das ist der
+interne Docker-Hostname.
+
+**(d) Rebuild + Restart:**
+
+```bash
+docker compose down
+docker compose build --no-cache frontend   # bake neue Public-URL ein
+docker compose up -d
+```
+
+`--no-cache frontend` ist wichtig, weil `NEXT_PUBLIC_BACKEND_URL` zur
+Build-Zeit in die JS-Bundles eingefroren wird.
+
+**(e) Zertifikat holt Caddy automatisch** via Let's Encrypt TLS-ALPN-01
+(Port 443). Dauer 5–20 s. Logs: `docker compose logs caddy`. Auto-Renewal
+läuft eigenständig (alle 60 Tage).
+
+**(f) Health-Check:**
+
+```bash
+curl -I https://deine-domain.de/
+# → HTTP/2 200, strict-transport-security header sichtbar
+curl -fsS https://deine-domain.de/api/v1/health
+# → {"status":"ok","service":"lv-preisrechner",...}
+```
+
+Ab hier kein SSH-Tunnel mehr nötig, der Stack ist live.
