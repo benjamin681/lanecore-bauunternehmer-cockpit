@@ -22,7 +22,6 @@ import {
   Loader2,
   RefreshCw,
   ClipboardCheck,
-  Hourglass,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -83,6 +82,30 @@ export default function PricingDetailPage() {
       }
     };
   }, [pl, load]);
+
+  // Elapsed-Timer fuer Parse-Hinweis-Card.
+  // Hinweis: Die Startzeit ist der Zeitpunkt, zu dem der User die Page
+  // sieht und den Status zum ersten Mal als "in Progress" wahrnimmt —
+  // nicht die echte Upload-Zeit (die liegt im Backend, wird aber nicht
+  // serverseitig als started_at auf der Pricelist gefuehrt). Wenn ein
+  // User mitten im Parse zurueckkommt, zeigt der Timer also "seit Mount"
+  // statt "seit Upload". Das ist okay, weil die Grenze "1–3 Minuten"
+  // ohnehin nur ein grober Richtwert ist.
+  const [elapsedSec, setElapsedSec] = useState(0);
+  const inProgressForTimer =
+    pl?.status === "PENDING_PARSE" || pl?.status === "PARSING";
+  useEffect(() => {
+    if (!inProgressForTimer) {
+      setElapsedSec(0);
+      return;
+    }
+    const startedAt = Date.now();
+    const tick = () =>
+      setElapsedSec(Math.floor((Date.now() - startedAt) / 1000));
+    tick();
+    const handle = setInterval(tick, 1000);
+    return () => clearInterval(handle);
+  }, [inProgressForTimer]);
 
   async function doActivate() {
     if (!pl) return;
@@ -196,17 +219,28 @@ export default function PricingDetailPage() {
         </div>
       </header>
 
-      {/* Progress-Hinweis */}
+      {/* Progress-Hinweis — waehrend Parse laeuft */}
       {inProgress && (
-        <Card className="border-bauplan-200 bg-bauplan-50/40">
-          <CardBody className="flex items-center gap-3">
-            <Hourglass className="w-5 h-5 text-bauplan-600 shrink-0" />
-            <div className="flex-1">
-              <div className="font-medium text-slate-900">Parser laeuft …</div>
-              <div className="text-sm text-slate-600">
-                Die Seite wird alle {POLL_INTERVAL_MS / 1000} Sekunden automatisch
-                aktualisiert. Du kannst den Tab offen lassen oder spaeter zurueck kommen —
-                der Parser laeuft im Hintergrund weiter.
+        <Card className="border-bauplan-200 bg-bauplan-50/40 transition-opacity duration-500">
+          <CardBody className="flex items-start gap-3">
+            <Loader2 className="w-5 h-5 text-bauplan-600 shrink-0 mt-0.5 animate-spin" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="font-medium text-slate-900">
+                  Preisliste wird analysiert
+                </div>
+                <div
+                  className="text-sm font-mono tabular-nums text-slate-500"
+                  aria-label="Verstrichene Zeit seit Seitenaufruf"
+                >
+                  {fmtElapsed(elapsedSec)}
+                </div>
+              </div>
+              <div className="text-sm text-slate-600 mt-1">
+                Unsere KI liest gerade die Preisliste und extrahiert alle
+                Positionen. Das dauert typischerweise 1–3 Minuten. Du kannst
+                den Tab offen lassen oder spaeter zurueck kommen — der Parser
+                laeuft im Hintergrund weiter.
               </div>
             </div>
           </CardBody>
@@ -241,33 +275,46 @@ export default function PricingDetailPage() {
         </Card>
       )}
 
-      {/* Kennzahlen */}
+      {/* Kennzahlen — waehrend Parse laeuft: Skeletons statt "0", damit der
+          User nicht denkt "da sind gar keine Eintraege drin". */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
           <CardBody>
             <div className="text-sm text-slate-500">Eintraege</div>
-            <div className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">
-              {total.toLocaleString("de-DE")}
-            </div>
+            {inProgress ? (
+              <div className="h-8 mt-1 w-20 rounded bg-slate-100 animate-pulse" />
+            ) : (
+              <div className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">
+                {total.toLocaleString("de-DE")}
+              </div>
+            )}
           </CardBody>
         </Card>
         <Card>
           <CardBody>
             <div className="text-sm text-slate-500">Reviewed</div>
-            <div className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">
-              {reviewed.toLocaleString("de-DE")}
-              <span className="text-base font-normal text-slate-500 ml-2">
-                / {total.toLocaleString("de-DE")} ({reviewPct} %)
-              </span>
-            </div>
+            {inProgress ? (
+              <div className="h-8 mt-1 w-32 rounded bg-slate-100 animate-pulse" />
+            ) : (
+              <div className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">
+                {reviewed.toLocaleString("de-DE")}
+                <span className="text-base font-normal text-slate-500 ml-2">
+                  / {total.toLocaleString("de-DE")} ({reviewPct} %)
+                </span>
+              </div>
+            )}
           </CardBody>
         </Card>
         <Card>
           <CardBody>
             <div className="text-sm text-slate-500">Offen (noch zu pruefen)</div>
-            <div className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">
-              {Math.max(0, total - reviewed).toLocaleString("de-DE")}
-            </div>
+            {inProgress ? (
+              <div className="h-8 mt-1 w-20 rounded bg-slate-100 animate-pulse" />
+            ) : (
+              <div className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">
+                {Math.max(0, total - reviewed).toLocaleString("de-DE")}
+              </div>
+            )}
           </CardBody>
         </Card>
       </div>
@@ -330,4 +377,12 @@ export default function PricingDetailPage() {
       </Card>
     </div>
   );
+}
+
+/** Sekunden → "mm:ss" (zeigt Minuten ohne fuehrende Null, Sekunden immer
+ *  zweistellig). Nur fuer Parse-Progress-Anzeige; keine i18n noetig. */
+function fmtElapsed(totalSec: number): string {
+  const mm = Math.floor(totalSec / 60);
+  const ss = totalSec % 60;
+  return `${mm}:${ss.toString().padStart(2, "0")}`;
 }
