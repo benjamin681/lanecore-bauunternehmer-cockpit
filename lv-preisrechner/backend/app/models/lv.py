@@ -1,9 +1,10 @@
 """LV = ein hochgeladenes Leistungsverzeichnis."""
 
 from datetime import UTC, datetime
+from enum import Enum
 from uuid import uuid4
 
-from sqlalchemy import DateTime, ForeignKey, LargeBinary, String
+from sqlalchemy import JSON, DateTime, ForeignKey, LargeBinary, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -62,4 +63,61 @@ class LV(Base):
         back_populates="lv",
         cascade="all, delete-orphan",
         order_by="Position.reihenfolge",
+    )
+
+
+class GapResolutionType(str, Enum):
+    """B+4.6: Arten, eine Katalog-Luecke im LV zu schliessen."""
+
+    MANUAL_PRICE = "manual_price"
+    SKIP = "skip"
+
+
+class LVGapResolution(Base):
+    """Audit-Trail fuer Nutzer-Aktionen auf Katalog-Luecken eines LV.
+
+    Ergaenzt die on-the-fly berechnete :class:`app.services.catalog_gaps
+    .compute_lv_gaps` um User-Entscheidungen. Der Gap-Report filtert
+    Entries mit aktiven ``skip``-Resolutions aus, sodass bewusst
+    akzeptierte Luecken nicht mehr als offener Handlungsbedarf gezeigt
+    werden.
+
+    ``manual_price``-Resolutions legen zusaetzlich einen
+    :class:`TenantPriceOverride` an — die FK sichert die Referenz fuer
+    Nachverfolgung und Loeschung.
+    """
+
+    __tablename__ = "lvp_lv_gap_resolutions"
+    __table_args__ = (
+        UniqueConstraint(
+            "lv_id",
+            "material_dna",
+            "resolution_type",
+            name="uq_lvp_lv_gap_resolutions_lv_material_type",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    lv_id: Mapped[str] = mapped_column(
+        ForeignKey("lvp_lvs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        ForeignKey("lvp_tenants.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    material_dna: Mapped[str] = mapped_column(String(500), nullable=False)
+    resolution_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    resolved_value: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    tenant_price_override_id: Mapped[str | None] = mapped_column(
+        ForeignKey("lvp_tenant_price_overrides.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_by_user_id: Mapped[str] = mapped_column(
+        ForeignKey("lvp_users.id"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, nullable=False
     )

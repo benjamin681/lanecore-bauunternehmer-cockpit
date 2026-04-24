@@ -41,6 +41,23 @@ export interface CatalogGapEntry {
   needs_review: boolean;
 }
 
+/** B+4.6 — per-DNA deduplizierte Gap-Liste für das UI. */
+export interface UniqueMissingMaterial {
+  material_dna: string;
+  material_name: string;
+  unit: string;
+  severity: GapSeverity;
+  betroffene_positionen: string[];
+  total_required_amount: number;
+  geschaetzter_preis: number | null;
+  geschaetzter_preis_einheit: string | null;
+  resolution: {
+    resolution_type: string;
+    resolved_value: Record<string, unknown> | null;
+    created_at: string;
+  } | null;
+}
+
 export interface LVGapsReport {
   lv_id: string;
   total_positions: number;
@@ -50,6 +67,33 @@ export interface LVGapsReport {
   estimated_count: number;
   low_confidence_count: number;
   gaps: CatalogGapEntry[];
+  unique_missing_materials?: UniqueMissingMaterial[];
+}
+
+/** B+4.6 — POST /lvs/{lv_id}/gaps/resolve */
+export type GapResolutionType = "manual_price" | "skip";
+
+export interface GapResolveRequest {
+  material_dna: string;
+  resolution_type: GapResolutionType;
+  value: Record<string, unknown>;
+}
+
+export interface GapResolutionOut {
+  id: string;
+  lv_id: string;
+  tenant_id: string;
+  material_dna: string;
+  resolution_type: string;
+  resolved_value: Record<string, unknown> | null;
+  tenant_price_override_id: string | null;
+  created_by_user_id: string;
+  created_at: string;
+}
+
+export interface GapResolveResponse {
+  resolution: GapResolutionOut;
+  recalculated: boolean;
 }
 
 /**
@@ -71,4 +115,23 @@ export async function fetchGaps(
 ): Promise<LVGapsReport> {
   const qs = includeLowConfidence ? "?include_low_confidence=true" : "";
   return api<LVGapsReport>(`/lvs/${lvId}/gaps${qs}`);
+}
+
+/**
+ * B+4.6 — loest eine Katalog-Luecke per manuellem Preis oder Skip.
+ *
+ * Bei manual_price wird zusaetzlich ein Tenant-Override angelegt; der
+ * Server rekalkuliert das LV direkt (recalculate=true default). Die
+ * neuen EPs sind nach der Response sichtbar.
+ */
+export async function resolveGap(
+  lvId: string,
+  body: GapResolveRequest,
+  recalculate: boolean = true,
+): Promise<GapResolveResponse> {
+  const qs = recalculate ? "" : "?recalculate=false";
+  return api<GapResolveResponse>(`/lvs/${lvId}/gaps/resolve${qs}`, {
+    method: "POST",
+    body,
+  });
 }

@@ -162,7 +162,10 @@ export default function PricingDetailPage() {
   const inProgress = pl.status === "PENDING_PARSE" || pl.status === "PARSING";
   const canActivate = pl.status === "APPROVED" && !pl.is_active;
   const canArchive = pl.status !== "ARCHIVED";
-  const canReview = pl.status === "PARSED" || pl.status === "REVIEWED";
+  const canReview =
+    pl.status === "PARSED" ||
+    pl.status === "REVIEWED" ||
+    pl.status === "PARTIAL_PARSE";
   const hasError = pl.status === "ERROR";
 
   const total = pl.entries_total ?? 0;
@@ -241,6 +244,52 @@ export default function PricingDetailPage() {
                 Positionen. Das dauert typischerweise 1–3 Minuten. Du kannst
                 den Tab offen lassen oder spaeter zurueck kommen — der Parser
                 laeuft im Hintergrund weiter.
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      )}
+
+      {/* B+4.6 — PARTIAL_PARSE: gelbe Warnung + Liste der fehlgeschlagenen Seiten */}
+      {pl.status === "PARTIAL_PARSE" && (
+        <Card className="border-amber-200 bg-amber-500/5">
+          <CardBody className="space-y-3">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-slate-900">
+                  Details unvollständiger Parse
+                </div>
+                {pl.parse_error && (
+                  <div className="text-sm text-slate-700 mt-1">
+                    {pl.parse_error}
+                  </div>
+                )}
+                {pl.parse_error_details && pl.parse_error_details.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {pl.parse_error_details.map((d, i) => (
+                      <div
+                        key={`${d.batch_idx}-${i}`}
+                        className="rounded-md bg-white border border-amber-200 p-2.5 text-sm"
+                      >
+                        <div className="font-medium text-slate-900">
+                          Batch {d.batch_idx} · Seiten {d.page_range}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-0.5">
+                          {d.attempts} Versuch{d.attempts === 1 ? "" : "e"} ·{" "}
+                          {d.error_class}
+                        </div>
+                        <div className="text-xs text-slate-600 mt-1 font-mono break-words">
+                          {d.error_message}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="text-xs text-slate-500 mt-2">
+                  Die verbleibenden Seiten wurden normal verarbeitet. Für einen
+                  vollständigen Parse bitte die Datei erneut hochladen.
+                </div>
               </div>
             </div>
           </CardBody>

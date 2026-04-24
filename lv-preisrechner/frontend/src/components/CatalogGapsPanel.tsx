@@ -13,14 +13,20 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, SkipForward, Tag } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   CatalogGapEntry,
   GapSeverity,
   LVGapsReport,
+  UniqueMissingMaterial,
   fetchGaps,
+  resolveGap,
 } from "@/lib/gapsApi";
 import { cn } from "@/lib/cn";
 
@@ -219,6 +225,19 @@ export function CatalogGapsPanel({
         </div>
       )}
 
+      {/* B+4.6 — Unique-Missing-Resolver: gruppiert pro Material-DNA */}
+      {!loading &&
+        !error &&
+        data &&
+        data.unique_missing_materials &&
+        data.unique_missing_materials.length > 0 && (
+          <UniqueMissingResolver
+            lvId={lvId}
+            items={data.unique_missing_materials}
+            onResolved={load}
+          />
+        )}
+
       {/* Loaded: Liste */}
       {!loading && !error && data && data.gaps_count > 0 && (
         <div className="space-y-2">
@@ -231,6 +250,180 @@ export function CatalogGapsPanel({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+
+// -------------------------------------------------------------------
+// B+4.6 — UniqueMissingResolver: pro Material-DNA eine Karte mit
+//          Preis-manuell-setzen + Ueberspringen
+// -------------------------------------------------------------------
+type ManualPriceState = {
+  dna: string;
+  name: string;
+  unit: string;
+  price: string;
+} | null;
+
+function UniqueMissingResolver({
+  lvId,
+  items,
+  onResolved,
+}: {
+  lvId: string;
+  items: UniqueMissingMaterial[];
+  onResolved: () => void;
+}) {
+  const [pending, setPending] = useState<string | null>(null); // material_dna in-flight
+  const [manual, setManual] = useState<ManualPriceState>(null);
+
+  async function doResolve(
+    dna: string,
+    type: "skip" | "manual_price",
+    value: Record<string, unknown>,
+  ) {
+    setPending(dna);
+    try {
+      const res = await resolveGap(lvId, {
+        material_dna: dna,
+        resolution_type: type,
+        value,
+      });
+      toast.success(
+        type === "skip"
+          ? "Übersprungen — Position bleibt bei EP 0."
+          : res.recalculated
+            ? "Preis gesetzt + LV neu kalkuliert."
+            : "Preis gesetzt.",
+      );
+      onResolved();
+    } catch (e: unknown) {
+      const detail = (e as { detail?: string })?.detail;
+      toast.error(detail || (e instanceof Error ? e.message : "Fehler"));
+    } finally {
+      setPending(null);
+    }
+  }
+
+  async function submitManual() {
+    if (!manual) return;
+    const n = Number.parseFloat(manual.price.replace(",", "."));
+    if (!Number.isFinite(n) || n <= 0) {
+      toast.error("Bitte einen gültigen Preis > 0 eingeben.");
+      return;
+    }
+    await doResolve(manual.dna, "manual_price", {
+      price_net: n,
+      unit: manual.unit.trim() || "Stk",
+    });
+    setManual(null);
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="text-sm font-semibold text-slate-900">
+        Zum Beheben ({items.length} Material{items.length === 1 ? "" : "ien"})
+      </div>
+      {items.map((it) => {
+        const isPending = pending === it.material_dna;
+        return (
+          <div
+            key={it.material_dna}
+            className="rounded-lg border border-slate-200 bg-slate-50/40 p-3"
+          >
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div className="min-w-0">
+                <div className="font-medium text-slate-900 truncate">
+                  {it.material_name || it.material_dna}
+                </div>
+                <div className="text-xs text-slate-500 mt-0.5">
+                  {it.betroffene_positionen.length} Position
+                  {it.betroffene_positionen.length === 1 ? "" : "en"}{" "}
+                  betroffen · {it.total_required_amount.toFixed(2)} {it.unit}
+                </div>
+                <div className="mt-1 text-xs text-slate-400 truncate max-w-xl">
+                  OZ: {it.betroffene_positionen.join(", ")}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={isPending}
+                  onClick={() =>
+                    setManual({
+                      dna: it.material_dna,
+                      name: it.material_name,
+                      unit: it.unit || "Stk",
+                      price: "",
+                    })
+                  }
+                >
+                  <Tag className="w-4 h-4 mr-1" /> Preis setzen
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={isPending}
+                  onClick={() => doResolve(it.material_dna, "skip", {})}
+                >
+                  <SkipForward className="w-4 h-4 mr-1" /> Überspringen
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      <Dialog
+        open={manual !== null}
+        onClose={() => setManual(null)}
+        title="Manuellen Preis setzen"
+        description={
+          manual
+            ? `${manual.name} — wird als Tenant-Override gespeichert und gilt ab sofort für alle LVs.`
+            : undefined
+        }
+        actions={[
+          { label: "Abbrechen", variant: "ghost", autoClose: true },
+          {
+            label: "Speichern",
+            variant: "primary",
+            autoClose: false,
+            onClick: submitManual,
+          },
+        ]}
+      >
+        {manual && (
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="gap-price">Preis (netto)</Label>
+              <Input
+                id="gap-price"
+                inputMode="decimal"
+                value={manual.price}
+                onChange={(e) =>
+                  setManual({ ...manual, price: e.target.value })
+                }
+                placeholder="z.B. 2,87"
+              />
+            </div>
+            <div>
+              <Label htmlFor="gap-unit">Einheit</Label>
+              <Input
+                id="gap-unit"
+                value={manual.unit}
+                onChange={(e) => setManual({ ...manual, unit: e.target.value })}
+                placeholder="z.B. lfm, m², Stk"
+              />
+            </div>
+            <p className="text-xs text-slate-500">
+              Das LV wird anschließend automatisch neu kalkuliert.
+            </p>
+          </div>
+        )}
+      </Dialog>
     </div>
   );
 }

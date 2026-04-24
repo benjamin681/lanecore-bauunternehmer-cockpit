@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Query, UploadFile
+from fastapi import status as http_status
 from fastapi.responses import FileResponse
 
 from app.core.config import settings
@@ -17,10 +18,21 @@ from app.schemas.candidates import (
     MaterialWithCandidates,
     PositionCandidatesOut,
 )
-from app.schemas.gaps import LVGapsReport
+from app.schemas.gaps import (
+    GapResolveRequest,
+    GapResolveResponse,
+    GapResolutionOut,
+    GapResolutionTypeSchema,
+    LVGapsReport,
+)
 from app.schemas.job import JobOut
 from app.schemas.lv import LVDetail, LVOut, PositionOut, PositionUpdate
-from app.services.catalog_gaps import compute_lv_gaps
+from app.services.catalog_gaps import (
+    GapResolutionError,
+    compute_lv_gaps,
+    resolve_gap_manual_price,
+    resolve_gap_skip,
+)
 from app.services.jobs import enqueue_job, run_parse_lv
 from app.services.kalkulation import kalkuliere_lv
 from app.services.lv_parser import parse_and_store
@@ -372,4 +384,86 @@ def get_lv_gaps(
     )
     if not lv:
         raise HTTPException(status_code=404, detail="LV nicht gefunden")
-    return compute_lv_gaps(lv, include_low_confidence=include_low_confidence)
+    return compute_lv_gaps(
+        lv, include_low_confidence=include_low_confidence, db=db
+    )
+
+
+@router.post(
+    "/{lv_id}/gaps/resolve",
+    response_model=GapResolveResponse,
+)
+def resolve_lv_gap(
+    lv_id: str,
+    payload: GapResolveRequest,
+    user: CurrentUser,
+    db: DbSession,
+    recalculate: bool = Query(
+        default=True,
+        description=(
+            "Wenn True, wird das LV direkt nach der Resolve-Aktion neu "
+            "kalkuliert und die neue Summe/Materialien sind sofort im "
+            "LV-Detail sichtbar. Bei False uebernimmt der Aufrufer das "
+            "Re-Calc (z.B. fuer Batch-Updates)."
+        ),
+    ),
+) -> GapResolveResponse:
+    """B+4.6 — Loest eine Katalog-Luecke entweder per manuellem Preis
+    (legt zusaetzlich einen Tenant-Override an) oder per Skip-Marker.
+
+    Tenant-Isolation ueber lv.tenant_id. Die Resolution ist idempotent
+    pro (lv_id, material_dna, resolution_type) — mehrfacher Aufruf mit
+    demselben Typ aktualisiert den bestehenden Eintrag.
+    """
+    lv = (
+        db.query(LV)
+        .filter(LV.id == lv_id, LV.tenant_id == user.tenant_id)
+        .first()
+    )
+    if not lv:
+        raise HTTPException(status_code=404, detail="LV nicht gefunden")
+
+    try:
+        if payload.resolution_type == GapResolutionTypeSchema.MANUAL_PRICE:
+            price_net = payload.value.get("price_net")
+            unit = payload.value.get("unit", "")
+            audit = resolve_gap_manual_price(
+                db=db,
+                lv=lv,
+                tenant_id=user.tenant_id,
+                user_id=user.id,
+                material_dna=payload.material_dna,
+                price_net=float(price_net) if price_net is not None else -1,
+                unit=str(unit),
+            )
+        else:
+            audit = resolve_gap_skip(
+                db=db,
+                lv=lv,
+                tenant_id=user.tenant_id,
+                user_id=user.id,
+                material_dna=payload.material_dna,
+            )
+    except GapResolutionError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        )
+
+    recalculated = False
+    if recalculate:
+        # kalkuliere_lv liest die Overrides selbst und weisst price_source
+        # "override" pro betroffener Position zu.
+        from app.services.kalkulation import kalkuliere_lv
+
+        kalkuliere_lv(db, lv_id, user.tenant_id)
+        recalculated = True
+
+    db.commit()
+    db.refresh(audit)
+
+    return GapResolveResponse(
+        resolution=GapResolutionOut.model_validate(audit),
+        recalculated=recalculated,
+    )

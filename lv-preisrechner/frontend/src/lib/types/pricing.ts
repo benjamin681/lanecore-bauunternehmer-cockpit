@@ -11,6 +11,7 @@ export type PricingStatus =
   | "PENDING_PARSE"
   | "PARSING"
   | "PARSED"
+  | "PARTIAL_PARSE"
   | "REVIEWED"
   | "APPROVED"
   | "ARCHIVED"
@@ -20,6 +21,7 @@ export const PRICING_STATUS_VALUES: PricingStatus[] = [
   "PENDING_PARSE",
   "PARSING",
   "PARSED",
+  "PARTIAL_PARSE",
   "REVIEWED",
   "APPROVED",
   "ARCHIVED",
@@ -34,10 +36,21 @@ export const PRICING_STATUS_META: Record<
   PENDING_PARSE: { label: "Warten auf Parse", badge: "info" },
   PARSING: { label: "Wird geparst …", badge: "info" },
   PARSED: { label: "Geparst", badge: "info" },
+  PARTIAL_PARSE: { label: "Teilweise geparst", badge: "warning" },
   REVIEWED: { label: "Review abgeschlossen", badge: "info" },
   APPROVED: { label: "Freigegeben", badge: "success" },
   ARCHIVED: { label: "Archiviert", badge: "default" },
   ERROR: { label: "Fehler", badge: "danger" },
+};
+
+/** B+4.5 — strukturierter Batch-Fehler aus dem Parser. */
+export type ParseErrorDetail = {
+  batch_idx: number;
+  page_range: string;
+  attempts: number;
+  error_class: string;
+  error_message: string;
+  raw_response_file: string | null;
 };
 
 /** SupplierPriceListOut */
@@ -53,6 +66,7 @@ export type SupplierPriceList = {
   source_file_hash: string;
   status: PricingStatus;
   parse_error: string | null;
+  parse_error_details: ParseErrorDetail[] | null;
   entries_total: number | null;
   entries_reviewed: number | null;
   is_active: boolean;

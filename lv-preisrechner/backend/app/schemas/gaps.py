@@ -8,9 +8,11 @@ Model persistiert.
 
 from __future__ import annotations
 
+from datetime import datetime
 from enum import Enum
+from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class GapSeverity(str, Enum):
@@ -49,6 +51,31 @@ class CatalogGapEntry(BaseModel):
     needs_review: bool
 
 
+class UniqueMissingMaterial(BaseModel):
+    """Dedupliziertes Gap pro material_dna mit Liste betroffener Positionen.
+
+    Kern-Datenstruktur fuer das UI: ein Material, alle betroffenen OZs
+    auf einen Blick, plus geschaetzter Preis aus einem eventuell
+    vorhandenen estimated-Fallback aus derselben Preisliste.
+    """
+
+    material_dna: str
+    material_name: str
+    unit: str
+    severity: GapSeverity
+    betroffene_positionen: list[str] = Field(
+        default_factory=list,
+        description="Liste von OZ-Kennungen der betroffenen Positionen.",
+    )
+    total_required_amount: float = 0.0
+    geschaetzter_preis: float | None = None
+    geschaetzter_preis_einheit: str | None = None
+    resolution: dict[str, Any] | None = Field(
+        default=None,
+        description="Aktive Resolution (falls vorhanden): resolution_type + resolved_value.",
+    )
+
+
 class LVGapsReport(BaseModel):
     lv_id: str
     total_positions: int
@@ -58,3 +85,49 @@ class LVGapsReport(BaseModel):
     estimated_count: int
     low_confidence_count: int
     gaps: list[CatalogGapEntry]
+    unique_missing_materials: list[UniqueMissingMaterial] = Field(default_factory=list)
+
+
+# --------------------------------------------------------------------------- #
+# Resolution (B+4.6)
+# --------------------------------------------------------------------------- #
+class GapResolutionTypeSchema(str, Enum):
+    MANUAL_PRICE = "manual_price"
+    SKIP = "skip"
+
+
+class GapResolveRequest(BaseModel):
+    """POST /lvs/{lv_id}/gaps/resolve.
+
+    corrected_value ist typ-abhaengig — Validierung im Service-Layer:
+    - MANUAL_PRICE: {price_net: float>0, unit: str}
+    - SKIP: {} (leer; Marker-Eintrag reicht).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    material_dna: str = Field(..., min_length=1, max_length=500)
+    resolution_type: GapResolutionTypeSchema
+    value: dict[str, Any] = Field(default_factory=dict)
+
+
+class GapResolutionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    lv_id: str
+    tenant_id: str
+    material_dna: str
+    resolution_type: str
+    resolved_value: dict[str, Any] | None
+    tenant_price_override_id: str | None
+    created_by_user_id: str
+    created_at: datetime
+
+
+class GapResolveResponse(BaseModel):
+    resolution: GapResolutionOut
+    recalculated: bool = Field(
+        default=False,
+        description="True wenn das LV nach der Aktion neu kalkuliert wurde.",
+    )
