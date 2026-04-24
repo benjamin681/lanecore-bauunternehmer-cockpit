@@ -680,10 +680,14 @@ REZEPTE: dict[str, Rezept] = {
 
 
 # F-Klasse-Routing: Wenn Feuerwiderstand gesetzt, bevorzuge Brandschutz-Rezept.
-def resolve_rezept(
+def _resolve_rezept_raw(
     erkanntes_system: str, feuerwiderstand: str, plattentyp: str
 ) -> Rezept | None:
-    """Liefert das passendste Rezept für eine LV-Position."""
+    """Liefert das passendste Rezept für eine LV-Position.
+
+    Interner Kern-Lookup ohne Plattentyp-Override. Wird vom Wrapper
+    ``resolve_rezept`` aufgerufen.
+    """
     if not erkanntes_system:
         return None
 
@@ -861,3 +865,94 @@ def resolve_rezept(
     if "AQUAPANEL" in upper:
         return REZEPTE["Aquapanel"]
     return None
+
+
+# ---------------------------------------------------------------------------
+# 2026-04-24: Plattentyp-Override fuer Nicht-Brandschutz-Schachtwaende
+# ---------------------------------------------------------------------------
+# Hintergrund: Die W62X-Schachtwand-Rezepte sind per Knauf-Standard mit
+# Fireboard (17,90 EUR/m²) ausgelegt, weil Schachtwaende oft Brand-
+# abschnittsgrenzen sind. In der Ulm-Praxis (Trockenbau Feichtenbeiner)
+# sind ca. 80 % der Schachtwaende aber reine Installationsschaechte ohne
+# Brandschutz-Auflage, beplankt mit normaler GKB/GKBi.
+#
+# Der Override greift GENAU dann:
+# - System ist in _OVERRIDE_WHITELIST (nur einfache Schachtwand
+#   W628A/W628B, kein Doppelstaender W629 und keine Sonderform W635 —
+#   die bleiben aus Sicherheitsgruenden bei Fireboard).
+# - LV-Position hat plattentyp explizit gesetzt auf GKB/GKBi/GKF/GKFi/
+#   Diamant (also nicht leer und nicht "Fireboard").
+# - LV-Position hat keinen Brandschutz-Feuerwiderstand (F30/F60/F90/
+#   F120/F180, EI30/EI60/EI90/EI120).
+# Sonst bleibt Fireboard unveraendert.
+_PLATTENTYP_TO_DNA = {
+    "GKB":     "|Gipskarton|GKB|12.5mm|",
+    "GKF":     "|Gipskarton|GKF|12.5mm|",
+    "GKBI":    "|Gipskarton|GKBI|12.5mm|",
+    "GKFI":    "|Gipskarton|GKFI|12.5mm|",
+    "DIAMANT": "|Gipskarton|Diamant|12.5mm|",
+}
+_FIRE_RATINGS = {
+    "F30", "F60", "F90", "F120", "F180",
+    "EI30", "EI60", "EI90", "EI120",
+}
+_OVERRIDE_WHITELIST = {"W628A", "W628B"}
+
+
+def _apply_plattentyp_override(
+    rezept: Rezept, plattentyp: str, feuerwiderstand: str
+) -> Rezept:
+    """Ersetzt Fireboard-Platten im Rezept durch die vom LV geforderte
+    Standard-Gipskartonplatte. Bedingungen siehe Modul-Kommentar oben."""
+    if rezept.system not in _OVERRIDE_WHITELIST:
+        return rezept
+    pt = (plattentyp or "").strip().upper()
+    if pt in ("", "FIREBOARD"):
+        return rezept
+    if pt not in _PLATTENTYP_TO_DNA:
+        return rezept
+    if (feuerwiderstand or "").strip().upper() in _FIRE_RATINGS:
+        return rezept
+
+    new_dna = _PLATTENTYP_TO_DNA[pt]
+    materialien_new: list[MaterialBedarf] = []
+    changed = False
+    for mb in rezept.materialien:
+        if "Fireboard" in mb.dna_pattern:
+            materialien_new.append(
+                MaterialBedarf(
+                    dna_pattern=new_dna,
+                    menge_pro_einheit=mb.menge_pro_einheit,
+                    basis_einheit=mb.basis_einheit,
+                    fallback_preis_eur=mb.fallback_preis_eur,
+                    optional=mb.optional,
+                )
+            )
+            changed = True
+        else:
+            materialien_new.append(mb)
+    if not changed:
+        return rezept
+    return Rezept(
+        system=rezept.system,
+        beschreibung=rezept.beschreibung + f" [plattentyp-override: {pt}]",
+        zieleinheit=rezept.zieleinheit,
+        zeit_h_pro_einheit=rezept.zeit_h_pro_einheit,
+        materialien=materialien_new,
+    )
+
+
+def resolve_rezept(
+    erkanntes_system: str, feuerwiderstand: str, plattentyp: str
+) -> Rezept | None:
+    """Rezept-Lookup + plattentyp-Override.
+
+    Delegiert erst an ``_resolve_rezept_raw`` (Kern-Lookup, unveraendert).
+    Wendet danach ``_apply_plattentyp_override`` an, das bei nicht-
+    brandschutz Schachtwaenden die Fireboard-Platte durch die vom LV
+    geforderte Standard-Gipskartonplatte ersetzt.
+    """
+    rezept = _resolve_rezept_raw(erkanntes_system, feuerwiderstand, plattentyp)
+    if rezept is None:
+        return None
+    return _apply_plattentyp_override(rezept, plattentyp, feuerwiderstand)
