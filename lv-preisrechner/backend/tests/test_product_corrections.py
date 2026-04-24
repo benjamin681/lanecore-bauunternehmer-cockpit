@@ -307,11 +307,12 @@ def test_parser_hook_wendet_bekannte_correction_an(client):
     pl_id = _upload_pricelist(client, token)
     tid = _tenant_id_of_pricelist(pl_id)
 
-    # User-ID aus dem Token ziehen, weil ProductCorrection.created_by_user_id
-    # nicht NULL sein darf. Wir holen sie ueber /auth/me.
-    me = client.get("/api/v1/auth/me", headers=_auth(token))
-    assert me.status_code == 200, me.text
-    user_id = me.json()["id"]
+    # User-ID aus der DB holen (ProductCorrection.created_by_user_id ist NOT NULL)
+    from app.models.user import User
+    with _sl()() as db:
+        user = db.query(User).filter(User.email == "hook@example.com").first()
+        assert user is not None
+        user_id = user.id
 
     # Korrektur vorab persistieren
     with _sl()() as db:
