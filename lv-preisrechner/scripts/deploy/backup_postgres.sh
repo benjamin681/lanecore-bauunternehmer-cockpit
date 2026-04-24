@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 #
-# B+4.3.2c-1: Taeglicher Postgres-Dump.
+# B+4.3.2c-1: Taeglicher Postgres-Dump + Storage-Archiv.
 #
-# Schreibt nach /home/appuser/backups/lvp-YYYY-MM-DD.sql.gz, loescht
-# Dumps aelter als 14 Tage.
+# Schreibt nach /home/appuser/backups/
+#   lvp-YYYY-MM-DD.sql.gz          (Postgres-Dump)
+#   lvp-storage-YYYY-MM-DD.tar.gz  (hochgeladene PDFs, falls vorhanden)
+# loescht Dumps + Archive aelter als 14 Tage.
 #
 # Einmalig in cron eintragen:
 #   crontab -e
@@ -13,9 +15,11 @@
 set -euo pipefail
 
 BACKUP_DIR="${HOME}/backups"
+STORAGE_DIR="${HOME}/lvp-storage"
 RETENTION_DAYS=14
 TIMESTAMP="$(date +%F)"
 DUMP_FILE="${BACKUP_DIR}/lvp-${TIMESTAMP}.sql.gz"
+STORAGE_ARCHIVE="${BACKUP_DIR}/lvp-storage-${TIMESTAMP}.tar.gz"
 
 mkdir -p "${BACKUP_DIR}"
 
@@ -47,7 +51,19 @@ docker compose exec -T postgres \
 
 ls -lh "${DUMP_FILE}"
 
-echo "[$(date -Is)] Loesche Dumps aelter als ${RETENTION_DAYS} Tage"
-find "${BACKUP_DIR}" -maxdepth 1 -name "lvp-*.sql.gz" -mtime +${RETENTION_DAYS} -print -delete
+# Storage-Archiv (User-Uploads: PDFs, Excel-LVs etc.)
+if [ -d "${STORAGE_DIR}" ] && [ -n "$(ls -A "${STORAGE_DIR}" 2>/dev/null)" ]; then
+    echo "[$(date -Is)] Archiviere ${STORAGE_DIR} nach ${STORAGE_ARCHIVE}"
+    tar -czf "${STORAGE_ARCHIVE}" -C "$(dirname "${STORAGE_DIR}")" \
+        "$(basename "${STORAGE_DIR}")"
+    ls -lh "${STORAGE_ARCHIVE}"
+else
+    echo "[$(date -Is)] Storage-Dir leer oder nicht vorhanden — kein Archiv."
+fi
+
+echo "[$(date -Is)] Loesche Dumps + Archive aelter als ${RETENTION_DAYS} Tage"
+find "${BACKUP_DIR}" -maxdepth 1 \
+    \( -name "lvp-*.sql.gz" -o -name "lvp-storage-*.tar.gz" \) \
+    -mtime +${RETENTION_DAYS} -print -delete
 
 echo "[$(date -Is)] Backup fertig."
