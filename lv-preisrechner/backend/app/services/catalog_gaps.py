@@ -121,7 +121,9 @@ def compute_lv_gaps(
             else:
                 confidence = float(conf_raw) if conf_raw is not None else None
 
-            dna = str(m.get("dna") or "")
+            # Material-JSONs tragen die DNA teils als "dna" (neueres
+            # Schema), teils als "dna_pattern" (Legacy). Beide tolerieren.
+            dna = str(m.get("dna") or m.get("dna_pattern") or "")
             position_name = pos.erkanntes_system or (pos.kurztext or "")[:60]
             gaps.append(
                 CatalogGapEntry(
@@ -288,6 +290,8 @@ def resolve_gap_manual_price(
     resolve_gap_manual_price-Call den bestehenden Override und
     Audit-Eintrag (Upsert ueber UniqueConstraint auf der Audit-Tabelle).
     """
+    if not material_dna or not material_dna.strip():
+        raise GapResolutionError("material_dna muss nicht-leerer String sein")
     if price_net is None or price_net <= 0:
         raise GapResolutionError("price_net muss > 0 sein")
     if not unit or not unit.strip():
