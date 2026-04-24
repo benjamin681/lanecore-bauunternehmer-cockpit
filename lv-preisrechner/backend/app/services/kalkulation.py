@@ -79,12 +79,20 @@ def _resolve_material_via_lookup(
 
     original_size = parts.get("abmessungen", "")
     product = _build_product(original_size) or parts.get("produktname", "")
+    # B+4.6: Eine synthetische article_number "DNA:<pattern>" ermoeglicht
+    # dem Override-Lookup (Stage 1), per-DNA eingetragene Tenant-Overrides
+    # (z.B. aus dem Gap-Resolve-Workflow) zuverlaessig zu treffen —
+    # unabhaengig davon, ob ein Hersteller im DNA-Pattern gesetzt ist.
+    dna_article_key = (
+        f"DNA:{mb.dna_pattern}" if getattr(mb, "dna_pattern", None) else None
+    )
     lookup = lookup_price(
         db=db,
         tenant_id=tenant_id,
         material_name=product,
         unit=mb.basis_einheit,
         manufacturer=parts.get("hersteller") or None,
+        article_number=dna_article_key,
         category=parts.get("kategorie") or None,
     )
 
@@ -101,6 +109,7 @@ def _resolve_material_via_lookup(
                 material_name=_build_product(alias_size),
                 unit=mb.basis_einheit,
                 manufacturer=parts.get("hersteller") or None,
+                article_number=dna_article_key,
                 category=parts.get("kategorie") or None,
             )
             if retry.price_source != "not_found":
