@@ -19,6 +19,7 @@ import type {
   SupplierPriceEntry,
   SupplierPriceEntryUpdate,
 } from "@/lib/types/pricing";
+import { REVIEW_REASON_LABELS } from "@/lib/types/pricing";
 
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -137,11 +138,76 @@ export function ReviewEntryDialog({
   const [busy, setBusy] = useState(false);
   const [attrError, setAttrError] = useState<string | null>(null);
 
+  // B+4.4 P4: Bundgroesse-Widget (nur aktiv wenn review_reason = bundgroesse_fehlt).
+  const [bundleInput, setBundleInput] = useState<string>("");
+  const [bundlePersist, setBundlePersist] = useState<boolean>(true);
+
   // Reset form whenever a new entry comes in
   useEffect(() => {
     setForm(initial);
     setAttrError(null);
+    setBundleInput("");
+    setBundlePersist(true);
   }, [initial]);
+
+  // Rechnet Live-Preview des resultierenden EUR/lfm-Werts.
+  const bundlePreview = useMemo(() => {
+    if (!entry) return null;
+    const pieces = Number.parseInt(bundleInput, 10);
+    const size = entry.package_size;
+    if (!Number.isFinite(pieces) || pieces <= 0) return null;
+    if (!size || size <= 0) {
+      return {
+        pieces,
+        size: null,
+        totalPerBundle: null,
+        pricePerUnit: null,
+        warning:
+          "Für diesen Eintrag fehlt package_size — der effektive Preis kann nicht berechnet werden.",
+      };
+    }
+    const totalPerBundle = size * pieces;
+    if (totalPerBundle <= 0) return null;
+    return {
+      pieces,
+      size,
+      totalPerBundle,
+      pricePerUnit: entry.price_net / totalPerBundle,
+      warning: null as string | null,
+    };
+  }, [entry, bundleInput]);
+
+  async function submitBundleCorrection() {
+    if (!entry) return;
+    const pieces = Number.parseInt(bundleInput, 10);
+    if (!Number.isFinite(pieces) || pieces <= 0) {
+      toast.error("Bitte eine gültige Stückzahl eingeben.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await pricingApi.correctEntry(entry.id, {
+        correction_type: "pieces_per_package",
+        corrected_value: { pieces_per_package: pieces },
+        persist: bundlePersist,
+      });
+      toast.success(
+        res.correction_persisted
+          ? "Gespeichert + für künftige Uploads gemerkt."
+          : "Gespeichert.",
+      );
+      onSaved(res.entry);
+      onClose();
+    } catch (err) {
+      if (err instanceof ApiError) {
+        toast.error(err.detail ?? "Speichern fehlgeschlagen");
+      } else {
+        toast.error("Speichern fehlgeschlagen");
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
 
   function patch<K extends keyof FormState>(field: K, value: FormState[K]) {
     setForm((s) => (s ? { ...s, [field]: value } : s));
@@ -260,6 +326,111 @@ export function ReviewEntryDialog({
             <ExternalLink className="w-4 h-4" /> Seite {entry.source_page} im
             Original-PDF ansehen
           </a>
+        )}
+
+        {/* source_row_raw: Originale PDF-Zeile als Kontext */}
+        {entry.source_row_raw && (
+          <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
+            <div className="text-xs text-slate-500 mb-1">Originale Zeile aus dem PDF</div>
+            <div className="font-mono text-xs text-slate-800 whitespace-pre-wrap break-words">
+              {entry.source_row_raw}
+            </div>
+          </div>
+        )}
+
+        {/* B+4.4 P4: Bundgroesse-Widget — nur wenn review_reason = bundgroesse_fehlt */}
+        {(entry.attributes?.review_reason as string | undefined) ===
+          "bundgroesse_fehlt" && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-4 space-y-3">
+            <div>
+              <div className="text-sm font-semibold text-amber-900">
+                Bundgröße nachtragen
+              </div>
+              <div className="text-xs text-amber-800/80 mt-0.5">
+                {REVIEW_REASON_LABELS.bundgroesse_fehlt} — im PDF-Text ist die
+                Stückzahl pro Bund nicht erkennbar. Trag sie ein, der effektive
+                Preis wird daraus neu berechnet.
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="bundle_pieces" className="text-amber-900">
+                  Stück pro Bund
+                </Label>
+                <Input
+                  id="bundle_pieces"
+                  inputMode="numeric"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={bundleInput}
+                  onChange={(e) => setBundleInput(e.target.value)}
+                  className="w-32"
+                />
+              </div>
+
+              {entry.package_size && (
+                <div className="text-xs text-amber-900/80 pb-2.5">
+                  × {entry.package_size}{" "}
+                  {entry.package_unit ?? entry.effective_unit ?? "Einheit"} pro
+                  Stück
+                </div>
+              )}
+            </div>
+
+            {bundlePreview && (
+              <div className="text-sm text-amber-900 bg-white/60 rounded border border-amber-200 px-3 py-2">
+                {bundlePreview.pricePerUnit !== null ? (
+                  <>
+                    <span className="font-mono">{bundlePreview.pieces}</span>{" "}
+                    Stück ×{" "}
+                    <span className="font-mono">{bundlePreview.size}</span>{" "}
+                    {entry.package_unit ?? entry.effective_unit} ={" "}
+                    <span className="font-mono">
+                      {bundlePreview.totalPerBundle!.toFixed(2)}
+                    </span>{" "}
+                    {entry.effective_unit} pro Bund
+                    <div className="mt-1">
+                      →{" "}
+                      <span className="font-mono font-semibold">
+                        {bundlePreview.pricePerUnit.toFixed(4)}
+                      </span>{" "}
+                      €/{entry.effective_unit}{" "}
+                      <span className="text-xs text-amber-900/60">
+                        (aus {entry.price_net.toFixed(2)} € Bundpreis)
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <span className="text-amber-900/80">
+                    {bundlePreview.warning}
+                  </span>
+                )}
+              </div>
+            )}
+
+            <label className="flex items-center gap-2 text-xs text-amber-900 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={bundlePersist}
+                onChange={(e) => setBundlePersist(e.target.checked)}
+                className="w-4 h-4"
+              />
+              Für künftige Uploads derselben Preisliste merken
+            </label>
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={submitBundleCorrection}
+                disabled={busy || bundleInput.trim() === ""}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Save className="w-4 h-4" /> Bundgröße anwenden
+              </button>
+            </div>
+          </div>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

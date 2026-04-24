@@ -82,6 +82,7 @@ export type SupplierPriceEntry = {
   price_per_effective_unit: number;
   attributes: Record<string, unknown>;
   source_page: number | null;
+  source_row_raw?: string | null;
   parser_confidence: number;
   needs_review: boolean;
   reviewed_by_user_id?: string | null;
@@ -119,4 +120,69 @@ export type ListPricelistsQuery = {
   active?: boolean | null;
   offset?: number;
   limit?: number;
+};
+
+
+// --------------------------------------------------------------------------- //
+// Review / Correction (B+4.4 P4)
+// --------------------------------------------------------------------------- //
+
+/** Normierte review_reason-Werte aus app/services/pricelist_parser.py. */
+export const REVIEW_REASON_LABELS: Record<string, string> = {
+  bundgroesse_fehlt: "Bundgröße fehlt",
+  bundpreis_vs_einzelpreis_unklar: "Bund- oder Einzelpreis unklar",
+  preis_ausserhalb_korridor: "Preis außerhalb des Korridors",
+  einheit_nicht_erkannt: "Einheit nicht erkannt",
+  unknown: "Ohne strukturierten Grund",
+};
+
+export type EntryReviewItem = {
+  id: string;
+  pricelist_id: string;
+  article_number: string | null;
+  manufacturer: string | null;
+  product_name: string;
+  price_net: number;
+  currency: string;
+  unit: string;
+  package_size: number | null;
+  pieces_per_package: number | null;
+  effective_unit: string;
+  price_per_effective_unit: number;
+  source_page: number | null;
+  source_row_raw: string | null;
+  review_reason: string | null;
+  attributes: Record<string, unknown>;
+  parser_confidence: number;
+};
+
+export type EntryReviewGroup = {
+  review_reason: string;
+  count: number;
+  items: EntryReviewItem[];
+};
+
+export type EntryReviewResponse = {
+  pricelist_id: string;
+  total_needs_review: number;
+  groups: EntryReviewGroup[];
+};
+
+/** Backend: ProductCorrectionType-Enum-Werte. */
+export type ProductCorrectionType =
+  | "pieces_per_package"
+  | "unit_override"
+  | "price_per_effective_unit"
+  | "confirmed_as_is";
+
+export type CorrectEntryRequest = {
+  correction_type: ProductCorrectionType;
+  corrected_value: Record<string, unknown>;
+  persist?: boolean;
+};
+
+export type CorrectEntryResponse = {
+  entry: SupplierPriceEntry;
+  correction_persisted: boolean;
+  correction_id: string | null;
 };

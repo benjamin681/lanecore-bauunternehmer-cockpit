@@ -23,9 +23,11 @@ import { toast } from "sonner";
 import { ApiError } from "@/lib/api";
 import { pricingApi } from "@/lib/pricingApi";
 import type {
+  EntryReviewResponse,
   SupplierPriceEntry,
   SupplierPriceListDetail,
 } from "@/lib/types/pricing";
+import { REVIEW_REASON_LABELS } from "@/lib/types/pricing";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardBody } from "@/components/ui/card";
@@ -68,6 +70,10 @@ export default function PricingReviewPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("NEEDS_REVIEW");
   const [mfrFilter, setMfrFilter] = useState<string>("ALL");
   const [search, setSearch] = useState("");
+  // B+4.4 P4: zusaetzlicher Filter auf strukturierten review_reason.
+  // "ALL" heisst "alle Gruende" (kein Filter).
+  const [reasonFilter, setReasonFilter] = useState<string>("ALL");
+  const [reviewOverview, setReviewOverview] = useState<EntryReviewResponse | null>(null);
 
   const [sortBy, setSortBy] = useState<string>("parser_confidence");
   const [sortDir, setSortDir] = useState<SortDirection>("asc");
@@ -80,13 +86,17 @@ export default function PricingReviewPage() {
     (async () => {
       setLoading(true);
       try {
-        const data = await pricingApi.getPricelist(id, {
-          includeEntries: true,
-          limit: 500,
-        });
+        // Parallel: Full-Detail fuer Tabelle + Gruppierte Review-Uebersicht
+        // (fuer Chips). Letzere scheitert leise, wenn der Endpoint auf
+        // alten Backend-Versionen noch nicht existiert.
+        const [data, overview] = await Promise.all([
+          pricingApi.getPricelist(id, { includeEntries: true, limit: 500 }),
+          pricingApi.getEntryReview(id).catch(() => null),
+        ]);
         if (!active) return;
         setDetail(data);
         setEntries(data.entries ?? []);
+        setReviewOverview(overview);
       } catch (e) {
         const msg = e instanceof ApiError ? e.detail : "Laden fehlgeschlagen";
         toast.error(msg ?? "Laden fehlgeschlagen");
@@ -113,9 +123,14 @@ export default function PricingReviewPage() {
       if (statusFilter === "UNCERTAIN" && e.parser_confidence >= 0.7) return false;
       if (mfrFilter !== "ALL" && (e.manufacturer ?? "") !== mfrFilter) return false;
       if (q && !e.product_name.toLowerCase().includes(q)) return false;
+      if (reasonFilter !== "ALL") {
+        const reason =
+          (e.attributes?.review_reason as string | undefined) ?? "unknown";
+        if (reason !== reasonFilter) return false;
+      }
       return true;
     });
-  }, [entries, statusFilter, mfrFilter, search]);
+  }, [entries, statusFilter, mfrFilter, search, reasonFilter]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -138,7 +153,7 @@ export default function PricingReviewPage() {
   // Reset zur Seite 1 bei Filter-Wechsel
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, mfrFilter, search]);
+  }, [statusFilter, mfrFilter, search, reasonFilter]);
 
   function handleSaved(updated: SupplierPriceEntry) {
     setEntries((list) =>
@@ -300,6 +315,42 @@ export default function PricingReviewPage() {
           </div>
         </CardBody>
       </Card>
+
+      {/* Review-Grund-Chips (nur wenn needs_review-Entries vorhanden) */}
+      {reviewOverview && reviewOverview.total_needs_review > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-slate-500 mr-1">Grund:</span>
+          <button
+            type="button"
+            onClick={() => setReasonFilter("ALL")}
+            className={`px-3 py-1 text-xs rounded-full border transition ${
+              reasonFilter === "ALL"
+                ? "bg-bauplan-600 text-white border-bauplan-600"
+                : "bg-white text-slate-700 border-slate-200 hover:border-slate-300"
+            }`}
+          >
+            Alle ({reviewOverview.total_needs_review})
+          </button>
+          {reviewOverview.groups.map((g) => {
+            const active = reasonFilter === g.review_reason;
+            const label = REVIEW_REASON_LABELS[g.review_reason] ?? g.review_reason;
+            return (
+              <button
+                key={g.review_reason}
+                type="button"
+                onClick={() => setReasonFilter(g.review_reason)}
+                className={`px-3 py-1 text-xs rounded-full border transition ${
+                  active
+                    ? "bg-bauplan-600 text-white border-bauplan-600"
+                    : "bg-white text-slate-700 border-slate-200 hover:border-slate-300"
+                }`}
+              >
+                {label} ({g.count})
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Confidence-Legende */}
       <div className="text-xs text-slate-500 flex items-center gap-3 flex-wrap">

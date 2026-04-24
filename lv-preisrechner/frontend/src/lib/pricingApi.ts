@@ -9,6 +9,9 @@
 
 import { api } from "@/lib/api";
 import type {
+  CorrectEntryRequest,
+  CorrectEntryResponse,
+  EntryReviewResponse,
   ListPricelistsQuery,
   SupplierPriceList,
   SupplierPriceListDetail,
@@ -93,6 +96,19 @@ export const pricingApi = {
       `/pricing/pricelists/${pricelistId}/entries/${entryId}`,
       { method: "PATCH", body },
     ),
+
+  // B+4.4 P4: Review gruppiert + strukturierte Korrekturen ------------------
+
+  /** Alle needs_review-Entries einer Preisliste, gruppiert nach review_reason. */
+  getEntryReview: (pricelistId: string) =>
+    api<EntryReviewResponse>(`/pricing/entries/${pricelistId}/review`),
+
+  /** Korrektur auf einen Entry anwenden (optional persistiert). */
+  correctEntry: (entryId: string, body: CorrectEntryRequest) =>
+    api<CorrectEntryResponse>(`/pricing/entries/${entryId}/correct`, {
+      method: "POST",
+      body,
+    }),
 };
 
 export type PricingApi = typeof pricingApi;
