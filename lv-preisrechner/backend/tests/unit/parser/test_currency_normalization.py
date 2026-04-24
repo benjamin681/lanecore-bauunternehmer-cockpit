@@ -48,15 +48,26 @@ def test_currency_whitelist_passthrough(raw_input, expected_currency, expected_r
     "raw_input, expected_raw",
     [
         ("eur", "eur"),          # lower-case → upper, raw wird gespiegelt
-        (" EUR ", "EUR"),        # Whitespace → stripped, raw gespiegelt
         ("Eur", "Eur"),          # mixed case, raw gespiegelt
     ],
 )
-def test_currency_whitelist_normalized(raw_input, expected_raw):
-    """Case- und Whitespace-Varianten werden auf EUR gemappt und geloggt."""
+def test_currency_case_normalized(raw_input, expected_raw):
+    """Case-Varianten werden auf EUR gemappt und als raw-Spur geloggt."""
     currency, raw = _normalize_currency(raw_input)
     assert currency == "EUR"
     assert raw == expected_raw
+
+
+def test_currency_pure_whitespace_is_silent():
+    """Reiner Whitespace um einen sauberen Whitelist-Code spiegelt NICHT.
+
+    Rationale: strip+upper landet auf dem Whitelist-Eintrag und das
+    Original unterscheidet sich nur durch Whitespace — keine
+    Debugging-relevante Drift.
+    """
+    currency, raw = _normalize_currency(" EUR ")
+    assert currency == "EUR"
+    assert raw is None
 
 
 # --------------------------------------------------------------------------- #
