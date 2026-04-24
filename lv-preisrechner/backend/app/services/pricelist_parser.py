@@ -83,6 +83,34 @@ REVIEW_REASON_PREIS_AUSSERHALB_KORRIDOR = "preis_ausserhalb_korridor"
 REVIEW_REASON_EINHEIT_NICHT_ERKANNT = "einheit_nicht_erkannt"
 
 
+# Erlaubte Waehrungs-Codes. Der LLM-Parse kann in Randfaellen Varianten
+# wie "EURO", "Euro", "€/Sack", " EUR " liefern. Die DB-Spalte ist
+# varchar(10) nach Migration f8a2b3e91d04, aber wir normalisieren
+# trotzdem hier auf ISO-4217-Whitelist — abweichende Rohwerte landen
+# in attributes["raw_currency"] zur Nachvollziehbarkeit.
+CURRENCY_WHITELIST = ("EUR", "USD", "CHF", "GBP")
+CURRENCY_DEFAULT = "EUR"
+
+
+def _normalize_currency(raw_value: object) -> tuple[str, str | None]:
+    """Normalisiert Claude-Currency-Output auf ISO-4217-Whitelist.
+
+    Returns (normalized_currency, raw_for_debug).
+    raw_for_debug ist None wenn der Wert sauber auf die Whitelist
+    mappt (strip + upper reicht), sonst der Original-String.
+    """
+    if raw_value is None:
+        return CURRENCY_DEFAULT, None
+    raw_str = str(raw_value).strip()
+    if not raw_str:
+        return CURRENCY_DEFAULT, None
+    upper = raw_str.upper()
+    if upper in CURRENCY_WHITELIST:
+        # nur raw festhalten wenn Groß-/Klein- oder Whitespace-Reibung
+        return upper, (raw_str if raw_str != upper else None)
+    return CURRENCY_DEFAULT, raw_str
+
+
 # ---------------------------------------------------------------------------
 # Format-Erkennung
 # ---------------------------------------------------------------------------
@@ -814,6 +842,14 @@ class PricelistParser:
         elif corridor_violated:
             attributes["review_reason"] = REVIEW_REASON_PREIS_AUSSERHALB_KORRIDOR
 
+        # Currency-Normalisierung: Whitelist + Raw-Spiegelung in attributes.
+        # Historie: vor Migration f8a2b3e91d04 war currency varchar(3) und
+        # ein einziger abweichender LLM-Output wie "EURO" oder "€/Sack"
+        # brachte die gesamte Transaction zum Rollback.
+        currency, raw_currency = _normalize_currency(raw.get("currency"))
+        if raw_currency is not None:
+            attributes["raw_currency"] = raw_currency
+
         return SupplierPriceEntry(
             pricelist_id=pricelist.id,
             tenant_id=pricelist.tenant_id,
@@ -823,7 +859,7 @@ class PricelistParser:
             category=(raw.get("category") or None),
             subcategory=(raw.get("subcategory") or None),
             price_net=price_net,
-            currency=(raw.get("currency") or "EUR"),
+            currency=currency,
             unit=unit[:50],
             package_size=unit_info.package_size,
             package_unit=unit_info.package_unit,

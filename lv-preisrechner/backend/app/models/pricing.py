@@ -175,7 +175,7 @@ class SupplierPriceEntry(Base):
 
     # Preis
     price_net: Mapped[float] = mapped_column(Float, nullable=False)
-    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="EUR")
+    currency: Mapped[str] = mapped_column(String(10), nullable=False, default="EUR")
     unit: Mapped[str] = mapped_column(String(50), nullable=False)
 
     # Einheiten-Intelligenz (Normalisierung fuer Matching)
