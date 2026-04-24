@@ -63,6 +63,24 @@ class UnitInfo:
     confidence: float = 1.0                 # 0..1
     needs_review: bool = False
     note: str = ""                          # Freitext-Hinweis fuer Reviewer
+    review_reason: str | None = None        # Normierter Grund (s. _REVIEW_REASONS)
+
+
+# Normierte review_reason-Werte. Damit kann das UI gezielt filtern und dem
+# User sagen was zu tun ist.
+#
+# - bundgroesse_fehlt: Produktname impliziert Gebinde (z.B. BL=XYZmm bei einem
+#   Profil) aber keine Stueckzahl ("N St./Bd.") gefunden. Wahrscheinlich
+#   Bundpreis gespeichert als lfm-Preis.
+# - bundpreis_vs_einzelpreis_unklar: R2-Fall — Bundangabe UND Laengenangabe
+#   gefunden, aber €/m kann sich auf Einzelstange oder Bund beziehen.
+# - preis_ausserhalb_korridor: Plausibilitaets-Check schlaegt fehl
+#   (s. _PLAUSIBILITY_CORRIDORS in _build_entry).
+# - einheit_nicht_erkannt: Fallback-Fall — keine der R1-R5-Regeln matcht.
+REVIEW_REASON_BUNDGROESSE_FEHLT = "bundgroesse_fehlt"
+REVIEW_REASON_BUNDPREIS_UNKLAR = "bundpreis_vs_einzelpreis_unklar"
+REVIEW_REASON_PREIS_AUSSERHALB_KORRIDOR = "preis_ausserhalb_korridor"
+REVIEW_REASON_EINHEIT_NICHT_ERKANNT = "einheit_nicht_erkannt"
 
 
 # ---------------------------------------------------------------------------
@@ -155,6 +173,15 @@ _ROLL_SIZE_RE = re.compile(
 # Regex: Plattenformat "2000x1250x12,5 mm"
 _PLATE_SIZE_RE = re.compile(
     r"(?P<w>\d+)\s*[x×]\s*(?P<h>\d+)\s*(?:[x×]\s*\d+(?:[,\.]\d+)?)?\s*mm",
+    re.IGNORECASE,
+)
+
+# Regex: Profil-Typ-Erkennung (Trockenbau).
+# Matcht CW/UW/UA/CD/UD als eigenstaendiges Token (Wortgrenze davor und
+# entweder Zahl/Dimension/Leerzeichen danach), damit z.B. "UA" in
+# "Aufbau" oder "Quadrat" nicht falsch matcht.
+_PROFILE_TYPE_RE = re.compile(
+    r"\b(?:CW|UW|UA|CD|UD)\b[\s\-]*\d",
     re.IGNORECASE,
 )
 
@@ -282,6 +309,36 @@ def _normalize_unit(
                     "Bundpreis vs. Einzelpreis unklar — "
                     "der €/m koennte sich auf eine Einzelstange oder den Bund beziehen."
                 ),
+                review_reason=REVIEW_REASON_BUNDPREIS_UNKLAR,
+            )
+        # P3 (B+4.3.x): Bundgroesse fehlt — BL=XYZmm im Produktname, aber
+        # keine "N St./Bd."-Angabe. Das ist der Kern-Bug bei den Kemmler
+        # UA-Profilen: "UA 48x40x2 BL=3000mm" mit €/m 318,80 sieht fuer
+        # den Parser wie klarer lfm-Preis aus, ist aber tatsaechlich ein
+        # Bundpreis (6 St./Bd. stand nicht im PDF).
+        #
+        # Wir triggern NUR wenn length_match greift — das ist der starke
+        # Hinweis auf Gebinde. Profil-Typ allein (CW/UW/UA) ohne BL wuerde
+        # zu viele false positives schalten (normaler lfm-Preis fuer
+        # Einzelstangen ist legitim).
+        if length_match:
+            return UnitInfo(
+                unit=raw,
+                effective_unit="lfm",
+                price_per_effective_unit=price,
+                package_size=_to_meters(
+                    _to_float(length_match.group("len")),
+                    length_match.group("unit"),
+                ),
+                package_unit="m",
+                confidence=0.4,
+                needs_review=True,
+                note=(
+                    "Bundgroesse fehlt — Produkttext enthaelt BL=XYZmm, aber "
+                    "keine 'N St./Bd.'-Angabe gefunden. Der €/m-Preis koennte "
+                    "in Wahrheit ein Bundpreis sein."
+                ),
+                review_reason=REVIEW_REASON_BUNDGROESSE_FEHLT,
             )
         # Sonst: klarer lfm-Preis
         return UnitInfo(
@@ -353,6 +410,7 @@ def _normalize_unit(
         confidence=0.3,
         needs_review=True,
         note=f"Einheit '{raw_unit}' nicht automatisch erkannt. Manuelle Pruefung noetig.",
+        review_reason=REVIEW_REASON_EINHEIT_NICHT_ERKANNT,
     )
 
 
@@ -365,6 +423,141 @@ def _extract_price_per_effective_unit(
     """Convenience-Wrapper: nur den normalisierten Preis zurueck."""
     info = _normalize_unit(raw_unit, product_name=product_name, price=price)
     return info.price_per_effective_unit
+
+
+# ---------------------------------------------------------------------------
+# P1 (B+4.3.x): Plausibilitaets-Korridore
+# ---------------------------------------------------------------------------
+# Jede Regel: (name, product_name_pattern, effective_unit_set, min_price, max_price)
+#
+# Matching-Strategie:
+# - Produktname-Pattern (nicht category-String, da Kategorien haendler-
+#   spezifisch und inkonsistent sind).
+# - effective_unit-Set muss nach _normalize_unit matchen.
+# - Erste passende Regel gewinnt. Reihenfolge: spezifisch → allgemein.
+#
+# Wenn Preis ausserhalb: parser_confidence=0.3, needs_review=True,
+# review_reason="preis_ausserhalb_korridor". Preis wird TROTZDEM uebernommen
+# (nicht verworfen) — die Entscheidung liegt beim Reviewer.
+_PLAUSIBILITY_CORRIDORS: list[tuple[str, re.Pattern, set[str], float, float]] = [
+    # Brandschutzplatten Fireboard/Diamant (zuerst, weil spezifischer als GKB)
+    (
+        "brandschutzplatte",
+        re.compile(r"\b(fireboard|diamant)\b", re.IGNORECASE),
+        {"m²", "m2", "qm"},
+        10.0,
+        30.0,
+    ),
+    # Gipsfaserplatten GKF/GKFi (vor GKB, damit GKF nicht als GKB matcht)
+    (
+        "gipsfaserplatte",
+        re.compile(
+            r"\b(GKFI?|Gipsfaser(?:platte)?|Fermacell\s+Powerpanel)\b",
+            re.IGNORECASE,
+        ),
+        {"m²", "m2", "qm"},
+        4.0,
+        20.0,
+    ),
+    # Gipskartonplatten GKB/GKBI (Standard + impraegniert, kein GKF!)
+    (
+        "gipskartonplatte",
+        re.compile(
+            r"\b(GKB(?:I|i)?|Gipskartonplatte|Gipskarton[\-\s]?Bauplatte|"
+            r"Bauplatte\s+GKB|HRAK)\b",
+            re.IGNORECASE,
+        ),
+        {"m²", "m2", "qm"},
+        2.0,
+        12.0,
+    ),
+    # Profile CW/UW/UA/CD/UD
+    (
+        "profil",
+        re.compile(
+            r"\b(CW|UW|UA|CD|UD)\b[\s\-]*\d|"
+            r"\b(CW|UW|UA|CD|UD)[\s\-]?Profil\b",
+            re.IGNORECASE,
+        ),
+        {"lfm", "m"},
+        1.0,
+        30.0,
+    ),
+    # Daemmung (Mineralwolle, Steinwolle, Glaswolle)
+    (
+        "daemmung",
+        re.compile(
+            r"\b(Mineralwolle|Steinwolle|Glaswolle|Rockwool|Isover|Ursa|"
+            r"Klemmfilz|Trennwandplatte|Daemmplatte)\b",
+            re.IGNORECASE,
+        ),
+        {"m²", "m2", "qm"},
+        2.0,
+        15.0,
+    ),
+    # Putze / Moertel (pro kg nach Sack-Normalisierung)
+    (
+        "putz_moertel",
+        re.compile(
+            r"\b(Putz|Moertel|M\u00f6rtel|Ansetzbinder|Ansetzgips|Uniflott|"
+            r"Fugenfueller|Fugenf\u00fcller|Rotband|Goldband|MP75|Finish)\b",
+            re.IGNORECASE,
+        ),
+        {"kg"},
+        0.5,
+        3.0,
+    ),
+    # Schrauben (pro Stk nach Paket-Normalisierung)
+    # 5-50 EUR/1000 Stk -> 0.005-0.05 EUR/Stk
+    (
+        "schraube",
+        re.compile(
+            r"\b(Schraube|Schnellbauschraube|Trockenbauschraube|TN|TB|"
+            r"Spaxschraube|Holzschraube)\b",
+            re.IGNORECASE,
+        ),
+        {"Stk", "stk"},
+        0.005,
+        0.05,
+    ),
+    # Klebebaender (Anputz, Trennband, Kantenband)
+    (
+        "klebeband",
+        re.compile(
+            r"\b(Klebeband|Anputzdichtband|Trennband|Kantenschutz(?:band)?|"
+            r"Fugendichtband|Dichtungsband|Fugenband|Anschlussband)\b",
+            re.IGNORECASE,
+        ),
+        {"lfm", "m", "Rolle"},
+        0.5,
+        5.0,
+    ),
+]
+
+
+def _check_price_corridor(
+    product_name: str, effective_unit: str, price_per_unit: float
+) -> tuple[bool, str | None]:
+    """Prueft ob der Preis in einem bekannten Produkt-Korridor liegt.
+
+    Returns:
+        (in_corridor, corridor_name)
+          - (True,  "profil"):        Regel matcht UND Preis im Korridor.
+          - (False, "profil"):        Regel matcht UND Preis ausserhalb.
+          - (True,  None):            Keine Regel matcht (unbekannte Kategorie,
+                                      kein Korridor-Check durchgefuehrt).
+    """
+    for name, pattern, units, lo, hi in _PLAUSIBILITY_CORRIDORS:
+        if not pattern.search(product_name):
+            continue
+        if effective_unit not in units:
+            continue
+        # Regel matcht — pruefe Korridor.
+        if lo <= price_per_unit <= hi:
+            return True, name
+        return False, name
+    # Keine Regel hat gematcht.
+    return True, None
 
 
 # ---------------------------------------------------------------------------
@@ -577,9 +770,22 @@ class PricelistParser:
         claude_conf = max(0.0, min(1.0, claude_conf))
         combined_conf = min(claude_conf, unit_info.confidence)
 
+        # P1 (B+4.3.x): Plausibilitaets-Korridor pruefen.
+        # Wenn der normalisierte Preis ausserhalb eines Produkt-typischen
+        # Korridors liegt (z.B. CW-Profil 129,60 EUR/lfm statt 1-30 EUR/lfm),
+        # deckeln wir die Confidence auf 0.3 und flaggen den Eintrag zum
+        # Review. Der Preis wird NICHT verworfen — nur markiert.
+        in_corridor, _corridor_name = _check_price_corridor(
+            product_name, unit_info.effective_unit, unit_info.price_per_effective_unit
+        )
+        corridor_violated = not in_corridor
+        if corridor_violated:
+            combined_conf = min(combined_conf, 0.3)
+
         needs_review = bool(
             raw.get("needs_review_hint", False)
             or unit_info.needs_review
+            or corridor_violated
             or combined_conf < 0.7
         )
 
@@ -596,6 +802,17 @@ class PricelistParser:
             attributes["product_code_type"] = code["type"]
             attributes["product_code_dimension"] = code["dimension"]
             attributes["product_code_raw"] = code["raw"]
+
+        # P3 (B+4.3.x): review_reason in attributes JSON persistieren.
+        # Priorisierung: Was _normalize_unit gefunden hat (tieferliegende
+        # Ursache: bundgroesse_fehlt, bundpreis_unklar, einheit_nicht_erkannt)
+        # ist informativer als das Symptom (preis_ausserhalb_korridor).
+        # Nur wenn _normalize_unit keinen Grund gesetzt hat UND der
+        # Korridor verletzt ist, setzen wir preis_ausserhalb_korridor.
+        if unit_info.review_reason:
+            attributes["review_reason"] = unit_info.review_reason
+        elif corridor_violated:
+            attributes["review_reason"] = REVIEW_REASON_PREIS_AUSSERHALB_KORRIDOR
 
         return SupplierPriceEntry(
             pricelist_id=pricelist.id,

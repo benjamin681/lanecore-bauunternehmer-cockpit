@@ -17,9 +17,14 @@ from pathlib import Path
 import pytest
 
 from app.services.pricelist_parser import (
+    REVIEW_REASON_BUNDGROESSE_FEHLT,
+    REVIEW_REASON_BUNDPREIS_UNKLAR,
+    REVIEW_REASON_EINHEIT_NICHT_ERKANNT,
+    REVIEW_REASON_PREIS_AUSSERHALB_KORRIDOR,
     ParseResult,
     PricelistParser,
     UnitInfo,
+    _check_price_corridor,
     _detect_format,
     _extract_price_per_effective_unit,
     _normalize_unit,
@@ -121,6 +126,183 @@ def test_normalize_unit_fallback_unknown_unit():
     assert info.needs_review is True
     assert info.confidence < 0.5
     assert info.price_per_effective_unit == 19.99  # unveraendert durchgereicht
+    assert info.review_reason == REVIEW_REASON_EINHEIT_NICHT_ERKANNT
+
+
+# ---------------------------------------------------------------------------
+# P3 (B+4.3.x): review_reason-Werte
+# ---------------------------------------------------------------------------
+
+def test_normalize_unit_bundpreis_unklar_setzt_review_reason():
+    """R2: Bundle + Length match -> REVIEW_REASON_BUNDPREIS_UNKLAR"""
+    info = _normalize_unit(
+        "€/m",
+        product_name="Knauf CW 50x50 BL=2600 mm - 8 St./Bd.",
+        price=112.80,
+    )
+    assert info.needs_review is True
+    assert info.review_reason == REVIEW_REASON_BUNDPREIS_UNKLAR
+
+
+def test_normalize_unit_bundgroesse_fehlt_bei_bl_ohne_stueckzahl():
+    """P3: BL=XYZmm ohne 'N St./Bd.' -> REVIEW_REASON_BUNDGROESSE_FEHLT.
+
+    Das ist der Kern-Bug der Kemmler UA-Profile: BL im Text, aber
+    Stueckzahl fehlt, und der €/m-Preis sieht hoch aus (318,80 hier).
+    """
+    info = _normalize_unit(
+        "€/m",
+        product_name="UA 48x40x2 BL=3000mm",
+        price=318.80,
+    )
+    assert info.needs_review is True
+    assert info.review_reason == REVIEW_REASON_BUNDGROESSE_FEHLT
+    assert info.confidence < 0.5
+    # Preis wird trotzdem durchgereicht (nicht verworfen)
+    assert info.price_per_effective_unit == 318.80
+    # Package-Size aus BL extrahiert (Info fuer spaeteres Fixup)
+    assert info.package_size == 3.0  # 3000mm -> 3m
+    assert info.package_unit == "m"
+
+
+def test_normalize_unit_bundgroesse_fehlt_ua73_ua98():
+    """P3: Auch UA73 und UA98 aus Kemmler-Preisliste triggern."""
+    for name, price in [
+        ("UA 73x40x2 BL=2600mm", 387.20),
+        ("UA 98x40x2 BL=3000mm", 451.60),
+        ("CW-Profil 100 BL=4000mm", 148.80),
+    ]:
+        info = _normalize_unit("€/m", product_name=name, price=price)
+        assert info.review_reason == REVIEW_REASON_BUNDGROESSE_FEHLT, name
+        assert info.needs_review is True, name
+
+
+def test_normalize_unit_normaler_lfm_bleibt_clear():
+    """Einzel-Meter-Preis ohne BL + ohne Stueckzahl -> clear lfm, kein Flag.
+
+    z.B. Dichtungsband oder Kantenschutzprofil mit normalem lfm-Preis.
+    """
+    info = _normalize_unit(
+        "€/lfm",
+        product_name="Dichtungsband selbstklebend 5mm",
+        price=2.50,
+    )
+    assert info.needs_review is False
+    assert info.review_reason is None
+    assert info.confidence >= 0.9
+
+
+def test_normalize_unit_clear_plate_kein_review_reason():
+    """Plattenware €/m² -> kein review_reason."""
+    info = _normalize_unit(
+        "€/m²", product_name="Knauf GKB 2000x1250x12,5 mm", price=3.00
+    )
+    assert info.review_reason is None
+    assert info.needs_review is False
+
+
+def test_normalize_unit_sack_kg_kein_review_reason():
+    """R1 Gebindeeinheit -> kein review_reason (clear match)."""
+    info = _normalize_unit(
+        "€/Sack", product_name="Knauf Uniflott 25 kg/Sack", price=26.54
+    )
+    assert info.review_reason is None
+    assert info.needs_review is False
+
+
+# ---------------------------------------------------------------------------
+# P1 (B+4.3.x): Plausibilitaets-Korridor
+# ---------------------------------------------------------------------------
+
+def test_corridor_profil_im_korridor():
+    """UA 73x40 bei 37,23 EUR/lfm liegt im 1-30-Korridor? NEIN (>30).
+    Wir nehmen einen klar in-corridor Fall: CW 50 bei 3,50 EUR/lfm.
+    """
+    ok, name = _check_price_corridor("Knauf CW-Profil 50", "lfm", 3.50)
+    assert ok is True
+    assert name == "profil"
+
+
+def test_corridor_profil_ausserhalb_hoch():
+    """UA 48 bei 318,80 EUR/lfm (der Kemmler-UA-Bug) -> ausserhalb."""
+    ok, name = _check_price_corridor("UA 48x40x2 BL=3000mm", "lfm", 318.80)
+    assert ok is False
+    assert name == "profil"
+
+
+def test_corridor_profil_ausserhalb_niedrig():
+    """CW 50 bei 0,10 EUR/lfm -> unrealistisch niedrig, ausserhalb."""
+    ok, name = _check_price_corridor("CW-Profil 50", "lfm", 0.10)
+    assert ok is False
+    assert name == "profil"
+
+
+def test_corridor_gkb_im_korridor():
+    """Knauf GKB 12,5mm bei 3,00 EUR/m² -> im Korridor 2-12."""
+    ok, name = _check_price_corridor("Knauf GKB 2000x1250x12,5mm", "m²", 3.00)
+    assert ok is True
+    assert name == "gipskartonplatte"
+
+
+def test_corridor_gkb_ausserhalb():
+    """GKB bei 50 EUR/m² -> unrealistisch hoch (wohl Platten-Gesamtpreis)."""
+    ok, name = _check_price_corridor("GKB 2000x1250x12,5mm", "m²", 50.0)
+    assert ok is False
+    assert name == "gipskartonplatte"
+
+
+def test_corridor_gkfi_als_gipsfaser_nicht_gipskarton():
+    """GKF/GKFi soll als Gipsfaserplatte matchen, nicht als GKB.
+    GKF-Korridor: 4-20 EUR/m². GKB-Korridor: 2-12 EUR/m².
+    Bei 15 EUR/m² ist GKF im Korridor, GKB aber nicht.
+    """
+    ok, name = _check_price_corridor("Knauf GKFi 15mm", "m²", 15.0)
+    assert ok is True
+    assert name == "gipsfaserplatte"
+
+
+def test_corridor_fireboard_vor_gipskarton():
+    """Fireboard 18mm bei 22 EUR/m² -> Brandschutz-Korridor (10-30)."""
+    ok, name = _check_price_corridor("Knauf Fireboard 18mm", "m²", 22.0)
+    assert ok is True
+    assert name == "brandschutzplatte"
+
+
+def test_corridor_putz_im_korridor():
+    """Uniflott bei 1,06 EUR/kg -> im Putz/Moertel-Korridor 0,5-3."""
+    ok, name = _check_price_corridor("Knauf Uniflott", "kg", 1.06)
+    assert ok is True
+    assert name == "putz_moertel"
+
+
+def test_corridor_klebeband_im_korridor():
+    """Anputzdichtband bei 1,50 EUR/lfm -> im Korridor 0,5-5."""
+    ok, name = _check_price_corridor("Anputzdichtband 9mm", "lfm", 1.50)
+    assert ok is True
+    assert name == "klebeband"
+
+
+def test_corridor_keine_regel_matcht():
+    """Unbekanntes Produkt -> keine Regel matcht -> (True, None), kein Flag."""
+    ok, name = _check_price_corridor("Exotischer Artikel XYZ", "Stk", 999.0)
+    assert ok is True
+    assert name is None
+
+
+def test_corridor_falsche_einheit_kein_match():
+    """CW-Profil mit effective_unit='kg' sollte Regel nicht triggern
+    (units-Set passt nicht). -> (True, None).
+    """
+    ok, name = _check_price_corridor("Knauf CW-Profil 50", "kg", 500.0)
+    assert ok is True
+    assert name is None
+
+
+def test_corridor_ua_kemmler_realfall():
+    """Kemmler UA 73 BL=2600 Bundpreis 387,20 EUR (faelschlich €/m)."""
+    ok, name = _check_price_corridor("UA 73x40x2 BL=2600mm", "lfm", 387.20)
+    assert ok is False
+    assert name == "profil"
 
 
 def test_normalize_unit_stk_direct():
