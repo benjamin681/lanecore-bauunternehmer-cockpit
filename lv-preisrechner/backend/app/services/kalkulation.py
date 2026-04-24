@@ -62,17 +62,51 @@ def _resolve_material_via_lookup(
     Das DNA-Pattern wird auf die freie lookup_price-Signatur uebersetzt.
     Anschliessend wird aus dem gematchten SupplierPriceEntry manufacturer
     und product_name nachgereicht (fuer angebotenes_fabrikat).
+
+    Profile-Aequivalenz-Retry (B+4.4): bei not_found wird geprueft, ob die
+    im DNA-Pattern geforderte Profil-Groesse einen bekannten Alias hat
+    (UA 48 <-> UA 50, UA 73 <-> UA 75, UA 98 <-> UA 100). Falls ja, wird
+    der Lookup mit den Alias-Werten wiederholt. Der erste Treffer gewinnt.
     """
     parts = _parse_dna_pattern(mb.dna_pattern)
-    product = " ".join(p for p in (parts.get("produktname"), parts.get("abmessungen"), parts.get("variante")) if p)
+
+    def _build_product(size: str) -> str:
+        return " ".join(
+            p
+            for p in (parts.get("produktname"), size, parts.get("variante"))
+            if p
+        )
+
+    original_size = parts.get("abmessungen", "")
+    product = _build_product(original_size) or parts.get("produktname", "")
     lookup = lookup_price(
         db=db,
         tenant_id=tenant_id,
-        material_name=product or parts.get("produktname", ""),
+        material_name=product,
         unit=mb.basis_einheit,
         manufacturer=parts.get("hersteller") or None,
         category=parts.get("kategorie") or None,
     )
+
+    # Retry mit Aequivalenz-Aliases, falls der erste Versuch scheitert.
+    if lookup.price_source == "not_found":
+        from app.services.profile_equivalence import dimension_aliases
+
+        for alias_size in dimension_aliases(
+            parts.get("produktname", ""), original_size
+        ):
+            retry = lookup_price(
+                db=db,
+                tenant_id=tenant_id,
+                material_name=_build_product(alias_size),
+                unit=mb.basis_einheit,
+                manufacturer=parts.get("hersteller") or None,
+                category=parts.get("kategorie") or None,
+            )
+            if retry.price_source != "not_found":
+                lookup = retry
+                break
+
     resolution = from_lookup_result(lookup)
 
     # manufacturer & product_name aus dem Entry nachziehen (wenn Treffer)
