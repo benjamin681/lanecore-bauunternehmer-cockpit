@@ -756,9 +756,32 @@ class PricelistParser:
                 entries_updated=backfilled,
             )
 
-        # 6. Summen aufs Pricelist-Model zurueckschreiben
+        # 5a. B+4.4 / P4: bekannte manuelle Korrekturen des Tenants auf
+        # frisch geparste Entries anwenden. Matching ueber
+        # (manufacturer, article_number) — wenn der User z.B. bei einem
+        # frueheren Upload pieces_per_package=6 fuer UA48 nachgetragen
+        # hat, greift das jetzt automatisch.
+        from app.services.product_corrections import (
+            apply_known_corrections_to_entries,
+        )
+        corrections_applied = apply_known_corrections_to_entries(
+            db=self.db,
+            tenant_id=pricelist.tenant_id,
+            entries=entries_in_pricelist,
+        )
+        if corrections_applied:
+            log.info(
+                "pricelist_corrections_applied",
+                pricelist_id=pricelist_id,
+                entries_updated=corrections_applied,
+            )
+
+        # 6. Summen aufs Pricelist-Model zurueckschreiben. entries_reviewed
+        # reflektiert automatisch angewandte Korrekturen (needs_review→False).
         pricelist.entries_total = result.parsed_entries
-        pricelist.entries_reviewed = 0  # wird im Review-Flow spaeter erhoeht
+        pricelist.entries_reviewed = sum(
+            1 for e in entries_in_pricelist if not e.needs_review
+        )
         self.db.commit()
 
         log.info(

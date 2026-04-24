@@ -183,3 +183,86 @@ class TenantDiscountRuleOut(BaseModel):
     notes: str | None
     created_by_user_id: str
     created_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# ProductCorrection / Review-Workflow (B+4.4 P4)
+# ---------------------------------------------------------------------------
+class ProductCorrectionTypeSchema(str, Enum):
+    PIECES_PER_PACKAGE = "pieces_per_package"
+    UNIT_OVERRIDE = "unit_override"
+    PRICE_PER_EFFECTIVE_UNIT = "price_per_effective_unit"
+    CONFIRMED_AS_IS = "confirmed_as_is"
+
+
+class EntryReviewItem(BaseModel):
+    """Ein einzelner Review-Eintrag mit allem Kontext fuers UI."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    pricelist_id: str
+    article_number: str | None
+    manufacturer: str | None
+    product_name: str
+    price_net: float
+    currency: str
+    unit: str
+    package_size: float | None
+    pieces_per_package: int | None
+    effective_unit: str
+    price_per_effective_unit: float
+    source_page: int | None
+    source_row_raw: str | None
+    review_reason: str | None
+    attributes: dict[str, Any]
+    parser_confidence: float
+
+
+class EntryReviewGroup(BaseModel):
+    """Gruppe von Review-Eintraegen mit identischem review_reason."""
+
+    review_reason: str
+    count: int
+    items: list[EntryReviewItem]
+
+
+class EntryReviewResponse(BaseModel):
+    """Top-Level-Antwort von GET /pricing/entries/{pricelist_id}/review."""
+
+    pricelist_id: str
+    total_needs_review: int
+    groups: list[EntryReviewGroup]
+
+
+class EntryCorrectionRequest(BaseModel):
+    """POST /pricing/entries/{entry_id}/correct.
+
+    corrected_value ist typ-abhaengig — Validierung im Service-Layer:
+    - PIECES_PER_PACKAGE: {"pieces_per_package": int > 0}
+    - UNIT_OVERRIDE: {"unit": str, "package_size": float | null,
+                       "effective_unit": str | null}
+    - PRICE_PER_EFFECTIVE_UNIT: {"price_per_effective_unit": float > 0,
+                                  "effective_unit": str | null}
+    - CONFIRMED_AS_IS: {} (leerer Dict reicht; setzt nur Flags)
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    correction_type: ProductCorrectionTypeSchema
+    corrected_value: dict[str, Any] = Field(default_factory=dict)
+    persist: bool = Field(
+        default=True,
+        description=(
+            "Wenn true, wird die Korrektur in lvp_product_corrections "
+            "gespeichert und beim naechsten Upload automatisch angewendet."
+        ),
+    )
+
+
+class EntryCorrectionResponse(BaseModel):
+    """Antwort nach angewandter Korrektur."""
+
+    entry: SupplierPriceEntryOut
+    correction_persisted: bool
+    correction_id: str | None = None

@@ -33,6 +33,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -286,4 +287,79 @@ class TenantDiscountRule(Base):
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_now, nullable=False
+    )
+
+
+# ---------------------------------------------------------------------------
+# Tabelle 5: ProductCorrection (B+4.4 / P4 — UI-Review-Workflow)
+#
+# Nimmt manuelle Korrekturen des Nutzers an Preislisten-Eintraegen auf, so
+# dass Re-Uploads derselben Preisliste die Korrekturen automatisch anwenden.
+# Matching erfolgt ueber (manufacturer, article_number); wenn beide fehlen,
+# faellt der Parser-Hook auf product_name_fallback zurueck.
+# ---------------------------------------------------------------------------
+class ProductCorrectionType(str, Enum):
+    PIECES_PER_PACKAGE = "pieces_per_package"
+    UNIT_OVERRIDE = "unit_override"
+    PRICE_PER_EFFECTIVE_UNIT = "price_per_effective_unit"
+    CONFIRMED_AS_IS = "confirmed_as_is"
+
+
+class ProductCorrection(Base):
+    __tablename__ = "lvp_product_corrections"
+    __table_args__ = (
+        # Ein Tenant darf pro (manufacturer, article_number, correction_type)
+        # genau eine aktive Korrektur haben. NULLS NOT DISTINCT (PG15+) sorgt
+        # dafuer, dass auch NULL-Artikelnr-Korrekturen als Kollisionen zaehlen.
+        UniqueConstraint(
+            "tenant_id",
+            "manufacturer",
+            "article_number",
+            "correction_type",
+            name="uq_lvp_product_corrections_tenant_key",
+            postgresql_nulls_not_distinct=True,
+        ),
+        Index(
+            "ix_lvp_product_corrections_tenant_article",
+            "tenant_id",
+            "article_number",
+        ),
+        Index(
+            "ix_lvp_product_corrections_tenant_manufacturer",
+            "tenant_id",
+            "manufacturer",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(
+        ForeignKey("lvp_tenants.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # Matching-Schluessel. manufacturer + article_number sind der Primaerweg,
+    # product_name_fallback dient als Fallback wenn Artikelnr fehlt.
+    manufacturer: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    article_number: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    product_name_fallback: Mapped[str | None] = mapped_column(
+        String(500), nullable=True
+    )
+
+    # Typ + Wert der Korrektur. corrected_value haelt je nach Typ
+    # unterschiedliche Strukturen (z.B. {"pieces_per_package": 6} oder
+    # {"unit": "lfm", "package_size": 3.0}) — Validierung passiert im
+    # Service-Layer, nicht im Model.
+    correction_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    corrected_value: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+    # Audit
+    created_by_user_id: Mapped[str] = mapped_column(
+        ForeignKey("lvp_users.id"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, onupdate=_now, nullable=False
     )

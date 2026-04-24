@@ -26,12 +26,18 @@ from fastapi import (
 from app.core.deps import CurrentUser, DbSession
 from app.models.pricing import (
     PricelistStatus,
+    ProductCorrection,
     SupplierPriceEntry,
     SupplierPriceList,
     TenantDiscountRule,
     TenantPriceOverride,
 )
 from app.schemas.pricing import (
+    EntryCorrectionRequest,
+    EntryCorrectionResponse,
+    EntryReviewGroup,
+    EntryReviewItem,
+    EntryReviewResponse,
     SupplierPriceEntryOut,
     SupplierPriceEntryUpdate,
     SupplierPriceListDetail,
@@ -42,6 +48,12 @@ from app.schemas.pricing import (
     TenantPriceOverrideOut,
 )
 from app.services.pricing_readiness import compute_readiness
+from app.services.product_corrections import (
+    CorrectionValidationError,
+    apply_correction_to_entry,
+    bump_reviewed_counter,
+    upsert_product_correction,
+)
 from app.workers.pricelist_parse_worker import run_pricelist_parse
 
 router = APIRouter(prefix="/pricing", tags=["pricing"])
@@ -633,3 +645,171 @@ def update_entry(
     db.commit()
     db.refresh(entry)
     return SupplierPriceEntryOut.model_validate(entry)
+
+
+# ---------------------------------------------------------------------------
+# GET /pricing/entries/{pricelist_id}/review  (B+4.4 P4 — gruppiert)
+# ---------------------------------------------------------------------------
+_REVIEW_REASON_UNKNOWN = "unknown"
+
+
+def _build_review_item(entry: SupplierPriceEntry) -> EntryReviewItem:
+    attrs = entry.attributes or {}
+    review_reason = attrs.get("review_reason")
+    return EntryReviewItem(
+        id=entry.id,
+        pricelist_id=entry.pricelist_id,
+        article_number=entry.article_number,
+        manufacturer=entry.manufacturer,
+        product_name=entry.product_name,
+        price_net=entry.price_net,
+        currency=entry.currency,
+        unit=entry.unit,
+        package_size=entry.package_size,
+        pieces_per_package=entry.pieces_per_package,
+        effective_unit=entry.effective_unit,
+        price_per_effective_unit=entry.price_per_effective_unit,
+        source_page=entry.source_page,
+        source_row_raw=entry.source_row_raw,
+        review_reason=review_reason,
+        attributes=attrs,
+        parser_confidence=entry.parser_confidence,
+    )
+
+
+@router.get(
+    "/entries/{pricelist_id}/review",
+    response_model=EntryReviewResponse,
+)
+def get_review_overview(
+    pricelist_id: str,
+    user: CurrentUser,
+    db: DbSession,
+) -> EntryReviewResponse:
+    """Gibt alle needs_review-Entries einer Preisliste gruppiert nach review_reason.
+
+    UI-Kontext: Das Frontend rendert einen Accordion pro review_reason,
+    damit der User seinen Workflow auf einen Grund zur Zeit fokussieren
+    kann (z.B. "alle Bundgroessen auf einmal nachtragen").
+    """
+    pl = (
+        db.query(SupplierPriceList)
+        .filter(
+            SupplierPriceList.id == pricelist_id,
+            SupplierPriceList.tenant_id == user.tenant_id,
+        )
+        .first()
+    )
+    if pl is None:
+        raise HTTPException(404, "Preisliste nicht gefunden")
+
+    entries = (
+        db.query(SupplierPriceEntry)
+        .filter(
+            SupplierPriceEntry.pricelist_id == pricelist_id,
+            SupplierPriceEntry.tenant_id == user.tenant_id,
+            SupplierPriceEntry.needs_review.is_(True),
+        )
+        .order_by(SupplierPriceEntry.parser_confidence.asc())
+        .all()
+    )
+
+    # Gruppieren: review_reason aus attributes.review_reason; Fallback wenn
+    # das Feld fehlt (aeltere Parses vor P3 hatten nur needs_review=True
+    # ohne strukturellen Grund).
+    groups: dict[str, list[EntryReviewItem]] = {}
+    for e in entries:
+        reason = (e.attributes or {}).get("review_reason") or _REVIEW_REASON_UNKNOWN
+        groups.setdefault(reason, []).append(_build_review_item(e))
+
+    return EntryReviewResponse(
+        pricelist_id=pricelist_id,
+        total_needs_review=len(entries),
+        groups=[
+            EntryReviewGroup(review_reason=reason, count=len(items), items=items)
+            for reason, items in sorted(
+                groups.items(), key=lambda kv: (-len(kv[1]), kv[0])
+            )
+        ],
+    )
+
+
+# ---------------------------------------------------------------------------
+# POST /pricing/entries/{entry_id}/correct  (B+4.4 P4)
+# ---------------------------------------------------------------------------
+@router.post(
+    "/entries/{entry_id}/correct",
+    response_model=EntryCorrectionResponse,
+)
+def correct_entry(
+    entry_id: str,
+    payload: EntryCorrectionRequest,
+    user: CurrentUser,
+    db: DbSession,
+) -> EntryCorrectionResponse:
+    """Wendet eine Nutzer-Korrektur auf einen SupplierPriceEntry an.
+
+    - Tenant-Isolation ueber entry.tenant_id.
+    - needs_review wird auf False gesetzt; Parent-Pricelist bekommt einen
+      Counter-Bump.
+    - Wenn payload.persist=True: die Korrektur wird zusaetzlich in
+      lvp_product_corrections abgelegt (Upsert), damit sie bei einem
+      Re-Upload derselben Preisliste automatisch wiederverwendet wird.
+    """
+    entry = (
+        db.query(SupplierPriceEntry)
+        .filter(
+            SupplierPriceEntry.id == entry_id,
+            SupplierPriceEntry.tenant_id == user.tenant_id,
+        )
+        .first()
+    )
+    if entry is None:
+        raise HTTPException(404, "Eintrag nicht gefunden")
+
+    pl = (
+        db.query(SupplierPriceList)
+        .filter(SupplierPriceList.id == entry.pricelist_id)
+        .first()
+    )
+    if pl is None:
+        raise HTTPException(404, "Preisliste nicht gefunden")
+
+    needs_review_before = entry.needs_review
+
+    try:
+        apply_correction_to_entry(
+            entry,
+            payload.correction_type.value,
+            payload.corrected_value,
+            user_id=user.id,
+        )
+    except CorrectionValidationError as exc:
+        raise HTTPException(http_status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc))
+
+    if needs_review_before and not entry.needs_review:
+        bump_reviewed_counter(pl)
+
+    correction_persisted = False
+    correction_id: str | None = None
+    if payload.persist:
+        correction = upsert_product_correction(
+            db=db,
+            tenant_id=user.tenant_id,
+            entry=entry,
+            correction_type=payload.correction_type.value,
+            corrected_value=payload.corrected_value,
+            user_id=user.id,
+        )
+        db.flush()  # sorgt dafuer, dass UUIDs fuer neue Zeilen gesetzt sind
+        correction_persisted = True
+        correction_id = correction.id
+
+    db.commit()
+    db.refresh(entry)
+
+    return EntryCorrectionResponse(
+        entry=SupplierPriceEntryOut.model_validate(entry),
+        correction_persisted=correction_persisted,
+        correction_id=correction_id,
+    )
