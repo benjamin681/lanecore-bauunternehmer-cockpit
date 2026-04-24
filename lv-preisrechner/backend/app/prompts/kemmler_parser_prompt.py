@@ -27,6 +27,11 @@ Extrahiere pro sichtbarer Produktzeile:
    "€/m", "€/lfm", "€/kg")
 8. Attribute (flexibel, als Dict: "dimensions", "color", "weight",
    "thickness" etc. wenn extrahierbar)
+9. source_row_raw (PFLICHT): Die vollstaendige originale PDF-Zeile als
+   zusammenhaengender String, inklusive aller Angaben (Produktname,
+   Artikelnummer, Preis, Einheit, Abmessungen, Gebindeangaben wie
+   "N St./Bd." oder "BL=XYZmm" falls vorhanden). NIEMALS leer lassen,
+   nicht kuerzen. Audit-Quelle fuer Review-Menschen.
 
 AUSGABE-SCHEMA — GANZ WICHTIG:
 Du erhaeltst MEHRERE Bilder (mehrere Seiten) in EINEM Request. Antworte mit
@@ -51,7 +56,7 @@ EXAKT dieses Format, nichts anderes:
           "currency": "EUR",
           "unit": "<string, pflicht - ORIGINAL wie im Text, z.B. '€/m²'>",
           "attributes": { ... },
-          "source_row_raw": "<string - unverarbeiteter Zeilentext falls OCR-Verdacht>",
+          "source_row_raw": "<PFLICHT, string - vollstaendige originale PDF-Zeile, NIEMALS leer>",
           "parser_confidence": <float 0..1>,
           "needs_review_hint": <bool>
         }

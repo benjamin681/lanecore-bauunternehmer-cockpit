@@ -55,6 +55,14 @@ Extrahiere pro sichtbarer Produktzeile:
    "€/m", "€/lfm", "€/kg").
 8. Attribute (flexibles Dict: "dimensions", "color", "weight", "thickness",
    "packaging", "pieces_per_pack", "pieces_per_bundle" etc.).
+9. source_row_raw (PFLICHT): Die vollstaendige originale PDF-Zeile als
+   zusammenhaengender String, genau wie sie im Dokument steht. Inklusive
+   aller Angaben: Produktname, Artikelnummer, Preis, Einheit, Abmessungen,
+   Gebindeangaben ("N St./Bd.", "BL=XYZmm", "42 Sa (=1 PAL)"), Rabatt-Zahlen.
+   NIEMALS leer lassen, nicht kuerzen, nicht umformulieren. Dieses Feld ist
+   die Audit-Quelle fuer Review-Menschen und Downstream-Parser — besonders
+   wichtig wenn Bundgroessen im Produktname NICHT explizit stehen (dann kann
+   der Downstream-Parser zumindest signalisieren "Bundgroesse fehlt").
 
 
 === SPEZIAL-REGEL A) CODE-EINHEITEN (E / Z / H / T) ===
@@ -309,7 +317,7 @@ Fences, kein einleitender Text.
             "validation_warning": "<optional, 'FACTOR_100_SUSPECTED' etc.>",
             ... weitere Produktattribute ...
           },
-          "source_row_raw": "<optional, unverarbeiteter Zeilentext bei OCR-Verdacht>",
+          "source_row_raw": "<PFLICHT, string - vollstaendige originale PDF-Zeile, NIEMALS leer>",
           "parser_confidence": <float 0..1>,
           "needs_review_hint": <bool>
         }
