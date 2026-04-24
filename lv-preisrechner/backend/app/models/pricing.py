@@ -55,6 +55,10 @@ class PricelistStatus(str, Enum):
     PENDING_PARSE = "PENDING_PARSE"
     PARSING = "PARSING"
     PARSED = "PARSED"
+    # B+4.5: >=80% der Claude-Vision-Batches erfolgreich, Rest in
+    # parse_error_details gelistet. Verwendbar, aber UI soll den
+    # Teilverlust kenntlich machen.
+    PARTIAL_PARSE = "PARTIAL_PARSE"
     REVIEWED = "REVIEWED"
     APPROVED = "APPROVED"
     ARCHIVED = "ARCHIVED"
@@ -97,6 +101,10 @@ class SupplierPriceList(Base):
         String(30), nullable=False, default=PricelistStatus.PENDING_PARSE.value
     )
     parse_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # B+4.5: strukturierte Liste der Batch-Fehler mit Seiten-Range,
+    # Attempt-Zaehler, Exception-Klasse und Pfad zur Rohantwort-Datei.
+    # Liste von dicts, siehe Migration c91f4d7a2b85.
+    parse_error_details: Mapped[list | None] = mapped_column(JSON, nullable=True)
 
     entries_total: Mapped[int | None] = mapped_column(Integer, nullable=True)
     entries_reviewed: Mapped[int | None] = mapped_column(Integer, nullable=True)

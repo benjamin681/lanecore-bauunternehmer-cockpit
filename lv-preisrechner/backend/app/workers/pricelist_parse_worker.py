@@ -42,11 +42,10 @@ def run_pricelist_parse(pricelist_id: str) -> None:
         attempt += 1
         try:
             result = _parse_once(pricelist_id)
-            _set_status(
-                pricelist_id,
-                PricelistStatus.PARSED.value,
-                parse_error=None,
-            )
+            # B+4.5: Final-Status (PARSED / PARTIAL_PARSE / ERROR) wird vom
+            # Parser selbst gesetzt — abhaengig von Batch-Fehlerquote. Hier
+            # NICHT ueberschreiben, damit Teilerfolge als PARTIAL_PARSE
+            # durchsichtig bleiben.
             log.info(
                 "pricelist_worker_done",
                 pricelist_id=pricelist_id,

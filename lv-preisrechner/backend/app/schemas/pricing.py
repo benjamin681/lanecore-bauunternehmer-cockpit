@@ -13,6 +13,7 @@ class PricelistStatusSchema(str, Enum):
     PENDING_PARSE = "PENDING_PARSE"
     PARSING = "PARSING"
     PARSED = "PARSED"
+    PARTIAL_PARSE = "PARTIAL_PARSE"
     REVIEWED = "REVIEWED"
     APPROVED = "APPROVED"
     ARCHIVED = "ARCHIVED"
@@ -58,6 +59,7 @@ class SupplierPriceListOut(BaseModel):
     source_file_hash: str
     status: PricelistStatusSchema
     parse_error: str | None
+    parse_error_details: list[dict[str, Any]] | None = None
     entries_total: int | None
     entries_reviewed: int | None
     is_active: bool

@@ -624,7 +624,11 @@ class PricelistParser:
         Wirft Exception bei kritischen Fehlern (Datei nicht da, Format unbekannt,
         DB-Commit schlaegt fehl). Kleinere Fehler landen in result.errors.
         """
-        from app.models.pricing import SupplierPriceEntry, SupplierPriceList
+        from app.models.pricing import (
+            PricelistStatus,
+            SupplierPriceEntry,
+            SupplierPriceList,
+        )
         from app.services.pdf_utils import pdf_to_page_images
 
         pricelist = self.db.get(SupplierPriceList, pricelist_id)
@@ -668,21 +672,32 @@ class PricelistParser:
         else:
             from app.prompts.kemmler_parser_prompt import SYSTEM_PROMPT
 
+        # B+4.5: strukturierte Batch-Fehler-Liste (persistiert auf pricelist.
+        # parse_error_details am Ende des Laufs).
+        batch_failures: list[dict] = []
+        total_batches = 0
+
         confidences: list[float] = []
         for start in range(0, len(images), self._batch_size):
             batch = images[start : start + self._batch_size]
             batch_idx = start // self._batch_size + 1
             page_range = f"{start + 1}-{start + len(batch)}"
-            try:
-                parsed, _model = self._claude.extract_json(
-                    system=SYSTEM_PROMPT,
-                    images=batch,
-                    max_tokens=_PRICELIST_MAX_TOKENS,
+            total_batches += 1
+
+            parsed, batch_error = self._extract_with_retry(
+                pricelist_id=pricelist_id,
+                system_prompt=SYSTEM_PROMPT,
+                images=batch,
+                batch_idx=batch_idx,
+                page_range=page_range,
+            )
+            if batch_error is not None:
+                batch_failures.append(batch_error)
+                result.errors.append(
+                    f"Batch {batch_idx} ({page_range}) fehlgeschlagen nach "
+                    f"{batch_error['attempts']} Versuchen: "
+                    f"{batch_error['error_class']}: {batch_error['error_message']}"
                 )
-            except Exception as exc:
-                msg = f"Batch {batch_idx} ({page_range}) fehlgeschlagen: {exc}"
-                log.warning("pricelist_batch_failed", batch=batch_idx, error=str(exc))
-                result.errors.append(msg)
                 continue
 
             # Claude kann ein einzelnes Objekt {"page":..., "entries":[]} oder
@@ -782,6 +797,36 @@ class PricelistParser:
         pricelist.entries_reviewed = sum(
             1 for e in entries_in_pricelist if not e.needs_review
         )
+
+        # B+4.5: Status- und Fehler-Aggregation am Ende des Laufs.
+        # PARSED  — alle Batches erfolgreich.
+        # PARTIAL_PARSE — mind. 80% ok, Rest in parse_error_details.
+        # ERROR   — weniger als 80%, auch wenn einige durch sind (schiefe
+        #          Datenbasis, Nutzer soll neu uploaden).
+        pricelist.parse_error_details = batch_failures or None
+        if total_batches == 0:
+            pricelist.status = PricelistStatus.ERROR.value
+            if not pricelist.parse_error:
+                pricelist.parse_error = "Keine Batches verarbeitet (leere PDF?)"
+        else:
+            success_batches = total_batches - len(batch_failures)
+            success_ratio = success_batches / total_batches
+            if len(batch_failures) == 0:
+                pricelist.status = PricelistStatus.PARSED.value
+                pricelist.parse_error = None
+            elif success_ratio >= 0.8:
+                pricelist.status = PricelistStatus.PARTIAL_PARSE.value
+                pricelist.parse_error = (
+                    f"Teilfehler: {len(batch_failures)}/{total_batches} "
+                    f"Batches fehlgeschlagen (siehe parse_error_details)"
+                )
+            else:
+                pricelist.status = PricelistStatus.ERROR.value
+                pricelist.parse_error = (
+                    f"Parser instabil: {len(batch_failures)}/{total_batches} "
+                    f"Batches fehlgeschlagen (siehe parse_error_details)"
+                )
+
         self.db.commit()
 
         log.info(
@@ -791,8 +836,138 @@ class PricelistParser:
             skipped=result.skipped_entries,
             needs_review=result.needs_review_count,
             avg_confidence=round(result.avg_confidence, 3),
+            status=pricelist.status,
+            batches_ok=total_batches - len(batch_failures),
+            batches_failed=len(batch_failures),
         )
         return result
+
+    # ------------------------------------------------------------------ #
+    # B+4.5: Resilienz fuer Claude-Vision-Batches.
+    # ------------------------------------------------------------------ #
+    _RETRY_HINT_JSON_SYNTAX = (
+        "Wichtig: Deine letzte Antwort enthielt ungueltiges JSON. "
+        "Achte jetzt streng auf Syntax — Kommata zwischen allen "
+        "Feldern und Array-Elementen, schliessende geschweifte und "
+        "eckige Klammern, alle Strings in doppelten Anfuehrungszeichen. "
+        "Liefere das gesamte Dokument als ein einziges gueltiges "
+        "JSON-Objekt ohne Kommentare."
+    )
+
+    def _extract_with_retry(
+        self,
+        *,
+        pricelist_id: str,
+        system_prompt: str,
+        images: list[dict],
+        batch_idx: int,
+        page_range: str,
+        max_retries: int = 2,
+    ) -> tuple[dict | list | None, dict | None]:
+        """Ruft Claude-Vision fuer einen Batch mit lokaler Retry-Logik.
+
+        Retry-Pfad nur bei JSON-Decode-Fehlern (ValueError vom
+        claude_client). Andere Fehler (Rate-Limit, Timeout, APIStatusError)
+        gehen direkt nach oben — das Rate-Limit-Retry macht der Client
+        bereits mit exp. Backoff.
+
+        Rohantwort wird beim JSON-Fail in eine Datei im Storage-Volume
+        geschrieben, damit Post-Mortem moeglich ist.
+
+        Returns:
+            (parsed, None) — Erfolg.
+            (None, error_dict) — alle Retries erschoepft; error_dict
+                passt ins parse_error_details-Schema.
+        """
+        attempts = 0
+        last_error: Exception | None = None
+        extra_user_text: str | None = None
+        # max_retries=2 => 1 initialer Versuch + 2 Retries = 3 Attempts
+        while attempts < max_retries + 1:
+            attempts += 1
+            try:
+                parsed, _model = self._claude.extract_json(
+                    system=system_prompt,
+                    user_text=extra_user_text,
+                    images=images,
+                    max_tokens=_PRICELIST_MAX_TOKENS,
+                )
+                return parsed, None
+            except ValueError as exc:
+                # JSON-Syntax-Fehler — retryable in diesem Pfad.
+                last_error = exc
+                self._dump_raw_response(
+                    pricelist_id=pricelist_id,
+                    batch_idx=batch_idx,
+                    attempt=attempts,
+                    error=exc,
+                )
+                log.warning(
+                    "pricelist_batch_json_retry",
+                    batch=batch_idx,
+                    attempt=attempts,
+                    page_range=page_range,
+                    error=str(exc),
+                )
+                if attempts > max_retries:
+                    break
+                # Haertere Anweisung an Claude fuer den naechsten Versuch.
+                extra_user_text = self._RETRY_HINT_JSON_SYNTAX
+                continue
+            except Exception as exc:
+                # Nicht-JSON-Fehler (Rate-Limit, Timeout, etc.): nicht retryen.
+                # Der claude_client hat fuer 429/529/503 eigenen Retry gemacht,
+                # wenn wir hier ankommen, ist das endgueltig.
+                last_error = exc
+                log.warning(
+                    "pricelist_batch_hard_failure",
+                    batch=batch_idx,
+                    page_range=page_range,
+                    error_class=type(exc).__name__,
+                    error=str(exc),
+                )
+                break
+
+        err = last_error if last_error is not None else RuntimeError("unknown")
+        return None, {
+            "batch_idx": batch_idx,
+            "page_range": page_range,
+            "attempts": attempts,
+            "error_class": type(err).__name__,
+            "error_message": str(err),
+            "raw_response_file": (
+                f"/home/appuser/storage/parse_logs/{pricelist_id}/"
+                f"batch_{batch_idx}_attempt_{attempts}.txt"
+                if isinstance(err, ValueError)
+                else None
+            ),
+        }
+
+    def _dump_raw_response(
+        self,
+        *,
+        pricelist_id: str,
+        batch_idx: int,
+        attempt: int,
+        error: Exception,
+    ) -> None:
+        """Schreibt die (bekannt-kaputte) Roh-Antwort in eine Datei.
+
+        Der claude_client hat den kaputten raw-String nicht nach oben
+        gegeben — wir rekonstruieren daher den Fehler-Kontext aus dem
+        Exception-Message. Das reicht fuer Post-Mortem.
+        """
+        try:
+            base = Path("/home/appuser/storage/parse_logs") / pricelist_id
+            base.mkdir(parents=True, exist_ok=True)
+            f = base / f"batch_{batch_idx}_attempt_{attempt}.txt"
+            f.write_text(
+                f"=== batch {batch_idx} attempt {attempt} ===\n"
+                f"error_class: {type(error).__name__}\n"
+                f"error_message: {error}\n"
+            )
+        except Exception as exc:  # Logging darf Parse niemals crashen.
+            log.warning("parse_log_dump_failed", error=str(exc))
 
     def _build_entry(self, pricelist, raw: dict):
         """Validiert Raw-Claude-Output + Unit-Normalisierung -> SupplierPriceEntry."""
