@@ -27,6 +27,7 @@ import structlog
 
 from app.models.lv import LV
 from app.models.tenant import Tenant
+from app.services.pdf_filler import _oz_sort_key
 
 log = structlog.get_logger()
 
@@ -140,9 +141,10 @@ def generate_angebot_pdf(lv: LV, tenant: Tenant) -> bytes:
     y = _draw_angebot_header(page, y=y, lv=lv, angebotsnr=angebotsnr,
                              erstell_datum=erstell_datum)
 
-    # Tabelle
+    # Tabelle. Sortierung nach OZ-Hierarchie: Hauptgruppen bleiben
+    # zusammen, statt durch reihenfolge fragmentiert zu werden.
     sorted_positions = sorted(
-        lv.positions, key=lambda p: (p.reihenfolge, p.oz or "")
+        lv.positions, key=lambda p: (_oz_sort_key(p.oz or ""), p.reihenfolge)
     )
     page, y = _draw_table(doc, page, y, sorted_positions)
 
