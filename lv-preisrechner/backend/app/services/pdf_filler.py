@@ -171,8 +171,15 @@ def _fill_page(page: fitz.Page, pos_by_oz: dict) -> int:
 
     for idx, (text, rect) in enumerate(lines_with_coords):
         # OZ-Muster: "610.18", "1.9.1.1.10", "01.01.005" etc.
+        # B+4.10: re.match statt fullmatch — Salach-LV haelt OZ und
+        # Kurztext in derselben Zeile (z.B. "59.10.0010. Innenwand,
+        # d=100mm"), waehrend Habau/Gross-LVs die OZ in eigener Zeile
+        # haben. Beide Faelle werden jetzt erfasst, durch Anker `^`
+        # und Lookahead auf Whitespace/EOL nach der OZ-Sequenz.
         text_stripped = text.strip()
-        oz_match = re.fullmatch(r"(\d+(?:\.\d+){1,5})\.?", text_stripped)
+        oz_match = re.match(
+            r"^(\d+(?:\.\d+){1,5})\.?(?=\s|$)", text_stripped
+        )
         if not oz_match:
             continue
         oz_candidates = [oz_match.group(1), oz_match.group(1) + "."]
@@ -196,7 +203,9 @@ def _fill_page(page: fitz.Page, pos_by_oz: dict) -> int:
         # Stoppe bei naechster OZ, damit wir nicht in nachfolgende Position greifen
         for j in range(idx + 1, search_end):
             next_text, next_rect = lines_with_coords[j]
-            if j > idx + 2 and re.fullmatch(r"\s*\d+(?:\.\d+){1,5}\.?\s*", next_text.strip()):
+            if j > idx + 2 and re.match(
+                r"^(\d+(?:\.\d+){1,5})\.?(?=\s|$)", next_text.strip()
+            ):
                 # naechste OZ -> abbrechen
                 break
             # EP+GP-Muster: 2 Dot-Gruppen mit Whitespace dazwischen
