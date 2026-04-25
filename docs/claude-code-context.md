@@ -69,7 +69,7 @@ haben. Bitte ergänzen wenn neue auftauchen.
 
 | Tabelle | Quirk |
 |---|---|
-| `lvp_supplier_pricelists` | Hat `uploaded_at` (kein `updated_at`). Hat `parse_error` (Text) UND `parse_error_details` (JSON, B+4.5). |
+| `lvp_supplier_pricelists` | Hat `uploaded_at` (kein `updated_at`). Hat `parse_error` (Text), `parse_error_details` (JSON, B+4.5) und `parse_progress` (JSON, B+4.7 — Live-Fortschritt eines Parses). |
 | `lvp_supplier_price_entries` | Hat **kein** `created_at` / `updated_at`. Spalte `currency` ist `varchar(10)` seit Migration `f8a2b3e91d04` (vorher `varchar(3)`, hat Re-Parses gekillt). |
 | `lvp_positions.materialien` | JSON-Array; Material-Items nutzen **teils `dna`, teils `dna_pattern`** als Key — beide tolerieren wenn man drin liest (siehe `compute_lv_gaps`). |
 | `lvp_tenant_price_overrides` | Synthetische `article_number` mit Pattern `DNA:<dna_pattern>` für Gap-Resolves (B+4.6). Der Matcher in `kalkulation.py` schickt diesen Key an `lookup_price`, damit Stage-1-Override greift. |
@@ -219,6 +219,9 @@ Dauer typisch 18–22 Min für eine ~26-seitige PDF mit `batch_size=3`.
   Entries **erst am Ende** des Parse-Laufs in einem einzigen Bulk-INSERT,
   nicht inkrementell. Während des Parsens zeigt die DB 0 Entries. Erwartet
   ist also langes "0 entries", dann auf einen Schlag der Endwert.
+  Live-Fortschritt zeigt `parse_progress` (B+4.7) — wird in eigener
+  DB-Session pro Batch geschrieben, **nicht** über die Hauptsession,
+  damit nicht versehentlich ungetragte Entries committed werden.
 - **Volume-Mount muss existieren:** Vor erstem Container-Start auf Host
   `mkdir -p /home/appuser/lvp-storage/{pricelists,lvs}` ausführen, sonst
   ist der Mount-Point leer und Uploads scheitern.
