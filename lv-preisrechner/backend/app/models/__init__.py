@@ -1,5 +1,6 @@
 """SQLAlchemy Models."""
 
+from app.models.customer import Customer, Project, ProjectStatus
 from app.models.job import Job
 from app.models.lv import LV
 from app.models.position import Position
@@ -29,4 +30,8 @@ __all__ = [
     "TenantPriceOverride",
     "TenantDiscountRule",
     "PricelistStatus",
+    # B+4.9 Vertriebs-Workflow
+    "Customer",
+    "Project",
+    "ProjectStatus",
 ]

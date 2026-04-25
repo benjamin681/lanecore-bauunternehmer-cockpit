@@ -55,6 +55,14 @@ class LV(Base):
     # Welche Preisliste wurde verwendet
     price_list_id: Mapped[str] = mapped_column(String, default="")
 
+    # B+4.9: optionale Verknuepfung zum Project. NULL = "Lose LVs"-Bucket
+    # (z.B. wenn Auto-Anlage beim Upload mangels LV-Header-Daten ausfaellt).
+    project_id: Mapped[str | None] = mapped_column(
+        ForeignKey("lvp_projects.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 

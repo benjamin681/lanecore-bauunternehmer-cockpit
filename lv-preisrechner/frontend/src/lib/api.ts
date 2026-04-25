@@ -214,6 +214,8 @@ export type LV = {
   positionen_gematcht: number;
   positionen_unsicher: number;
   angebotssumme_netto: number;
+  /** B+4.9: optionale Verknuepfung zum Project. NULL = "Lose LVs". */
+  project_id?: string | null;
   created_at: string;
   updated_at: string;
 };

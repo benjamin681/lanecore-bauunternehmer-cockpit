@@ -96,10 +96,12 @@ def _seed_realistic_lv(db, tenant_id: str) -> str:
     return lv.id
 
 
-def _set_company_settings(tenant_id: str, settings: dict) -> None:
+def _set_company_profile(tenant_id: str, **fields) -> None:
+    """B+4.9: typisierte Spalten setzen. Erlaubte Keys siehe Tenant-Modell."""
     with _db() as db:
         t = db.get(Tenant, tenant_id)
-        t.company_settings = settings
+        for k, v in fields.items():
+            setattr(t, k, v)
         db.commit()
 
 
@@ -139,16 +141,16 @@ def test_export_enthaelt_alle_pflichtinhalte(client):
         from app.models.user import User
         user = db.query(User).filter_by(email="pdf-full@example.com").first()
         tid = user.tenant_id
-    _set_company_settings(tid, {
-        "firma": "Trockenbau Mustermann GmbH",
-        "anschrift_zeile1": "Beispielweg 12",
-        "anschrift_zeile2": "89073 Ulm",
-        "telefon": "+49 731 12345",
-        "email": "info@mustermann.de",
-        "iban": "DE12 3456 7890 1234",
-        "bic": "MUSTDE12",
-        "ust_id": "DE123456789",
-    })
+    _set_company_profile(
+        tid,
+        company_name="Trockenbau Mustermann GmbH",
+        company_address_street="Beispielweg 12",
+        company_address_zip="89073",
+        company_address_city="Ulm",
+        bank_iban="DE12 3456 7890 1234",
+        bank_bic="MUSTDE12",
+        vat_id="DE123456789",
+    )
     with _db() as db:
         lv_id = _seed_realistic_lv(db, tid)
     with _db() as db:
@@ -161,7 +163,7 @@ def test_export_enthaelt_alle_pflichtinhalte(client):
     # Briefkopf
     assert "Trockenbau Mustermann GmbH" in text
     assert "Beispielweg 12" in text
-    assert "info@mustermann.de" in text
+    assert "89073 Ulm" in text
     # Empfaenger
     assert "Bauunternehmen Beispiel GmbH" in text
     assert "Salach" in text

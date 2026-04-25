@@ -122,8 +122,25 @@ def generate_angebot_pdf(lv: LV, tenant: Tenant) -> bytes:
     if not lv.positions:
         raise LVExportError("LV hat keine Positionen — Export macht keinen Sinn.")
 
-    cs = dict(tenant.company_settings or {})
-    firma = (cs.get("firma") or tenant.name or "").strip()
+    # B+4.9: aus typisierten Tenant-Spalten ein flat dict bauen, damit
+    # die Drawing-Helper-API gleich bleibt. Fallback auf tenant.name
+    # wenn company_name leer ist (Migrations-Pfad: Tenant existiert,
+    # User hat Settings-Form noch nicht ausgefuellt).
+    tenant_data = {
+        "firma": (tenant.company_name or tenant.name or "").strip(),
+        "anschrift_zeile1": (tenant.company_address_street or "").strip(),
+        "anschrift_zeile2": " ".join(
+            s for s in [tenant.company_address_zip, tenant.company_address_city] if s
+        ).strip(),
+        "telefon": "",  # bewusst leer; Telefon liegt im User-Modell
+        "email": "",
+        "iban": (tenant.bank_iban or "").strip(),
+        "bic": (tenant.bank_bic or "").strip(),
+        "bank_name": (tenant.bank_name or "").strip(),
+        "ust_id": (tenant.vat_id or "").strip(),
+        "footer_text": (tenant.default_agb_text or "").strip(),
+    }
+    firma = tenant_data["firma"]
     angebotsnr = _build_angebotsnummer(lv)
     erstell_datum = date.today()
 
@@ -132,7 +149,7 @@ def generate_angebot_pdf(lv: LV, tenant: Tenant) -> bytes:
     y = MARGIN_Y
 
     # Briefkopf links + Empfaenger rechts
-    y = _draw_briefkopf(page, y=y, firma=firma, settings=cs)
+    y = _draw_briefkopf(page, y=y, firma=firma, settings=tenant_data)
     _draw_empfaenger(page, y=MARGIN_Y, lv=lv)
 
     y = max(y, MARGIN_Y + 90) + 30
@@ -152,7 +169,7 @@ def generate_angebot_pdf(lv: LV, tenant: Tenant) -> bytes:
     page, y = _draw_summen(doc, page, y, lv)
 
     # Footer-Block (auf jeder Seite unten gleicher Inhalt)
-    _draw_footer_all_pages(doc, settings=cs)
+    _draw_footer_all_pages(doc, settings=tenant_data)
 
     out = BytesIO()
     doc.save(out)

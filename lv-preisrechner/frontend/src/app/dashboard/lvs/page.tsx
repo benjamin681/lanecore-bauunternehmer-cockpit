@@ -76,11 +76,20 @@ export default function LvsPage() {
                 >
                   {lv.projekt_name || lv.original_dateiname || "Unbenanntes LV"}
                 </Link>
+                {lv.auftraggeber && (
+                  <div className="text-xs text-slate-500 mt-0.5 truncate">
+                    {lv.auftraggeber}
+                  </div>
+                )}
                 <div className="text-sm text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
                   <StatusBadge status={lv.status} />
                   <span>· {lv.positionen_gesamt} Positionen</span>
                   {lv.positionen_unsicher > 0 && (
                     <Badge variant="warning">{lv.positionen_unsicher} unsicher</Badge>
+                  )}
+                  {/* B+4.9: Hinweis wenn LV noch keinem Projekt zugeordnet ist */}
+                  {!lv.project_id && (
+                    <Badge variant="default">Lose</Badge>
                   )}
                   <span>· {fmtDate(lv.created_at)}</span>
                 </div>

@@ -298,9 +298,20 @@ def parse_and_store(
     lv.positionen_gesamt = len(positionen)
     lv.positionen_unsicher = unsicher
     lv.status = "review_needed"
+
+    # B+4.9: Auto-Anlage von Customer + Project aus dem LV-Header.
+    # Nicht-fatal — bei fehlenden Daten bleibt lv.project_id NULL und
+    # der LV landet in der "Lose LVs"-Sicht.
+    try:
+        from app.services.customer_project_autocreate import autocreate_for_lv
+        autocreate_for_lv(db, lv)
+    except Exception as exc:  # noqa: BLE001 — niemals den LV-Upload kippen
+        log.warning("autocreate_failed", lv_id=lv.id, error=str(exc))
+
     db.commit()
     db.refresh(lv)
     log.info(
-        "lv_parsed", lv_id=lv.id, model=model, total=len(positionen), unsicher=unsicher
+        "lv_parsed", lv_id=lv.id, model=model, total=len(positionen),
+        unsicher=unsicher, project_id=lv.project_id,
     )
     return lv
