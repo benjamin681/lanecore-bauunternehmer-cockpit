@@ -13,6 +13,7 @@ import type {
   CorrectEntryResponse,
   EntryReviewResponse,
   ListPricelistsQuery,
+  ParseProgress,
   SupplierPriceList,
   SupplierPriceListDetail,
   SupplierPriceEntry,
@@ -109,6 +110,10 @@ export const pricingApi = {
       method: "POST",
       body,
     }),
+
+  /** B+4.7 — Live-Progress eines Parses. */
+  getParseProgress: (pricelistId: string) =>
+    api<ParseProgress>(`/pricing/pricelists/${pricelistId}/progress`),
 };
 
 export type PricingApi = typeof pricingApi;

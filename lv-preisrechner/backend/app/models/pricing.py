@@ -105,6 +105,10 @@ class SupplierPriceList(Base):
     # Attempt-Zaehler, Exception-Klasse und Pfad zur Rohantwort-Datei.
     # Liste von dicts, siehe Migration c91f4d7a2b85.
     parse_error_details: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    # B+4.7: Live-Fortschritt eines laufenden Parses, geschrieben in
+    # eigener DB-Session pro Update. Schluessel siehe Migration
+    # a4b1e7c30982 / PricelistParser._update_progress.
+    parse_progress: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     entries_total: Mapped[int | None] = mapped_column(Integer, nullable=True)
     entries_reviewed: Mapped[int | None] = mapped_column(Integer, nullable=True)

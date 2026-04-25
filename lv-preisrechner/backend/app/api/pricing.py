@@ -38,6 +38,7 @@ from app.schemas.pricing import (
     EntryReviewGroup,
     EntryReviewItem,
     EntryReviewResponse,
+    ParseProgressOut,
     SupplierPriceEntryOut,
     SupplierPriceEntryUpdate,
     SupplierPriceListDetail,
@@ -812,4 +813,88 @@ def correct_entry(
         entry=SupplierPriceEntryOut.model_validate(entry),
         correction_persisted=correction_persisted,
         correction_id=correction_id,
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /pricing/pricelists/{id}/progress  (B+4.7)
+# ---------------------------------------------------------------------------
+@router.get(
+    "/pricelists/{pricelist_id}/progress",
+    response_model=ParseProgressOut,
+)
+def get_pricelist_progress(
+    pricelist_id: str,
+    user: CurrentUser,
+    db: DbSession,
+) -> ParseProgressOut:
+    """Liefert den Live-Fortschritt eines laufenden Parses.
+
+    Wenn status != PARSING/PENDING_PARSE: Felder sind leer, UI stoppt
+    das Polling. Wenn parse_progress null ist (alter Parser-Lauf vor
+    B+4.7): Felder leer.
+
+    Restzeit wird linear extrapoliert: elapsed_seconds /
+    current_batch * (total_batches - current_batch).
+    """
+    from datetime import UTC, datetime
+
+    pl = (
+        db.query(SupplierPriceList)
+        .filter(
+            SupplierPriceList.id == pricelist_id,
+            SupplierPriceList.tenant_id == user.tenant_id,
+        )
+        .first()
+    )
+    if pl is None:
+        raise HTTPException(404, "Preisliste nicht gefunden")
+
+    progress = pl.parse_progress or {}
+    current_batch = progress.get("current_batch")
+    total_batches = progress.get("total_batches")
+    started_at_str = progress.get("started_at")
+    last_update_at_str = progress.get("last_update_at")
+
+    started_at = (
+        datetime.fromisoformat(started_at_str.replace("Z", "+00:00"))
+        if started_at_str
+        else None
+    )
+    last_update_at = (
+        datetime.fromisoformat(last_update_at_str.replace("Z", "+00:00"))
+        if last_update_at_str
+        else None
+    )
+
+    elapsed: float | None = None
+    remaining: float | None = None
+    percentage: float | None = None
+    if started_at is not None:
+        elapsed = (datetime.now(UTC) - started_at).total_seconds()
+    if (
+        isinstance(current_batch, int)
+        and isinstance(total_batches, int)
+        and total_batches > 0
+    ):
+        percentage = round(100.0 * current_batch / total_batches, 1)
+        if (
+            elapsed is not None
+            and current_batch > 0
+            and current_batch < total_batches
+        ):
+            remaining = elapsed / current_batch * (total_batches - current_batch)
+
+    return ParseProgressOut(
+        pricelist_id=pricelist_id,
+        status=pl.status,  # type: ignore[arg-type]
+        current_batch=current_batch if isinstance(current_batch, int) else None,
+        total_batches=total_batches if isinstance(total_batches, int) else None,
+        percentage=percentage,
+        current_action=progress.get("current_action"),
+        entries_so_far=int(progress.get("entries_so_far") or 0),
+        elapsed_seconds=elapsed,
+        estimated_remaining_seconds=remaining,
+        started_at=started_at,
+        last_update_at=last_update_at,
     )

@@ -200,3 +200,18 @@ export type CorrectEntryResponse = {
   correction_persisted: boolean;
   correction_id: string | null;
 };
+
+/** B+4.7 — Live-Fortschritt eines Parses. */
+export type ParseProgress = {
+  pricelist_id: string;
+  status: PricingStatus;
+  current_batch: number | null;
+  total_batches: number | null;
+  percentage: number | null;
+  current_action: string | null;
+  entries_so_far: number;
+  elapsed_seconds: number | null;
+  estimated_remaining_seconds: number | null;
+  started_at: string | null;
+  last_update_at: string | null;
+};

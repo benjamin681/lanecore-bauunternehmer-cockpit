@@ -675,7 +675,24 @@ class PricelistParser:
         # B+4.5: strukturierte Batch-Fehler-Liste (persistiert auf pricelist.
         # parse_error_details am Ende des Laufs).
         batch_failures: list[dict] = []
+        total_batches_planned = (
+            (len(images) + self._batch_size - 1) // self._batch_size
+        )
         total_batches = 0
+
+        # B+4.7: Live-Progress initialisieren — eigene Session, damit
+        # der Parser-Hauptprozess die Transaction nicht zwischendurch
+        # committen muss (das wuerde die noch ungetraged-Entries auch
+        # vorzeitig persistieren).
+        from datetime import UTC, datetime
+        parse_started_at = datetime.now(UTC)
+        self._update_progress(
+            pricelist_id=pricelist_id,
+            current_batch=0,
+            total_batches=total_batches_planned,
+            current_action="Parser gestartet",
+            started_at=parse_started_at,
+        )
 
         confidences: list[float] = []
         for start in range(0, len(images), self._batch_size):
@@ -683,6 +700,16 @@ class PricelistParser:
             batch_idx = start // self._batch_size + 1
             page_range = f"{start + 1}-{start + len(batch)}"
             total_batches += 1
+
+            # Progress vor dem Claude-Call.
+            self._update_progress(
+                pricelist_id=pricelist_id,
+                current_batch=batch_idx,
+                total_batches=total_batches_planned,
+                current_action=f"Verarbeite Seiten {page_range}",
+                started_at=parse_started_at,
+                entries_so_far=result.parsed_entries,
+            )
 
             parsed, batch_error = self._extract_with_retry(
                 pricelist_id=pricelist_id,
@@ -829,6 +856,18 @@ class PricelistParser:
 
         self.db.commit()
 
+        # B+4.7: Final-Progress — UI kann anhand current_batch == total_batches
+        # erkennen, dass der Parser fertig ist (UI stoppt Polling auch bei
+        # status-Wechsel auf PARSED/PARTIAL_PARSE/ERROR).
+        self._update_progress(
+            pricelist_id=pricelist_id,
+            current_batch=total_batches_planned,
+            total_batches=total_batches_planned,
+            current_action="Parser fertig",
+            started_at=parse_started_at,
+            entries_so_far=result.parsed_entries,
+        )
+
         log.info(
             "pricelist_parse_done",
             pricelist_id=pricelist_id,
@@ -841,6 +880,51 @@ class PricelistParser:
             batches_failed=len(batch_failures),
         )
         return result
+
+    # ------------------------------------------------------------------ #
+    # B+4.7: Live-Progress in eigener DB-Session.
+    # ------------------------------------------------------------------ #
+    def _update_progress(
+        self,
+        *,
+        pricelist_id: str,
+        current_batch: int,
+        total_batches: int,
+        current_action: str,
+        started_at,
+        entries_so_far: int = 0,
+    ) -> None:
+        """Schreibt parse_progress in einer eigenen Session.
+
+        Wir nutzen bewusst NICHT self.db, weil ein Commit auf der Haupt-
+        Session auch noch nicht-persistierte SupplierPriceEntry-Objekte
+        committen wuerde. Eine separate Session sieht den Pricelist-Eintrag
+        und kann ihn unabhaengig updaten.
+
+        Fehler werden geloggt, aber nicht durchgereicht — Progress-Update
+        darf den Parse niemals abbrechen.
+        """
+        from datetime import UTC, datetime
+
+        from app.core.database import SessionLocal
+        from app.models.pricing import SupplierPriceList
+
+        try:
+            with SessionLocal() as fresh:
+                pl = fresh.get(SupplierPriceList, pricelist_id)
+                if pl is None:
+                    return
+                pl.parse_progress = {
+                    "current_batch": current_batch,
+                    "total_batches": total_batches,
+                    "current_action": current_action,
+                    "started_at": started_at.isoformat(),
+                    "last_update_at": datetime.now(UTC).isoformat(),
+                    "entries_so_far": entries_so_far,
+                }
+                fresh.commit()
+        except Exception as exc:  # noqa: BLE001 — Resilienz vor Korrektheit
+            log.warning("parse_progress_update_failed", error=str(exc))
 
     # ------------------------------------------------------------------ #
     # B+4.5: Resilienz fuer Claude-Vision-Batches.

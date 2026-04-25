@@ -268,3 +268,26 @@ class EntryCorrectionResponse(BaseModel):
     entry: SupplierPriceEntryOut
     correction_persisted: bool
     correction_id: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Parse-Progress (B+4.7)
+# ---------------------------------------------------------------------------
+class ParseProgressOut(BaseModel):
+    """GET /pricing/pricelists/{id}/progress.
+
+    Bei Status != PARSING/PENDING_PARSE sind die Live-Felder leer und das
+    UI sollte das Progress-Polling stoppen.
+    """
+
+    pricelist_id: str
+    status: PricelistStatusSchema
+    current_batch: int | None = None
+    total_batches: int | None = None
+    percentage: float | None = None
+    current_action: str | None = None
+    entries_so_far: int = 0
+    elapsed_seconds: float | None = None
+    estimated_remaining_seconds: float | None = None
+    started_at: datetime | None = None
+    last_update_at: datetime | None = None

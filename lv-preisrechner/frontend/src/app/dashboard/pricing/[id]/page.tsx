@@ -30,6 +30,7 @@ import { pricingApi } from "@/lib/pricingApi";
 import { fmtDate } from "@/lib/format";
 import {
   PRICING_STATUS_META,
+  type ParseProgress,
   type SupplierPriceList,
 } from "@/lib/types/pricing";
 
@@ -43,14 +44,19 @@ export default function PricingDetailPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const [pl, setPl] = useState<SupplierPriceList | null>(null);
+  const [progress, setProgress] = useState<ParseProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const data = await pricingApi.getPricelist(id);
+      const [data, prog] = await Promise.all([
+        pricingApi.getPricelist(id),
+        pricingApi.getParseProgress(id).catch(() => null),
+      ]);
       setPl(data);
+      setProgress(prog);
     } catch (e) {
       const msg = e instanceof ApiError ? e.detail : "Laden fehlgeschlagen";
       toast.error(msg || "Nicht gefunden");
@@ -222,29 +228,76 @@ export default function PricingDetailPage() {
         </div>
       </header>
 
-      {/* Progress-Hinweis — waehrend Parse laeuft */}
+      {/* B+4.7 — Live-Progress-Card mit Bar, Action-Text, Restzeit */}
       {inProgress && (
         <Card className="border-bauplan-200 bg-bauplan-50/40 transition-opacity duration-500">
-          <CardBody className="flex items-start gap-3">
-            <Loader2 className="w-5 h-5 text-bauplan-600 shrink-0 mt-0.5 animate-spin" />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div className="font-medium text-slate-900">
-                  Preisliste wird analysiert
+          <CardBody className="space-y-3">
+            <div className="flex items-start gap-3">
+              <Loader2 className="w-5 h-5 text-bauplan-600 shrink-0 mt-0.5 animate-spin" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="font-medium text-slate-900">
+                    Preisliste wird analysiert
+                    {progress && progress.percentage !== null && (
+                      <span className="ml-2 text-bauplan-700 font-mono tabular-nums">
+                        {progress.percentage.toFixed(1)} %
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-sm font-mono tabular-nums text-slate-500 flex items-center gap-3">
+                    <span aria-label="Verstrichene Zeit">
+                      {fmtElapsed(
+                        progress?.elapsed_seconds != null
+                          ? Math.round(progress.elapsed_seconds)
+                          : elapsedSec,
+                      )}
+                    </span>
+                    {progress?.estimated_remaining_seconds != null &&
+                      progress.estimated_remaining_seconds > 0 && (
+                        <span className="text-slate-400">
+                          Rest ~
+                          {fmtElapsed(
+                            Math.round(progress.estimated_remaining_seconds),
+                          )}
+                        </span>
+                      )}
+                  </div>
                 </div>
-                <div
-                  className="text-sm font-mono tabular-nums text-slate-500"
-                  aria-label="Verstrichene Zeit seit Seitenaufruf"
-                >
-                  {fmtElapsed(elapsedSec)}
+                <div className="text-sm text-slate-600 mt-1">
+                  {progress?.current_action ?? "Vorbereitung läuft …"}
+                  {progress?.current_batch != null &&
+                    progress.total_batches != null && (
+                      <span className="text-slate-400 ml-2 font-mono tabular-nums">
+                        Batch {progress.current_batch} / {progress.total_batches}
+                      </span>
+                    )}
                 </div>
               </div>
-              <div className="text-sm text-slate-600 mt-1">
-                Unsere KI liest gerade die Preisliste und extrahiert alle
-                Positionen. Das dauert typischerweise 1–3 Minuten. Du kannst
-                den Tab offen lassen oder spaeter zurueck kommen — der Parser
-                laeuft im Hintergrund weiter.
-              </div>
+            </div>
+
+            {/* Progress-Bar */}
+            <div className="h-2 rounded-full bg-bauplan-100 overflow-hidden">
+              <div
+                role="progressbar"
+                aria-valuenow={progress?.percentage ?? 0}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                className="h-full bg-bauplan-600 transition-[width] duration-500"
+                style={{
+                  width: `${
+                    progress?.percentage != null
+                      ? Math.min(100, Math.max(2, progress.percentage))
+                      : 2
+                  }%`,
+                }}
+              />
+            </div>
+
+            <div className="text-xs text-slate-500">
+              {progress?.entries_so_far != null && progress.entries_so_far > 0
+                ? `${progress.entries_so_far} Einträge bisher erkannt · `
+                : ""}
+              Du kannst den Tab offen lassen — der Parser läuft im Hintergrund.
             </div>
           </CardBody>
         </Card>
