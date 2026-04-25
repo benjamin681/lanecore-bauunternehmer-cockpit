@@ -8,6 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, ApiError, getPricingReadiness, User } from "@/lib/api";
+import {
+  isValidBIC,
+  isValidIBAN,
+  isValidVATID,
+  tenantApi,
+  TenantProfile,
+  TenantProfileUpdate,
+} from "@/lib/tenantApi";
 
 type Form = {
   firma: string;
@@ -115,7 +123,253 @@ export default function EinstellungenPage() {
     : 0;
 
   return (
-    <form onSubmit={save} className="max-w-2xl space-y-6">
+    <div className="max-w-3xl space-y-8">
+      <SettingsForm
+        form={form}
+        user={user}
+        busy={busy}
+        save={save}
+        update={update}
+        toggleNewPricing={toggleNewPricing}
+        togglingFlag={togglingFlag}
+        dirty={Boolean(dirty)}
+        gesamtZuschlag={gesamtZuschlag}
+      />
+      <TenantProfileSection />
+    </div>
+  );
+}
+
+// --------------------------------------------------------------------------- //
+// B+4.9 — Tenant-Profil mit typisierten Spalten (Briefkopf, Bank, Defaults)
+// --------------------------------------------------------------------------- //
+function TenantProfileSection() {
+  const [profile, setProfile] = useState<TenantProfile | null>(null);
+  const [draft, setDraft] = useState<TenantProfileUpdate>({});
+  const [busy, setBusy] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    tenantApi.getProfile().then((p) => {
+      setProfile(p);
+      setDraft({});
+    });
+  }, []);
+
+  function setField<K extends keyof TenantProfileUpdate>(
+    key: K, value: TenantProfileUpdate[K],
+  ) {
+    setDraft((d) => ({ ...d, [key]: value }));
+  }
+
+  function effective<K extends keyof TenantProfile>(key: K): TenantProfile[K] | null {
+    if (key in draft) return (draft as Record<string, unknown>)[key as string] as TenantProfile[K];
+    return profile ? profile[key] : null;
+  }
+
+  async function save() {
+    if (!profile) return;
+    // Clientseitige Validierung
+    const errs: Record<string, string> = {};
+    const iban = effective("bank_iban");
+    const bic = effective("bank_bic");
+    const vat = effective("vat_id");
+    const country = effective("company_address_country");
+    if (iban && typeof iban === "string" && iban.trim() && !isValidIBAN(iban)) {
+      errs["bank_iban"] = "IBAN-Format ungültig (Land + 13–32 Zeichen).";
+    }
+    if (bic && typeof bic === "string" && bic.trim() && !isValidBIC(bic)) {
+      errs["bank_bic"] = "BIC muss 8 oder 11 Zeichen haben.";
+    }
+    if (vat && typeof vat === "string" && vat.trim() && !isValidVATID(vat)) {
+      errs["vat_id"] = "USt-IdNr. muss mit Land-Code beginnen (z.B. DE…).";
+    }
+    if (country && typeof country === "string" && country.length !== 2) {
+      errs["company_address_country"] = "ISO-2-Land-Code (z.B. DE).";
+    }
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      toast.error("Bitte Validierungsfehler korrigieren.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const updated = await tenantApi.updateProfile(draft);
+      setProfile(updated);
+      setDraft({});
+      toast.success("Firmen-Profil gespeichert");
+    } catch (err) {
+      const detail = err instanceof ApiError ? err.detail : "Speichern fehlgeschlagen";
+      toast.error(detail || "Speichern fehlgeschlagen");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!profile) {
+    return <div className="text-slate-500">Lade Firmen-Profil…</div>;
+  }
+  const isDirty = Object.keys(draft).length > 0;
+
+  return (
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-2xl font-bold text-slate-900">Firmen-Profil</h2>
+        <p className="text-slate-600 mt-1 text-sm">
+          Stammdaten für Briefkopf, Bankverbindung und Footer im Angebots-PDF.
+        </p>
+      </div>
+
+      <div className="rounded-xl bg-white border border-slate-200 p-6 space-y-4">
+        <h3 className="font-semibold text-slate-900">Briefkopf</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ProfileText label="Firmenname" value={effective("company_name")}
+                       onChange={(v) => setField("company_name", v)} />
+          <ProfileText label="Land (ISO-2)" value={effective("company_address_country")}
+                       maxLength={2} placeholder="DE"
+                       onChange={(v) => setField("company_address_country", v.toUpperCase())}
+                       error={errors["company_address_country"]} />
+          <ProfileText label="Strasse + Nr." value={effective("company_address_street")}
+                       onChange={(v) => setField("company_address_street", v)} />
+          <ProfileText label="PLZ" value={effective("company_address_zip")}
+                       onChange={(v) => setField("company_address_zip", v)} />
+          <ProfileText label="Stadt" value={effective("company_address_city")}
+                       onChange={(v) => setField("company_address_city", v)} />
+          <ProfileText label="Logo-URL (optional)" value={effective("logo_url")}
+                       placeholder="https://…/logo.png"
+                       onChange={(v) => setField("logo_url", v)} />
+        </div>
+      </div>
+
+      <div className="rounded-xl bg-white border border-slate-200 p-6 space-y-4">
+        <h3 className="font-semibold text-slate-900">Steuer &amp; Bank</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ProfileText label="Steuernummer" value={effective("tax_id")}
+                       onChange={(v) => setField("tax_id", v)} />
+          <ProfileText label="USt-IdNr." value={effective("vat_id")}
+                       placeholder="DE123456789"
+                       onChange={(v) => setField("vat_id", v)}
+                       error={errors["vat_id"]} />
+          <ProfileText label="IBAN" value={effective("bank_iban")}
+                       placeholder="DE12 3456 7890 1234 5678 90"
+                       onChange={(v) => setField("bank_iban", v)}
+                       error={errors["bank_iban"]} />
+          <ProfileText label="BIC" value={effective("bank_bic")}
+                       placeholder="MUSTDE12"
+                       onChange={(v) => setField("bank_bic", v)}
+                       error={errors["bank_bic"]} />
+          <div className="md:col-span-2">
+            <ProfileText label="Bank-Name" value={effective("bank_name")}
+                         onChange={(v) => setField("bank_name", v)} />
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl bg-white border border-slate-200 p-6 space-y-4">
+        <h3 className="font-semibold text-slate-900">Vertragsbedingungen</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ProfileNumber label="Zahlungsziel (Tage)"
+                         value={effective("default_payment_terms_days") ?? 14}
+                         onChange={(v) => setField("default_payment_terms_days", v)} />
+          <ProfileNumber label="Angebots-Gültigkeit (Tage)"
+                         value={effective("default_offer_validity_days") ?? 30}
+                         onChange={(v) => setField("default_offer_validity_days", v)} />
+        </div>
+        <div>
+          <Label>AGB-Text</Label>
+          <textarea
+            className="w-full rounded-lg bg-white border border-slate-200 p-3 text-sm focus:outline-none focus:border-bauplan-500 focus:ring-2 focus:ring-bauplan-100"
+            rows={3}
+            value={String(effective("default_agb_text") ?? "")}
+            onChange={(e) => setField("default_agb_text", e.target.value)}
+          />
+        </div>
+        <div>
+          <Label>Signatur (Footer-Text)</Label>
+          <textarea
+            className="w-full rounded-lg bg-white border border-slate-200 p-3 text-sm focus:outline-none focus:border-bauplan-500 focus:ring-2 focus:ring-bauplan-100"
+            rows={2}
+            value={String(effective("signature_text") ?? "")}
+            onChange={(e) => setField("signature_text", e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end">
+        <Button onClick={save} disabled={!isDirty || busy} variant="primary">
+          <Save className="w-4 h-4" />
+          {busy ? "Speichere…" : "Firmen-Profil speichern"}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+function ProfileText({
+  label, value, onChange, placeholder, error, maxLength,
+}: {
+  label: string;
+  value: string | null;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  error?: string;
+  maxLength?: number;
+}) {
+  return (
+    <div className="space-y-1">
+      <Label>{label}</Label>
+      <Input
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        maxLength={maxLength}
+      />
+      {error && <p className="text-xs text-danger-600">{error}</p>}
+    </div>
+  );
+}
+
+function ProfileNumber({
+  label, value, onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="space-y-1">
+      <Label>{label}</Label>
+      <Input
+        type="number" min={1} max={365}
+        value={value}
+        onChange={(e) => {
+          const n = parseInt(e.target.value, 10);
+          onChange(Number.isFinite(n) ? n : 0);
+        }}
+      />
+    </div>
+  );
+}
+
+// --------------------------------------------------------------------------- //
+// SettingsForm: existing Kalkulations-Defaults (unveraendert)
+// --------------------------------------------------------------------------- //
+function SettingsForm({
+  form, user, busy, save, update, toggleNewPricing, togglingFlag,
+  dirty, gesamtZuschlag,
+}: {
+  form: Form | null;
+  user: User | null;
+  busy: boolean;
+  save: (e: FormEvent) => Promise<void>;
+  update: <K extends keyof Form>(k: K, v: Form[K]) => void;
+  toggleNewPricing: (next: boolean) => Promise<void>;
+  togglingFlag: boolean;
+  dirty: boolean;
+  gesamtZuschlag: number;
+}) {
+  return (
+    <form onSubmit={save} className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-slate-900">Einstellungen</h1>
         <p className="text-slate-600 mt-1">

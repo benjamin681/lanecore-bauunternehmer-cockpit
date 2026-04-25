@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  Building2,
   FileStack,
   FolderOpen,
   LayoutDashboard,
@@ -11,6 +12,7 @@ import {
   Menu,
   Package,
   Settings,
+  Users,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -27,6 +29,8 @@ const NAV = [
     beta: true,
   },
   { href: "/dashboard/lvs", label: "Leistungsverzeichnisse", icon: FolderOpen },
+  { href: "/dashboard/projects", label: "Projekte", icon: Building2 },
+  { href: "/dashboard/customers", label: "Kunden", icon: Users },
   { href: "/dashboard/einstellungen", label: "Einstellungen", icon: Settings },
 ];
 
