@@ -201,6 +201,31 @@ export default function LvDetailPage() {
     }
   }
 
+  // B+4.10 — Original-LV mit Preis-Overlay. Anders als exportAngebotPdf
+  // wird hier das Auftraggeber-PDF 1:1 zurueckgeschickt mit unseren
+  // Preisen in den existierenden Punkt-Linien-Spalten.
+  async function exportOriginalFilledPdf() {
+    setBusy(true);
+    try {
+      const blob = await api<Blob>(
+        `/lvs/${id}/export-original-filled-pdf`, { raw: true },
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Angebot-Original-${lv?.projekt_name || id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Original-LV mit Preisen heruntergeladen.");
+    } catch (e: any) {
+      toast.error(e?.detail || "PDF-Erstellung fehlgeschlagen");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (loading || !lv) {
     return <div className="text-slate-500 py-20 text-center">Lade…</div>;
   }
@@ -277,9 +302,20 @@ export default function LvDetailPage() {
           onClick={exportAngebotPdf}
           disabled={!canExport || busy}
           variant="primary"
+          title="Eigenständiges Angebots-PDF im Kalkulane-Layout: Briefkopf, Empfänger, Tabelle, Summen, AGB-Footer. Für das eigene Archiv oder Verhandlungsmitschrift."
         >
           <FileDown className="w-4 h-4" />
           {busy ? "Erstelle Angebot…" : "Angebot als PDF"}
+        </Button>
+        {/* B+4.10 — Original-LV mit Preisen (zurück an Auftraggeber) */}
+        <Button
+          onClick={exportOriginalFilledPdf}
+          disabled={!canExport || busy}
+          variant="primary"
+          title="Original-PDF des Auftraggebers 1:1 mit unseren Einheits- und Gesamtpreisen ausgefüllt. Direkt zurückschickbar — der Auftraggeber kann seine eigene LV-Tabelle Bieter-für-Bieter vergleichen."
+        >
+          <FileDown className="w-4 h-4" />
+          {busy ? "Erstelle…" : "LV-Antwort an Auftraggeber"}
         </Button>
         <div className="flex-1" />
         <div className="text-sm text-slate-500">

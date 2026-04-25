@@ -34,6 +34,10 @@ from app.services.catalog_gaps import (
     resolve_gap_skip,
 )
 from app.services.lv_pdf_export import LVExportError, generate_angebot_pdf
+from app.services.lv_original_filled import (
+    LVOriginalFilledError,
+    generate_original_filled_pdf,
+)
 from app.services.jobs import enqueue_job, run_parse_lv
 from app.services.kalkulation import kalkuliere_lv
 from app.services.lv_parser import parse_and_store
@@ -520,6 +524,76 @@ def export_lv_pdf(
 
     angebotsnr = _build_angebotsnummer(lv)
     filename = f"Angebot-{angebotsnr}.pdf"
+    disposition = "inline" if inline else "attachment"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'{disposition}; filename="{filename}"',
+            "Cache-Control": "private, no-cache, no-store, must-revalidate",
+        },
+    )
+
+
+@router.get("/{lv_id}/export-original-filled-pdf")
+def export_original_filled_pdf(
+    lv_id: str,
+    user: CurrentUser,
+    db: DbSession,
+    inline: bool = Query(
+        default=False,
+        description=(
+            "Wenn True, wird das PDF inline im Browser geladen "
+            "(Vorschau-Modus). Default ist Download mit attachment-"
+            "Disposition."
+        ),
+    ),
+):
+    """B+4.10 — Original-LV-PDF mit eingetragenen Einheitspreisen.
+
+    Use-Case: Auftraggeber-LV mit unseren Preisen ausgefuellt
+    direkt zurueckschicken. Standard-Praxis im Bauwesen — der
+    Auftraggeber vergleicht direkt seine Original-LV-Tabelle mit
+    eingetragenen Preisen mehrerer Bieter.
+
+    Im Unterschied zum verwandten Endpoint /export-pdf (B+4.8) wird
+    hier KEIN eigenes Angebots-Layout neu generiert. Stattdessen
+    wird das Original-PDF aus lv.original_pdf_bytes geladen und mit
+    EP/GP-Overlays an den existierenden Punkt-Linien-Spalten
+    versehen. Anzahl Seiten + Layout bleiben identisch zum Original.
+    """
+    from datetime import date
+
+    from fastapi.responses import Response
+
+    lv = (
+        db.query(LV)
+        .filter(LV.id == lv_id, LV.tenant_id == user.tenant_id)
+        .first()
+    )
+    if lv is None:
+        raise HTTPException(status_code=404, detail="LV nicht gefunden")
+
+    try:
+        pdf_bytes = generate_original_filled_pdf(lv)
+    except LVOriginalFilledError as exc:
+        raise HTTPException(
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        )
+
+    # Filename aus Projektname (oder original_dateiname) + Datum
+    raw_label = (lv.projekt_name or lv.original_dateiname or lv.id[:8]).strip()
+    # Nur ASCII-sichere Zeichen — bzw. Umlaute → -ae- etc. Pragmatisch
+    # ueber simple Substitution; die meisten Auftraggeber-Systeme moegen
+    # Umlaute in Filenamen nicht.
+    label = (
+        raw_label.replace(" ", "_")
+        .replace("/", "-").replace("\\", "-")
+        .replace('"', "").replace("'", "")
+    )
+    filename = f"Angebot-Original-{label[:60]}-{date.today().strftime('%Y%m%d')}.pdf"
     disposition = "inline" if inline else "attachment"
 
     return Response(
