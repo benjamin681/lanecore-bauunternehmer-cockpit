@@ -121,19 +121,38 @@ def _fill_original_lv(doc: fitz.Document, lv: LV) -> None:
         log.warning("fill_original_lv_no_positions", lv_id=lv.id)
         return
 
+    # B+4.10 Cross-Page: erst per-page versuchen (Stil 1+2 wie bisher).
+    # Dann fuer noch ungefuellte OZs einen Cross-Page-Pass: wenn die OZ
+    # am Seitenende steht und ihr Dot-Pair erst auf der naechsten Seite
+    # beginnt, wird das Pair dort gesucht und das EP/GP auf die naechste
+    # Page geschrieben.
+    filled_oz: set[str] = set()
     filled_count = 0
-    # Nur Original-Seiten verarbeiten (vor eventuellem Anhang)
     for page_idx in range(doc.page_count):
         page = doc.load_page(page_idx)
         try:
-            filled_count += _fill_page(page, pos_by_oz)
+            filled_count += _fill_page(page, pos_by_oz, filled_oz=filled_oz)
         except Exception as e:
             log.warning("fill_page_failed", page=page_idx, err=str(e))
 
-    log.info("original_lv_filled", lv_id=lv.id, positions=filled_count)
+    # Cross-Page-Pass fuer alle nicht gefuellten OZs.
+    cross_filled = _fill_cross_page(doc, pos_by_oz, filled_oz)
+    filled_count += cross_filled
+
+    log.info(
+        "original_lv_filled",
+        lv_id=lv.id,
+        positions=filled_count,
+        cross_page=cross_filled,
+    )
 
 
-def _fill_page(page: fitz.Page, pos_by_oz: dict) -> int:
+def _fill_page(
+    page: fitz.Page,
+    pos_by_oz: dict,
+    *,
+    filled_oz: set[str] | None = None,
+) -> int:
     """Fuellt EP/GP/Fabrikat fuer alle auf der Seite gefundenen OZs.
 
     Returns: Anzahl ausgefuellter Positionen auf dieser Seite.
@@ -249,6 +268,8 @@ def _fill_page(page: fitz.Page, pos_by_oz: dict) -> int:
                     (gp_x, y_txt), gp_txt, fontsize=9, fontname="helv", color=(0, 0, 0.4)
                 )
                 filled += 1
+                if filled_oz is not None and pos.oz:
+                    filled_oz.add(pos.oz.strip())
             except Exception:
                 continue
             # Fabrikat-Search ist Habau-Stil-spezifisch (ein "Angebotenes
@@ -306,6 +327,8 @@ def _fill_page(page: fitz.Page, pos_by_oz: dict) -> int:
                     (gp_x, gp_y), gp_txt, fontsize=9, fontname="helv", color=(0, 0, 0.4)
                 )
                 filled += 1
+                if filled_oz is not None and pos.oz:
+                    filled_oz.add(pos.oz.strip())
             except Exception:
                 continue
             # Stil-2-Pfad endet hier (kein Fabrikat-Search, siehe Habau-Block).
@@ -343,6 +366,124 @@ def _fill_page(page: fitz.Page, pos_by_oz: dict) -> int:
                     break
 
     return filled
+
+
+def _fill_cross_page(
+    doc: fitz.Document, pos_by_oz: dict, filled_oz: set[str],
+) -> int:
+    """B+4.10 Cross-Page-Fallback fuer Salach-Stil.
+
+    Wenn die OZ am Seitenende steht und ihr Dot-Pair erst auf der naechsten
+    Seite beginnt, kann _fill_page das Pair nicht finden (page-isoliert).
+    Diese Funktion sammelt unter den noch nicht gefuellten Positionen die
+    Salach-Stil-OZs, prueft ob am Anfang der naechsten Seite ein
+    Single-Dot-Pair steht, und fuellt es dort.
+
+    Konservativ: nur die ersten 30 Lines der Folge-Seite werden geprueft.
+    Wenn dort vor dem ersten Dot-Pair eine andere OZ steht, wird
+    abgebrochen — dann gehoert das Pair zur naechsten Position.
+    """
+    import re
+    _OZ_RE = re.compile(r"^(\d+(?:\.\d+){1,5})\.?(?=\s|$)")
+    _SINGLE_DOT_RE = re.compile(r"^\s*\.{15,}\s*$")
+    cross_filled = 0
+
+    def _twidth(s: str) -> float:
+        return len(s) * 4.6
+
+    for page_idx in range(doc.page_count - 1):
+        page = doc.load_page(page_idx)
+        text_dict = page.get_text("dict")
+        page_lines: list[tuple[str, fitz.Rect]] = []
+        for block in text_dict.get("blocks", []):
+            for line in block.get("lines", []):
+                line_text = ""
+                line_bbox = None
+                for span in line.get("spans", []):
+                    line_text += span.get("text", "")
+                    bbox = span.get("bbox")
+                    if bbox and line_bbox is None:
+                        line_bbox = fitz.Rect(bbox)
+                    elif bbox and line_bbox is not None:
+                        line_bbox |= fitz.Rect(bbox)
+                if line_text.strip() and line_bbox:
+                    page_lines.append((line_text, line_bbox))
+        if not page_lines:
+            continue
+
+        # Gibt es eine OZ in den letzten 6 Zeilen die noch nicht gefuellt ist?
+        for j in range(max(0, len(page_lines) - 6), len(page_lines)):
+            text_stripped = page_lines[j][0].strip()
+            m = _OZ_RE.match(text_stripped)
+            if not m:
+                continue
+            oz_str = m.group(1)
+            pos = None
+            for oz_try in (oz_str, oz_str + "."):
+                if oz_try in pos_by_oz:
+                    pos = pos_by_oz[oz_try]
+                    break
+            if pos is None or not pos.ep or pos.ep <= 0:
+                continue
+            if pos.oz and pos.oz.strip() in filled_oz:
+                continue
+
+            # Auf naechster Seite die ersten 30 Lines holen.
+            next_page = doc.load_page(page_idx + 1)
+            next_dict = next_page.get_text("dict")
+            next_lines: list[tuple[str, fitz.Rect]] = []
+            for block in next_dict.get("blocks", []):
+                for line in block.get("lines", []):
+                    line_text = ""
+                    line_bbox = None
+                    for span in line.get("spans", []):
+                        line_text += span.get("text", "")
+                        bbox = span.get("bbox")
+                        if bbox and line_bbox is None:
+                            line_bbox = fitz.Rect(bbox)
+                        elif bbox and line_bbox is not None:
+                            line_bbox |= fitz.Rect(bbox)
+                    if line_text.strip() and line_bbox:
+                        next_lines.append((line_text, line_bbox))
+                        if len(next_lines) >= 30:
+                            break
+                if len(next_lines) >= 30:
+                    break
+
+            # Suche nach erstem Single-Dot-Pair, abbrechen bei OZ.
+            pair: tuple[int, int] | None = None
+            for k in range(len(next_lines) - 1):
+                if _OZ_RE.match(next_lines[k][0].strip()):
+                    break
+                if _SINGLE_DOT_RE.match(next_lines[k][0]) and _SINGLE_DOT_RE.match(
+                    next_lines[k + 1][0]
+                ):
+                    pair = (k, k + 1)
+                    break
+            if pair is None:
+                continue
+            ep_idx, gp_idx = pair
+            _, ep_rect = next_lines[ep_idx]
+            _, gp_rect = next_lines[gp_idx]
+            ep_txt = _euro_short(pos.ep)
+            gp_txt = _euro_short(pos.gp)
+            ep_x = max(ep_rect.x0 + 5, ep_rect.x1 - 5 - _twidth(ep_txt))
+            gp_x = max(gp_rect.x0 + 5, gp_rect.x1 - 5 - _twidth(gp_txt))
+            ep_y = ep_rect.y0 + ep_rect.height * 0.75
+            gp_y = gp_rect.y0 + gp_rect.height * 0.75
+            try:
+                next_page.insert_text(
+                    (ep_x, ep_y), ep_txt, fontsize=9, fontname="helv", color=(0, 0, 0.4)
+                )
+                next_page.insert_text(
+                    (gp_x, gp_y), gp_txt, fontsize=9, fontname="helv", color=(0, 0, 0.4)
+                )
+                cross_filled += 1
+                if pos.oz:
+                    filled_oz.add(pos.oz.strip())
+            except Exception:
+                continue
+    return cross_filled
 
 
 def _euro_short(value: float) -> str:
