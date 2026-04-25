@@ -21,6 +21,7 @@ import { api, Job, LVDetail, Position, pollJob } from "@/lib/api";
 import { fmtEur, fmtNum } from "@/lib/format";
 import { NearMissDrawer } from "@/components/NearMissDrawer";
 import { CatalogGapsPanel } from "@/components/CatalogGapsPanel";
+import { OffersCard } from "@/components/OffersCard";
 
 type Edit = { field: "menge" | "einheit" | "kurztext" | "erkanntes_system" | "ep"; value: string } | null;
 
@@ -322,6 +323,9 @@ export default function LvDetailPage() {
           Klicken Sie auf einen Wert in der Tabelle, um ihn anzupassen.
         </div>
       </div>
+
+      {/* B+4.11 — Offers-Karte (Lifecycle-State des LVs) */}
+      <OffersCard lvId={id} />
 
       {/* B+4.3.1c: Tab-Switcher zwischen Ergebnis-Tabelle und Gaps-Panel */}
       <div

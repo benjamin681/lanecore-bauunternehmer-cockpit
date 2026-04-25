@@ -7,16 +7,23 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { api, LV } from "@/lib/api";
+import { OfferLvSummary, offersApi } from "@/lib/tenantApi";
+import { OfferStatusBadge } from "@/components/OfferStatusBadge";
 import { fmtDate, fmtEur } from "@/lib/format";
 
 export default function LvsPage() {
   const [lvs, setLvs] = useState<LV[]>([]);
+  const [offerSummary, setOfferSummary] = useState<Record<string, OfferLvSummary>>({});
   const [loading, setLoading] = useState(true);
 
   async function load() {
     setLoading(true);
-    const data = await api<LV[]>("/lvs");
+    const [data, summary] = await Promise.all([
+      api<LV[]>("/lvs"),
+      offersApi.lvSummary().catch(() => ({}) as Record<string, OfferLvSummary>),
+    ]);
     setLvs(data);
+    setOfferSummary(summary);
     setLoading(false);
   }
   useEffect(() => {
@@ -90,6 +97,21 @@ export default function LvsPage() {
                   {/* B+4.9: Hinweis wenn LV noch keinem Projekt zugeordnet ist */}
                   {!lv.project_id && (
                     <Badge variant="default">Lose</Badge>
+                  )}
+                  {/* B+4.11: Offer-Summary fuer dieses LV */}
+                  {offerSummary[lv.id] && (
+                    <span className="inline-flex items-center gap-1">
+                      <Badge variant="default">
+                        {offerSummary[lv.id].offer_count} Angebot
+                        {offerSummary[lv.id].offer_count === 1 ? "" : "e"}
+                      </Badge>
+                      <OfferStatusBadge
+                        status={offerSummary[lv.id].latest_status}
+                      />
+                      {offerSummary[lv.id].expiring_soon && (
+                        <Badge variant="warning">Frist läuft ab</Badge>
+                      )}
+                    </span>
                   )}
                   <span>· {fmtDate(lv.created_at)}</span>
                 </div>

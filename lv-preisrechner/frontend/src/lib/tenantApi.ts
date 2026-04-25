@@ -155,6 +155,99 @@ export const customersApi = {
     api<void>(`/customers/${id}`, { method: "DELETE" }),
 };
 
+// --------------------------------------------------------------------------- //
+// Offer (B+4.11)
+// --------------------------------------------------------------------------- //
+export type OfferStatus =
+  | "draft"
+  | "sent"
+  | "accepted"
+  | "rejected"
+  | "negotiating"
+  | "expired";
+
+export const OFFER_STATUS_LABELS: Record<OfferStatus, string> = {
+  draft: "Entwurf",
+  sent: "Versendet",
+  accepted: "Angenommen",
+  rejected: "Abgelehnt",
+  negotiating: "In Verhandlung",
+  expired: "Abgelaufen",
+};
+
+export type OfferPdfFormat = "eigenes_layout" | "original_lv_filled";
+
+export const OFFER_PDF_FORMAT_LABELS: Record<OfferPdfFormat, string> = {
+  eigenes_layout: "Eigenes Angebots-Layout",
+  original_lv_filled: "Original-LV mit Preisen ausgefüllt",
+};
+
+export type Offer = {
+  id: string;
+  tenant_id: string;
+  lv_id: string;
+  project_id: string | null;
+  offer_number: string;
+  status: OfferStatus | string;
+  offer_date: string;
+  sent_date: string | null;
+  accepted_date: string | null;
+  rejected_date: string | null;
+  valid_until: string | null;
+  betrag_netto: number;
+  betrag_brutto: number;
+  position_count: number;
+  pdf_format: OfferPdfFormat | string;
+  internal_notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type OfferStatusChange = {
+  id: string;
+  old_status: string | null;
+  new_status: string;
+  changed_at: string;
+  changed_by: string | null;
+  reason: string | null;
+};
+
+export type OfferDetail = Offer & {
+  status_history: OfferStatusChange[];
+};
+
+export type OfferCreate = {
+  pdf_format?: OfferPdfFormat;
+  internal_notes?: string | null;
+};
+
+export type OfferStatusUpdate = {
+  status: OfferStatus;
+  reason?: string | null;
+  on_date?: string | null;
+};
+
+export type OfferLvSummary = {
+  offer_count: number;
+  latest_status: string;
+  latest_offer_number: string;
+  latest_valid_until: string | null;
+  expiring_soon: boolean;
+};
+
+export const offersApi = {
+  listForLv: (lvId: string) => api<Offer[]>(`/lvs/${lvId}/offers`),
+  createForLv: (lvId: string, body: OfferCreate) =>
+    api<Offer>(`/lvs/${lvId}/offers`, { method: "POST", body }),
+  get: (offerId: string) => api<OfferDetail>(`/offers/${offerId}`),
+  updateStatus: (offerId: string, body: OfferStatusUpdate) =>
+    api<OfferDetail>(`/offers/${offerId}/status`, { method: "PATCH", body }),
+  pdfUrl: (offerId: string, inline = false) =>
+    `/api/v1/offers/${offerId}/pdf${inline ? "?inline=true" : ""}`,
+  lvSummary: () =>
+    api<Record<string, OfferLvSummary>>(`/offers/lv-summary`),
+};
+
 export const projectsApi = {
   list: (params: { customer_id?: string; status?: string } = {}) => {
     const qs: string[] = [];

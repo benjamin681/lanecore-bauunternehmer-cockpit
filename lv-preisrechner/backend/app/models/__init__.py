@@ -3,6 +3,12 @@
 from app.models.customer import Customer, Project, ProjectStatus
 from app.models.job import Job
 from app.models.lv import LV
+from app.models.offer import (
+    Offer,
+    OfferPdfFormat,
+    OfferStatus,
+    OfferStatusChange,
+)
 from app.models.position import Position
 from app.models.price_entry import PriceEntry
 from app.models.price_list import PriceList
@@ -34,4 +40,9 @@ __all__ = [
     "Customer",
     "Project",
     "ProjectStatus",
+    # B+4.11 Offer-Lifecycle
+    "Offer",
+    "OfferStatus",
+    "OfferStatusChange",
+    "OfferPdfFormat",
 ]

@@ -18,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import auth as auth_api
 from app.api import jobs as jobs_api
 from app.api import lvs as lvs_api
+from app.api import offers as offers_api
 from app.api import price_lists as price_lists_api
 from app.api import pricing as pricing_api
 from app.api import tenant as tenant_api
@@ -111,3 +112,6 @@ app.include_router(pricing_api.router, prefix="/api/v1")
 app.include_router(tenant_api.router, prefix="/api/v1")
 app.include_router(tenant_api.customer_router, prefix="/api/v1")
 app.include_router(tenant_api.project_router, prefix="/api/v1")
+# B+4.11: Offer-Lifecycle.
+app.include_router(offers_api.lv_offers_router, prefix="/api/v1")
+app.include_router(offers_api.offers_router, prefix="/api/v1")
