@@ -478,6 +478,138 @@ def test_mixed_stil_lv_beide_layouts_gleichzeitig(client):
     )
 
 
+def test_stil3_nur_ep_marker_habau_trockenbau(client):
+    """Stil 3: OZ unter Position, EINZELNE Dot-Line auf Mengen-Zeile mit
+    "- Nur EP -" Marker. Erwartung: EP wird in die Dot-Line eingetragen."""
+    import re
+    token = _register(client, "stil3@example.com")
+    with _db() as db:
+        from app.models.user import User
+        u = db.query(User).filter_by(email="stil3@example.com").first()
+        tid = u.tenant_id
+
+    # PDF im Trockenbau-Stil 3 bauen
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text(
+        (50, 50), "Test-LV (synthetisch — Stil 3 Nur-EP)",
+        fontsize=12, fontname="hebo",
+    )
+    y = 100.0
+    # Position 1: OZ unter Mengen-Zeile mit Nur-EP-Marker
+    page.insert_text(
+        (72, y),
+        "235m² EP.......................... - Nur EP -",
+        fontsize=9, fontname="helv",
+    )
+    y += 14
+    page.insert_text(
+        (72, y), "620.621.7 Deckenausschnitte DN 100",
+        fontsize=9, fontname="helv",
+    )
+    pdf_buf = io.BytesIO()
+    doc.save(pdf_buf)
+    doc.close()
+
+    with _db() as db:
+        lv_id = _seed_lv_with_pdf_bytes(
+            db, tid, pdf_bytes=pdf_buf.getvalue(),
+            positions_data=[("620.621.7", "Deckenausschnitte DN 100", 235.0, 33.50)],
+        )
+    with _db() as db:
+        lv = db.get(LV, lv_id)
+        pdf_out = generate_original_filled_pdf(lv)
+
+    with pdfplumber.open(io.BytesIO(pdf_out)) as pdf:
+        text = "\n".join(p.extract_text() or "" for p in pdf.pages)
+    digits_only = re.sub(r"[^\d]", "", text)
+    # 33,50 -> "3350"
+    assert "3350" in digits_only, (
+        f"Stil 3: Erwartet EP 33,50 im Output, digits_only={digits_only[:300]!r}"
+    )
+
+
+def test_mixed_alle_drei_stile_in_einem_pdf(client):
+    """Mixed-LV mit Habau-Stil + Salach-Stil + Stil-3-Trockenbau in
+    einem PDF. Erwartung: alle drei Positionen werden gefuellt."""
+    import re
+    token = _register(client, "all-three@example.com")
+    with _db() as db:
+        from app.models.user import User
+        u = db.query(User).filter_by(email="all-three@example.com").first()
+        tid = u.tenant_id
+
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    y = 80.0
+
+    # Block 1: Habau-Stil (OZ ueber Position, double-dot)
+    page.insert_text((72, y), "01.01.001.", fontsize=9, fontname="helv")
+    page.insert_text((150, y), "Habau-Position", fontsize=9, fontname="helv")
+    y += 14
+    page.insert_text((72, y), "50,000 m²".replace(".", ","),
+                     fontsize=9, fontname="helv")
+    page.insert_text(
+        (250, y),
+        "....................." + "  " + ".....................",
+        fontsize=9, fontname="helv",
+    )
+    y += 28
+
+    # Block 2: Salach-Stil (Menge → EP-Single → GP-Single → OZ)
+    page.insert_text((72, y), "80,000 m²".replace(".", ","),
+                     fontsize=9, fontname="helv")
+    y += 12
+    page.insert_text((300, y), "......................",
+                     fontsize=9, fontname="helv")
+    y += 12
+    page.insert_text((300, y), "......................",
+                     fontsize=9, fontname="helv")
+    y += 12
+    page.insert_text((72, y), "02.02.001.", fontsize=9, fontname="helv")
+    page.insert_text((150, y), "Salach-Position",
+                     fontsize=9, fontname="helv")
+    y += 24
+
+    # Block 3: Stil-3 (Mengen-Zeile mit EP-Dotline + Nur-EP-Marker, dann OZ)
+    page.insert_text(
+        (72, y),
+        "235m² EP.......................... - Nur EP -",
+        fontsize=9, fontname="helv",
+    )
+    y += 14
+    page.insert_text((72, y), "03.03.001.", fontsize=9, fontname="helv")
+    page.insert_text((150, y), "Trockenbau-Stil-3-Position",
+                     fontsize=9, fontname="helv")
+
+    pdf_buf = io.BytesIO()
+    doc.save(pdf_buf)
+    doc.close()
+
+    with _db() as db:
+        lv_id = _seed_lv_with_pdf_bytes(
+            db, tid, pdf_bytes=pdf_buf.getvalue(),
+            positions_data=[
+                ("01.01.001", "Habau-Position", 50.0, 11.00),
+                ("02.02.001", "Salach-Position", 80.0, 22.00),
+                ("03.03.001", "Trockenbau-Stil-3-Position", 235.0, 33.00),
+            ],
+        )
+    with _db() as db:
+        lv = db.get(LV, lv_id)
+        pdf_out = generate_original_filled_pdf(lv)
+
+    with pdfplumber.open(io.BytesIO(pdf_out)) as pdf:
+        text = "\n".join(p.extract_text() or "" for p in pdf.pages)
+    digits_only = re.sub(r"[^\d]", "", text)
+    # 11,00 → "1100"; 22,00 → "2200"; 33,00 → "3300"
+    found = sum(1 for ep_d in ("1100", "2200", "3300") if ep_d in digits_only)
+    assert found == 3, (
+        f"Mixed-3-Stile: Erwartet alle 3 EPs gefunden, gefunden {found}\n"
+        f"digits-only: {digits_only[:400]!r}"
+    )
+
+
 def test_oz_ohne_dotlines_kein_crash(client):
     """Edge-Case: OZ existiert, aber weder Habau- noch Salach-Dot-Pattern.
     Algorithmus darf nicht crashen, Position bleibt einfach leer."""

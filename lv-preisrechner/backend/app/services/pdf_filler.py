@@ -307,7 +307,47 @@ def _fill_page(
                         break  # erstes Forward-Pair gewinnt
 
             if pair is None:
-                # Beide Stile haben kein Match — Position ohne Eintrag.
+                # ------------------------------------------------------
+                # Stil 3 — Habau-Trockenbau "- Nur EP -":
+                #   '235m² EP.......................... - Nur EP -'
+                # OZ steht UNTER der Position (wie Salach), aber statt
+                # zwei Dot-Lines stacked steht eine EINZELNE Dot-Linie
+                # auf der Mengen-Zeile mit Marker "- Nur EP -". GP wird
+                # auftraggeberseitig ausgerechnet.
+                # ------------------------------------------------------
+                stil3_match = _find_stil3_nur_ep_line(
+                    lines_with_coords, boundary, idx
+                )
+                if stil3_match is None:
+                    # Auch forward versuchen (defensiv).
+                    next_oz_idx = min(
+                        (i for i in oz_indices if i > idx),
+                        default=len(lines_with_coords),
+                    )
+                    stil3_match = _find_stil3_nur_ep_line(
+                        lines_with_coords, idx + 1, next_oz_idx
+                    )
+                if stil3_match is not None:
+                    line_idx_s3, dot_start, dot_end = stil3_match
+                    line_text, line_rect = lines_with_coords[line_idx_s3]
+                    char_w = line_rect.width / max(len(line_text), 1)
+                    ep_txt = _euro_short(pos.ep)
+                    ep_right_x = line_rect.x0 + dot_end * char_w
+                    ep_left_x = line_rect.x0 + dot_start * char_w
+                    ep_x = max(ep_left_x + 2, ep_right_x - 5 - _twidth(ep_txt))
+                    ep_y = line_rect.y0 + line_rect.height * 0.75
+                    try:
+                        page.insert_text(
+                            (ep_x, ep_y), ep_txt, fontsize=9,
+                            fontname="helv", color=(0, 0, 0.4),
+                        )
+                        filled += 1
+                        if filled_oz is not None and pos.oz:
+                            filled_oz.add(pos.oz.strip())
+                    except Exception:
+                        pass
+                    continue
+                # Alle Stile haben kein Match — Position ohne Eintrag.
                 continue
             ep_idx, gp_idx = pair
             _, ep_rect = lines_with_coords[ep_idx]
@@ -366,6 +406,38 @@ def _fill_page(
                     break
 
     return filled
+
+
+def _find_stil3_nur_ep_line(
+    lines: list[tuple[str, fitz.Rect]],
+    start: int,
+    end: int,
+) -> tuple[int, int, int] | None:
+    """B+4.10 Stil 3 (Habau-Trockenbau "- Nur EP -").
+
+    Sucht im Window [start, end) nach einer Zeile, die den Pattern
+    Menge-Einheit-EP-Dotline-MarkerNurEP enthaelt:
+      "235m² EP.......................... - Nur EP -"
+
+    Returns:
+        (line_idx, dot_start_char, dot_end_char) — Index der Zeile
+        und Char-Positionen der Dot-Linie innerhalb des Texts.
+        None wenn kein Treffer.
+    """
+    import re
+
+    # Pattern: irgendwo eine Dot-Gruppe (mind. 15 Punkte), gefolgt von
+    # beliebigem Text der "Nur EP" enthaelt (case-insensitive).
+    nur_ep_re = re.compile(r"(\.{15,})[^\n]*[Nn]ur\s*EP", re.IGNORECASE)
+    last_match: tuple[int, int, int] | None = None
+    for i in range(max(0, start), min(end, len(lines))):
+        text = lines[i][0]
+        m = nur_ep_re.search(text)
+        if m:
+            last_match = (i, m.start(1), m.end(1))
+            # Bei backward-Suche (start < end) wollen wir das LETZTE Match
+            # (naechstgelegen zur OZ); kein break, ueberschreiben.
+    return last_match
 
 
 def _fill_cross_page(
