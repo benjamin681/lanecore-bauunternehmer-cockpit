@@ -208,7 +208,10 @@ def _fill_page(
                 lines_with_coords.append((line_text, line_bbox))
 
     _DOUBLE_DOT_RE = re.compile(r"\.{15,}\s+\.{15,}")
-    _SINGLE_DOT_RE = re.compile(r"^\s*\.{15,}\s*$")
+    # B+4.10: Single-Dot-Lines koennen auch mit "EP"/"GP"-Prefix kommen
+    # (Trockenbau-LV Habau-17951-Variante). Pattern matcht entweder
+    # nackte Punkt-Linie oder vorangestelltes "EP "/"GP " plus Punkte.
+    _SINGLE_DOT_RE = re.compile(r"^\s*(?:EP|GP)?\s*\.{15,}\s*$")
     _OZ_RE = re.compile(r"^(\d+(?:\.\d+){1,5})\.?(?=\s|$)")
 
     # Indizes vorab cachen — fuer backward-search-Boundary und Style-2-Pairs
@@ -426,17 +429,32 @@ def _find_stil3_nur_ep_line(
     """
     import re
 
-    # Pattern: irgendwo eine Dot-Gruppe (mind. 15 Punkte), gefolgt von
-    # beliebigem Text der "Nur EP" enthaelt (case-insensitive).
-    nur_ep_re = re.compile(r"(\.{15,})[^\n]*[Nn]ur\s*EP", re.IGNORECASE)
+    # Variante A — eine Zeile: ".......... ... Nur EP"
+    nur_ep_inline_re = re.compile(r"(\.{15,})[^\n]*[Nn]ur\s*EP", re.IGNORECASE)
+    # Variante B — PyMuPDF splittet: Zeile X = "EP\.{15,}", Zeile X+k = "...Nur EP..."
+    ep_dotline_re = re.compile(r"(?:EP|GP)?\s*(\.{15,})\s*$")
+    nur_ep_marker_re = re.compile(r"[Nn]ur\s*EP")
+
     last_match: tuple[int, int, int] | None = None
     for i in range(max(0, start), min(end, len(lines))):
         text = lines[i][0]
-        m = nur_ep_re.search(text)
+        # Variante A: alles in einer Zeile
+        m = nur_ep_inline_re.search(text)
         if m:
             last_match = (i, m.start(1), m.end(1))
-            # Bei backward-Suche (start < end) wollen wir das LETZTE Match
-            # (naechstgelegen zur OZ); kein break, ueberschreiben.
+            continue
+        # Variante B: EP-Dotline gefolgt (innerhalb 4 Lines) von "Nur EP"-Marker
+        m_dot = ep_dotline_re.match(text.strip())
+        if m_dot:
+            # Pruefe ob in den naechsten 4 Lines ein "Nur EP"-Marker steht
+            for k in range(i + 1, min(i + 5, len(lines))):
+                if nur_ep_marker_re.search(lines[k][0]):
+                    # Char-Positionen der Dot-Gruppe in der Original-Line:
+                    full_text = text
+                    inner_match = re.search(r"\.{15,}", full_text)
+                    if inner_match:
+                        last_match = (i, inner_match.start(), inner_match.end())
+                    break
     return last_match
 
 
@@ -457,7 +475,7 @@ def _fill_cross_page(
     """
     import re
     _OZ_RE = re.compile(r"^(\d+(?:\.\d+){1,5})\.?(?=\s|$)")
-    _SINGLE_DOT_RE = re.compile(r"^\s*\.{15,}\s*$")
+    _SINGLE_DOT_RE = re.compile(r"^\s*(?:EP|GP)?\s*\.{15,}\s*$")
     cross_filled = 0
 
     def _twidth(s: str) -> float:
