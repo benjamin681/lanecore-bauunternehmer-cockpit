@@ -178,6 +178,29 @@ export default function LvDetailPage() {
     }
   }
 
+  // B+4.8 — Angebots-PDF aus dem neuen Endpoint (one-shot, kein Status-Toggle).
+  async function exportAngebotPdf() {
+    setBusy(true);
+    try {
+      const blob = await api<Blob>(`/lvs/${id}/export-pdf`, { raw: true });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      // Filename: das Backend setzt Content-Disposition; aus Konsistenz
+      // nutzen wir hier denselben Stil ohne weiteren Parse.
+      a.download = `Angebot-${lv?.projekt_name || id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Angebot als PDF heruntergeladen.");
+    } catch (e: any) {
+      toast.error(e?.detail || "PDF-Erstellung fehlgeschlagen");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (loading || !lv) {
     return <div className="text-slate-500 py-20 text-center">Lade…</div>;
   }
@@ -248,6 +271,15 @@ export default function LvDetailPage() {
         <Button onClick={downloadPdf} disabled={!canDownload} variant="secondary">
           <Download className="w-4 h-4" />
           PDF herunterladen
+        </Button>
+        {/* B+4.8 — neues Angebots-PDF (eigenstaendig, ohne Status-Toggle) */}
+        <Button
+          onClick={exportAngebotPdf}
+          disabled={!canExport || busy}
+          variant="primary"
+        >
+          <FileDown className="w-4 h-4" />
+          {busy ? "Erstelle Angebot…" : "Angebot als PDF"}
         </Button>
         <div className="flex-1" />
         <div className="text-sm text-slate-500">

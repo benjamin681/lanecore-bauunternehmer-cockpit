@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from sqlalchemy import Boolean, DateTime, String
+from sqlalchemy import JSON, Boolean, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -35,6 +35,12 @@ class Tenant(Base):
     use_new_pricing: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
+
+    # B+4.8: freie JSON-Stammdaten fuer Briefkopf, Bankverbindung,
+    # Footer im Angebots-PDF. Erwartete Keys siehe Migration
+    # e7a8d2c5b14f. Nullable; PDF-Service nutzt sinnvolle Defaults
+    # wenn Felder fehlen (z.B. tenant.name als firma).
+    company_settings: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 

@@ -33,6 +33,7 @@ from app.services.catalog_gaps import (
     resolve_gap_manual_price,
     resolve_gap_skip,
 )
+from app.services.lv_pdf_export import LVExportError, generate_angebot_pdf
 from app.services.jobs import enqueue_job, run_parse_lv
 from app.services.kalkulation import kalkuliere_lv
 from app.services.lv_parser import parse_and_store
@@ -466,4 +467,66 @@ def resolve_lv_gap(
     return GapResolveResponse(
         resolution=GapResolutionOut.model_validate(audit),
         recalculated=recalculated,
+    )
+
+
+@router.get("/{lv_id}/export-pdf")
+def export_lv_pdf(
+    lv_id: str,
+    user: CurrentUser,
+    db: DbSession,
+    inline: bool = Query(
+        default=False,
+        description=(
+            "Wenn True, wird das PDF inline im Browser geladen (Vorschau-"
+            "Modus). Default ist Download mit attachment-Disposition."
+        ),
+    ),
+):
+    """B+4.8 — Liefert das LV als professionelles Angebots-PDF.
+
+    Liest LV + Tenant-Stammdaten (company_settings JSON), generiert via
+    PyMuPDF ein A4-Layout mit Briefkopf, Empfaenger, Positionstabelle
+    samt Zwischensummen, Gesamtsumme + MwSt + Brutto und Footer.
+
+    Auth: Tenant-Scope ueber lv.tenant_id. Filename:
+    "Angebot-A<datum>-<id6>.pdf".
+    """
+    from fastapi.responses import Response
+
+    from app.models.tenant import Tenant
+    from app.services.lv_pdf_export import _build_angebotsnummer
+
+    lv = (
+        db.query(LV)
+        .filter(LV.id == lv_id, LV.tenant_id == user.tenant_id)
+        .first()
+    )
+    if lv is None:
+        raise HTTPException(status_code=404, detail="LV nicht gefunden")
+
+    tenant = db.get(Tenant, user.tenant_id)
+    if tenant is None:
+        # Datenintegritaet — Tenant des Users muss existieren.
+        raise HTTPException(status_code=500, detail="Tenant nicht gefunden")
+
+    try:
+        pdf_bytes = generate_angebot_pdf(lv, tenant)
+    except LVExportError as exc:
+        raise HTTPException(
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        )
+
+    angebotsnr = _build_angebotsnummer(lv)
+    filename = f"Angebot-{angebotsnr}.pdf"
+    disposition = "inline" if inline else "attachment"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'{disposition}; filename="{filename}"',
+            "Cache-Control": "private, no-cache, no-store, must-revalidate",
+        },
     )
