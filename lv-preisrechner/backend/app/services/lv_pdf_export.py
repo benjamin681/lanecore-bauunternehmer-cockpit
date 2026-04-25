@@ -144,10 +144,10 @@ def generate_angebot_pdf(lv: LV, tenant: Tenant) -> bytes:
     sorted_positions = sorted(
         lv.positions, key=lambda p: (p.reihenfolge, p.oz or "")
     )
-    y = _draw_table(doc, page, y, sorted_positions)
+    page, y = _draw_table(doc, page, y, sorted_positions)
 
     # Summen
-    y = _draw_summen(doc, page, y, lv)
+    page, y = _draw_summen(doc, page, y, lv)
 
     # Footer-Block (auf jeder Seite unten gleicher Inhalt)
     _draw_footer_all_pages(doc, settings=cs)
@@ -263,7 +263,7 @@ def _draw_table(
     page: fitz.Page,
     y: float,
     positions: list,
-) -> float:
+) -> tuple[fitz.Page, float]:
     y = _draw_table_header(page, y)
     current_group = None
     group_subtotal = 0.0
@@ -271,7 +271,6 @@ def _draw_table(
     for pos in positions:
         gruppe = _hauptgruppe(pos.oz or "")
         if gruppe and gruppe != current_group:
-            # Zwischensumme der vorherigen Gruppe einziehen, falls vorhanden
             if current_group is not None and group_subtotal > 0:
                 if y > PAGE_H - MARGIN_Y - 50:
                     page = _new_page(doc)
@@ -279,7 +278,6 @@ def _draw_table(
                 y = _draw_subtotal(page, y, current_group, group_subtotal)
             current_group = gruppe
             group_subtotal = 0.0
-            # Gruppen-Header
             if y > PAGE_H - MARGIN_Y - 40:
                 page = _new_page(doc)
                 y = _draw_table_header(page, MARGIN_Y)
@@ -295,13 +293,10 @@ def _draw_table(
             page = _new_page(doc)
             y = _draw_table_header(page, MARGIN_Y)
 
-        # OZ
         page.insert_text((COL_OZ, y), pos.oz or "", fontsize=9, fontname="helv")
-        # Kurztext (mehrzeilig)
         for i, line in enumerate(kurztext_lines):
             page.insert_text((COL_TEXT, y + i * 11), line,
                              fontsize=9, fontname="helv")
-        # Menge / EH rechts-buendig im Spaltenrahmen
         menge_str = _de_num(float(pos.menge or 0), 2)
         page.insert_text((COL_MENGE, y), menge_str,
                          fontsize=9, fontname="helv")
@@ -316,14 +311,13 @@ def _draw_table(
         group_subtotal += gp
         y += row_height
 
-    # Letzte Gruppen-Subtotal nicht vergessen
     if current_group is not None and group_subtotal > 0:
         if y > PAGE_H - MARGIN_Y - 50:
             page = _new_page(doc)
             y = MARGIN_Y
         y = _draw_subtotal(page, y, current_group, group_subtotal)
 
-    return y
+    return page, y
 
 
 def _draw_subtotal(page: fitz.Page, y: float, gruppe: str, subtotal: float) -> float:
@@ -347,7 +341,7 @@ def _draw_summen(
     page: fitz.Page,
     y: float,
     lv: LV,
-) -> float:
+) -> tuple[fitz.Page, float]:
     netto = float(lv.angebotssumme_netto or 0)
     mwst = round(netto * 0.19, 2)
     brutto = round(netto + mwst, 2)
@@ -379,7 +373,7 @@ def _draw_summen(
         page.insert_text((COL_GP, y), _euro(value), fontsize=size,
                          fontname=font, color=color)
         y += 18
-    return y
+    return page, y
 
 
 def _draw_footer_all_pages(doc: fitz.Document, *, settings: dict) -> None:
