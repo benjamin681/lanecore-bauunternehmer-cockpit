@@ -54,15 +54,15 @@ def _db():
 
 
 def _make_realistic_lv_pdf(positions: list[tuple[str, str, float, str]]) -> bytes:
-    """Baut ein 1-Seiten-PDF mit OZ + Kurztext + Menge + leeren EP/GP-
-    Punktlinien fuer jede Position. Format mimikriert das Salach-Layout.
+    """Baut ein Habau-Stil-PDF: OZ in eigener Zeile, danach Kurztext,
+    dann Menge + zwei Dot-Gruppen NEBENEINANDER auf einer Zeile.
 
     positions: list of (oz, kurztext, menge, einheit)
     """
     doc = fitz.open()
     page = doc.new_page(width=595, height=842)
     page.insert_text(
-        (50, 50), "Test-LV (synthetisch fuer B+4.10)",
+        (50, 50), "Test-LV (synthetisch — Habau-Stil)",
         fontsize=12, fontname="hebo",
     )
     y = 100.0
@@ -71,7 +71,7 @@ def _make_realistic_lv_pdf(positions: list[tuple[str, str, float, str]]) -> byte
         page.insert_text((72, y), f"{oz}.", fontsize=9, fontname="helv")
         page.insert_text((150, y), kurztext, fontsize=9, fontname="helv")
         y += 14
-        # Zeile 2: Menge + zwei Punkt-Linien (EP + GP)
+        # Zeile 2: Menge + zwei Punkt-Linien (EP + GP) auf einer Y-Achse
         menge_str = f"{menge:.3f}".replace(".", ",")
         page.insert_text((72, y), f"{menge_str} {einheit}",
                          fontsize=9, fontname="helv")
@@ -80,7 +80,48 @@ def _make_realistic_lv_pdf(positions: list[tuple[str, str, float, str]]) -> byte
             "....................." + "  " + ".....................",
             fontsize=9, fontname="helv",
         )
-        y += 28  # Abstand bis naechste Position
+        y += 28
+    buf = io.BytesIO()
+    doc.save(buf)
+    doc.close()
+    return buf.getvalue()
+
+
+def _make_salach_style_pdf(positions: list[tuple[str, str, float, str]]) -> bytes:
+    """Baut ein Salach-Stil-PDF: Menge → einzelne EP-Dotline → einzelne
+    GP-Dotline → Beschreibung → OZ → Kurztext.
+
+    positions: list of (oz, kurztext, menge, einheit)
+    """
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text(
+        (50, 50), "Test-LV (synthetisch — Salach-Stil)",
+        fontsize=12, fontname="hebo",
+    )
+    y = 100.0
+    for oz, kurztext, menge, einheit in positions:
+        # Zeile A: Menge
+        menge_str = f"{menge:.3f}".replace(".", ",")
+        page.insert_text((72, y), f"{menge_str} {einheit}",
+                         fontsize=9, fontname="helv")
+        y += 12
+        # Zeile B: EP-Dotline (eigene Zeile, allein)
+        page.insert_text((300, y), "......................",
+                         fontsize=9, fontname="helv")
+        y += 12
+        # Zeile C: GP-Dotline (eigene Zeile, allein)
+        page.insert_text((300, y), "......................",
+                         fontsize=9, fontname="helv")
+        y += 12
+        # Zeile D: Beschreibungs-Filler
+        page.insert_text((72, y), "Gemaess Ausfuehrungsbeschreibung",
+                         fontsize=9, fontname="helv")
+        y += 12
+        # Zeile E: OZ + Kurztext
+        page.insert_text((72, y), f"{oz}.", fontsize=9, fontname="helv")
+        page.insert_text((150, y), kurztext, fontsize=9, fontname="helv")
+        y += 24
     buf = io.BytesIO()
     doc.save(buf)
     doc.close()
@@ -297,6 +338,177 @@ def test_endpoint_fremder_tenant_404(client):
         headers=_auth(stranger),
     )
     assert r.status_code == 404
+
+
+# --------------------------------------------------------------------------- #
+# Multi-Layout-Tests (B+4.10 Phase 1)
+# --------------------------------------------------------------------------- #
+def _seed_lv_with_pdf_bytes(
+    db, tenant_id: str, *, pdf_bytes: bytes,
+    positions_data: list[tuple[str, str, float, float]],
+) -> str:
+    """Wie _seed_lv_with_pdf, aber mit explizit uebergebenem pdf_bytes."""
+    lv = LV(
+        tenant_id=tenant_id,
+        projekt_name="Layout-Test",
+        auftraggeber="X",
+        original_dateiname="layout.pdf",
+        original_pdf_bytes=pdf_bytes,
+        status="calculated",
+        angebotssumme_netto=sum(menge * ep for (_, _, menge, ep) in positions_data),
+    )
+    db.add(lv)
+    db.flush()
+    for i, (oz, kurztext, menge, ep) in enumerate(positions_data):
+        p = Position(
+            lv_id=lv.id, reihenfolge=i, oz=oz, kurztext=kurztext,
+            menge=menge, einheit="m²", erkanntes_system="W112",
+            feuerwiderstand="F0", plattentyp="GKB", materialien=[],
+            ep=ep, gp=round(menge * ep, 2),
+        )
+        db.add(p)
+    db.commit()
+    return lv.id
+
+
+def test_salach_stil_oz_unter_position_mit_einzelnen_dotlines(client):
+    """Stil 2: OZ unter Position, davor zwei einzelne Dot-Lines.
+    Erwartung: EP + GP werden korrekt eingetragen."""
+    import re
+    token = _register(client, "salach-stil@example.com")
+    with _db() as db:
+        from app.models.user import User
+        u = db.query(User).filter_by(email="salach-stil@example.com").first()
+        tid = u.tenant_id
+
+    pdf = _make_salach_style_pdf([
+        ("01.01.0010", "Innenwand W112", 100.0, "m²"),
+        ("01.01.0020", "Innenwand W112 d=175", 20.0, "m²"),
+    ])
+    with _db() as db:
+        lv_id = _seed_lv_with_pdf_bytes(
+            db, tid, pdf_bytes=pdf,
+            positions_data=[
+                ("01.01.0010", "Innenwand W112", 100.0, 60.50),
+                ("01.01.0020", "Innenwand W112 d=175", 20.0, 70.00),
+            ],
+        )
+    with _db() as db:
+        lv = db.get(LV, lv_id)
+        pdf_out = generate_original_filled_pdf(lv)
+
+    with pdfplumber.open(io.BytesIO(pdf_out)) as pdf2:
+        text = "\n".join(p.extract_text() or "" for p in pdf2.pages)
+    digits_only = re.sub(r"[^\d]", "", text)
+    # 60,50 → "6050", 70,00 → "7000"; jeweils EP+GP also doppelt
+    found = sum(1 for ep_d in ("6050", "7000") if ep_d in digits_only)
+    assert found == 2, (
+        f"Salach-Stil: Erwartet beide EPs gefunden, gefunden {found}\n"
+        f"digits-only: {digits_only[:300]!r}"
+    )
+
+
+def test_mixed_stil_lv_beide_layouts_gleichzeitig(client):
+    """Mixed: erste Hälfte Habau-Stil, zweite Hälfte Salach-Stil.
+    Erwartung: alle 4 Positionen kriegen ihren EP eingetragen."""
+    import re
+    token = _register(client, "mixed-stil@example.com")
+    with _db() as db:
+        from app.models.user import User
+        u = db.query(User).filter_by(email="mixed-stil@example.com").first()
+        tid = u.tenant_id
+
+    # PDF zusammenbauen: erst zwei Habau-Positionen, dann zwei Salach-Positionen
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    y = 80.0
+    # Habau-Block
+    for oz, kurz, menge in (("01.01.001", "Habau-Pos-1", 50.0), ("01.01.002", "Habau-Pos-2", 30.0)):
+        page.insert_text((72, y), f"{oz}.", fontsize=9, fontname="helv")
+        page.insert_text((150, y), kurz, fontsize=9, fontname="helv")
+        y += 14
+        page.insert_text((72, y), f"{menge:.3f} m²".replace(".", ","),
+                         fontsize=9, fontname="helv")
+        page.insert_text(
+            (250, y),
+            "....................." + "  " + ".....................",
+            fontsize=9, fontname="helv",
+        )
+        y += 28
+    # Salach-Block
+    for oz, kurz, menge in (("02.02.001", "Salach-Pos-1", 80.0), ("02.02.002", "Salach-Pos-2", 12.0)):
+        page.insert_text((72, y), f"{menge:.3f} m²".replace(".", ","),
+                         fontsize=9, fontname="helv")
+        y += 12
+        page.insert_text((300, y), "......................",
+                         fontsize=9, fontname="helv")
+        y += 12
+        page.insert_text((300, y), "......................",
+                         fontsize=9, fontname="helv")
+        y += 12
+        page.insert_text((72, y), f"{oz}.", fontsize=9, fontname="helv")
+        page.insert_text((150, y), kurz, fontsize=9, fontname="helv")
+        y += 24
+    pdf_buf = io.BytesIO()
+    doc.save(pdf_buf)
+    doc.close()
+
+    with _db() as db:
+        lv_id = _seed_lv_with_pdf_bytes(
+            db, tid, pdf_bytes=pdf_buf.getvalue(),
+            positions_data=[
+                ("01.01.001", "Habau-Pos-1", 50.0, 11.00),
+                ("01.01.002", "Habau-Pos-2", 30.0, 22.00),
+                ("02.02.001", "Salach-Pos-1", 80.0, 33.00),
+                ("02.02.002", "Salach-Pos-2", 12.0, 44.00),
+            ],
+        )
+    with _db() as db:
+        lv = db.get(LV, lv_id)
+        pdf_out = generate_original_filled_pdf(lv)
+
+    with pdfplumber.open(io.BytesIO(pdf_out)) as pdf2:
+        text = "\n".join(p.extract_text() or "" for p in pdf2.pages)
+    digits_only = re.sub(r"[^\d]", "", text)
+    # 11,00 → "1100", 22,00 → "2200", 33,00 → "3300", 44,00 → "4400"
+    found = sum(1 for ep_d in ("1100", "2200", "3300", "4400") if ep_d in digits_only)
+    assert found == 4, (
+        f"Mixed-Stil: Erwartet alle 4 EPs gefunden, gefunden {found}\n"
+        f"digits-only: {digits_only[:400]!r}"
+    )
+
+
+def test_oz_ohne_dotlines_kein_crash(client):
+    """Edge-Case: OZ existiert, aber weder Habau- noch Salach-Dot-Pattern.
+    Algorithmus darf nicht crashen, Position bleibt einfach leer."""
+    token = _register(client, "no-dots@example.com")
+    with _db() as db:
+        from app.models.user import User
+        u = db.query(User).filter_by(email="no-dots@example.com").first()
+        tid = u.tenant_id
+
+    # PDF mit OZ + Text aber OHNE jegliche Dot-Linien
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    page.insert_text((72, 80), "01.01.001.", fontsize=9, fontname="helv")
+    page.insert_text((150, 80), "Position ohne Dot-Pattern",
+                     fontsize=9, fontname="helv")
+    page.insert_text((72, 100), "Beliebiger Beschreibungstext.",
+                     fontsize=9, fontname="helv")
+    pdf_buf = io.BytesIO()
+    doc.save(pdf_buf)
+    doc.close()
+
+    with _db() as db:
+        lv_id = _seed_lv_with_pdf_bytes(
+            db, tid, pdf_bytes=pdf_buf.getvalue(),
+            positions_data=[("01.01.001", "Position ohne Dot-Pattern", 10.0, 50.0)],
+        )
+    with _db() as db:
+        lv = db.get(LV, lv_id)
+        # Kein Crash. Output ist gueltiges PDF.
+        pdf_out = generate_original_filled_pdf(lv)
+    assert pdf_out.startswith(b"%PDF-")
 
 
 def test_endpoint_lv_ohne_original_pdf_422(client):

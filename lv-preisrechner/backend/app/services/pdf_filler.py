@@ -137,7 +137,37 @@ def _fill_page(page: fitz.Page, pos_by_oz: dict) -> int:
     """Fuellt EP/GP/Fabrikat fuer alle auf der Seite gefundenen OZs.
 
     Returns: Anzahl ausgefuellter Positionen auf dieser Seite.
+
+    Unterstuetzte LV-Layout-Stile (B+4.10):
+
+    Stil 1 — Habau / Gross / Loehr-Becker:
+        OZ steht oben, danach Beschreibungs-Zeilen, am Ende der Position
+        eine Zeile mit zwei Dot-Gruppen nebeneinander auf einer Y-Achse:
+            "610.18"
+            "Fenster/Tuer..."
+            "2,00 Stk"
+            "..........................  ........................"   <- EP+GP
+
+    Stil 2 — Salach / Wilma Wohnen:
+        OZ steht UNTER der Position, davor stehen Beschreibungs-Zeilen,
+        und davor wiederum ZWEI einzelne aufeinanderfolgende Lines mit
+        je einer Dot-Gruppe (eine fuer EP, eine fuer GP):
+            "1.019,590 m2"
+            "......................"   <- EP-Dotline (eigene Zeile)
+            "......................"   <- GP-Dotline (eigene Zeile)
+            "Profilbreite: ..."
+            "59.10.0010."              <- OZ steht unten
+
+    Logik pro OZ-Treffer:
+      a) Stil 1 forward-search: nach OZ in idx+1..idx+80 nach
+         double-dot-Zeile suchen (vor der naechsten OZ).
+      b) Falls keine: Stil 2 backward-search: zwischen vorheriger OZ
+         und idx-1 nach zwei direkt aufeinanderfolgenden Single-Dot-
+         Zeilen suchen.
+      c) Falls beides leer: Position ohne Eintrag, kein Crash.
     """
+    import re
+
     # Text mit Koordinaten extrahieren (blocks/lines/spans)
     text_dict = page.get_text("dict")
     filled = 0
@@ -158,28 +188,26 @@ def _fill_page(page: fitz.Page, pos_by_oz: dict) -> int:
             if line_text.strip() and line_bbox:
                 lines_with_coords.append((line_text, line_bbox))
 
-    # 2) Finde OZ-Treffer + nachfolgende "..."-Muster fuer EP/GP
-    # Typisches Muster:
-    #    "610.18"
-    #    "Fenster / Tuer..."
-    #    "2,00 Stk"
-    #    ".........................  ........................."  ← EP + GP Leerstellen
-    import re
+    _DOUBLE_DOT_RE = re.compile(r"\.{15,}\s+\.{15,}")
+    _SINGLE_DOT_RE = re.compile(r"^\s*\.{15,}\s*$")
+    _OZ_RE = re.compile(r"^(\d+(?:\.\d+){1,5})\.?(?=\s|$)")
 
-    # Dot-Patterns (leere EP/GP-Felder) vorab lokalisieren
-    dot_lines = [(t, r) for (t, r) in lines_with_coords if re.fullmatch(r"\s*\.{10,}[\s\.]*", t)]
+    # Indizes vorab cachen — fuer backward-search-Boundary und Style-2-Pairs
+    oz_indices = [
+        i for i, (t, _) in enumerate(lines_with_coords)
+        if _OZ_RE.match(t.strip())
+    ]
+    salach_single_indices = {
+        i for i, (t, _) in enumerate(lines_with_coords)
+        if _SINGLE_DOT_RE.match(t)
+    }
+
+    def _twidth(s: str) -> float:
+        return len(s) * 4.6
 
     for idx, (text, rect) in enumerate(lines_with_coords):
-        # OZ-Muster: "610.18", "1.9.1.1.10", "01.01.005" etc.
-        # B+4.10: re.match statt fullmatch — Salach-LV haelt OZ und
-        # Kurztext in derselben Zeile (z.B. "59.10.0010. Innenwand,
-        # d=100mm"), waehrend Habau/Gross-LVs die OZ in eigener Zeile
-        # haben. Beide Faelle werden jetzt erfasst, durch Anker `^`
-        # und Lookahead auf Whitespace/EOL nach der OZ-Sequenz.
         text_stripped = text.strip()
-        oz_match = re.match(
-            r"^(\d+(?:\.\d+){1,5})\.?(?=\s|$)", text_stripped
-        )
+        oz_match = _OZ_RE.match(text_stripped)
         if not oz_match:
             continue
         oz_candidates = [oz_match.group(1), oz_match.group(1) + "."]
@@ -190,55 +218,83 @@ def _fill_page(page: fitz.Page, pos_by_oz: dict) -> int:
                 break
         if pos is None:
             continue
-
-        # Nur ausfuellen wenn EP gueltig
         if not pos.ep or pos.ep <= 0:
             continue
 
-        # Suche naechste EP+GP-Dotline (2 Dot-Gruppen mit Leerzeichen dazwischen).
-        # Fabrikat-Felder haben nur EINE Dot-Gruppe, Summen-Felder oft auch.
-        # Window bis naechste OZ oder 80 Zeilen (Stuttgart-LV hat lange Textbloecke).
-        dot_rect = None
+        # ----------------------------------------------------------------
+        # Stil 1 — Habau-Stil forward-search: double-dot auf einer Zeile
+        # ----------------------------------------------------------------
+        habau_rect: fitz.Rect | None = None
         search_end = min(len(lines_with_coords), idx + 80)
-        # Stoppe bei naechster OZ, damit wir nicht in nachfolgende Position greifen
         for j in range(idx + 1, search_end):
             next_text, next_rect = lines_with_coords[j]
-            if j > idx + 2 and re.match(
-                r"^(\d+(?:\.\d+){1,5})\.?(?=\s|$)", next_text.strip()
-            ):
-                # naechste OZ -> abbrechen
-                break
-            # EP+GP-Muster: 2 Dot-Gruppen mit Whitespace dazwischen
-            if re.search(r"\.{15,}\s+\.{15,}", next_text):
-                dot_rect = next_rect
+            if j > idx + 2 and _OZ_RE.match(next_text.strip()):
+                break  # naechste OZ — abbrechen
+            if _DOUBLE_DOT_RE.search(next_text):
+                habau_rect = next_rect
                 break
 
-        if dot_rect is None:
-            continue
-
-        # Dots aufteilen: EP-Feld links, GP-Feld rechts.
-        # Wir teilen das Rechteck in zwei Haelften.
-        mid_x = dot_rect.x0 + (dot_rect.width * 0.55)
-        ep_right_x = mid_x - 5
-        gp_right_x = dot_rect.x1 - 5
-
-        # Werte einfuegen - rechtsbuendig gegenueber Spalten-Ende
-        ep_txt = _euro_short(pos.ep)
-        gp_txt = _euro_short(pos.gp)
-
-        # Textbreite schaetzen (ca. 4.5pt pro Zeichen bei 9pt)
-        def _twidth(s: str) -> float:
-            return len(s) * 4.6
-
-        ep_x = max(dot_rect.x0 + 5, ep_right_x - _twidth(ep_txt))
-        gp_x = max(mid_x + 5, gp_right_x - _twidth(gp_txt))
-        y_txt = dot_rect.y0 + dot_rect.height * 0.75
-
-        try:
-            page.insert_text((ep_x, y_txt), ep_txt, fontsize=9, fontname="helv", color=(0, 0, 0.4))
-            page.insert_text((gp_x, y_txt), gp_txt, fontsize=9, fontname="helv", color=(0, 0, 0.4))
-            filled += 1
-        except Exception:
+        if habau_rect is not None:
+            mid_x = habau_rect.x0 + (habau_rect.width * 0.55)
+            ep_txt = _euro_short(pos.ep)
+            gp_txt = _euro_short(pos.gp)
+            ep_x = max(habau_rect.x0 + 5, mid_x - 5 - _twidth(ep_txt))
+            gp_x = max(mid_x + 5, habau_rect.x1 - 5 - _twidth(gp_txt))
+            y_txt = habau_rect.y0 + habau_rect.height * 0.75
+            try:
+                page.insert_text(
+                    (ep_x, y_txt), ep_txt, fontsize=9, fontname="helv", color=(0, 0, 0.4)
+                )
+                page.insert_text(
+                    (gp_x, y_txt), gp_txt, fontsize=9, fontname="helv", color=(0, 0, 0.4)
+                )
+                filled += 1
+            except Exception:
+                continue
+            # Fabrikat-Search ist Habau-Stil-spezifisch (ein "Angebotenes
+            # Fabrikat:"-Feld nach der OZ). Fuer Stil 2 ist das bisher
+            # nicht beobachtet — Salach hat keine Fabrikat-Felder.
+        else:
+            # ------------------------------------------------------------
+            # Stil 2 — Salach-Stil backward-search: zwei aufeinanderfolgende
+            # Single-Dot-Zeilen zwischen voriger OZ und aktueller Position.
+            # Die zwei Dotlines haben unterschiedliche Y-Koordinaten —
+            # erste = EP, zweite = GP.
+            # ------------------------------------------------------------
+            prev_oz_idx = max(
+                (i for i in oz_indices if i < idx), default=-1
+            )
+            boundary = prev_oz_idx + 1
+            # Finde aufeinanderfolgende Paare (i, i+1) im Window.
+            pair: tuple[int, int] | None = None
+            for i in range(boundary, idx - 1):
+                if i in salach_single_indices and (i + 1) in salach_single_indices:
+                    pair = (i, i + 1)  # spaeter ueberschreiben → letztes Paar gewinnt
+            if pair is None:
+                # Beide Stile haben kein Match — Position ohne Eintrag.
+                continue
+            ep_idx, gp_idx = pair
+            _, ep_rect = lines_with_coords[ep_idx]
+            _, gp_rect = lines_with_coords[gp_idx]
+            ep_txt = _euro_short(pos.ep)
+            gp_txt = _euro_short(pos.gp)
+            # Rechtsbuendig im jeweiligen Dot-Rect (5 pt Abstand vom rechten Rand)
+            ep_x = max(ep_rect.x0 + 5, ep_rect.x1 - 5 - _twidth(ep_txt))
+            gp_x = max(gp_rect.x0 + 5, gp_rect.x1 - 5 - _twidth(gp_txt))
+            ep_y = ep_rect.y0 + ep_rect.height * 0.75
+            gp_y = gp_rect.y0 + gp_rect.height * 0.75
+            try:
+                page.insert_text(
+                    (ep_x, ep_y), ep_txt, fontsize=9, fontname="helv", color=(0, 0, 0.4)
+                )
+                page.insert_text(
+                    (gp_x, gp_y), gp_txt, fontsize=9, fontname="helv", color=(0, 0, 0.4)
+                )
+                filled += 1
+            except Exception:
+                continue
+            # Stil-2-Pfad endet hier (kein Fabrikat-Search, siehe Habau-Block).
+            # Wir continue'n in die naechste OZ ohne den Habau-Fabrikat-Code zu durchlaufen.
             continue
 
         # 3) Angebotenes Fabrikat: suche in naechsten 15 Zeilen nach "Angebotenes"
