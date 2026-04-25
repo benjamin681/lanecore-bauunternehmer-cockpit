@@ -411,8 +411,8 @@ def _fill_cross_page(
         if not page_lines:
             continue
 
-        # Gibt es eine OZ in den letzten 6 Zeilen die noch nicht gefuellt ist?
-        for j in range(max(0, len(page_lines) - 6), len(page_lines)):
+        # Gibt es eine OZ in den letzten 20 Zeilen die noch nicht gefuellt ist?
+        for j in range(max(0, len(page_lines) - 20), len(page_lines)):
             text_stripped = page_lines[j][0].strip()
             m = _OZ_RE.match(text_stripped)
             if not m:
