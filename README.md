@@ -75,6 +75,34 @@ npm run dev        # http://localhost:3100
 
 ---
 
+## Working with Claude Code
+
+Sessions starten in der Regel mit etwas Schema-/Pfad-/Credential-Kontext, der
+sonst jede Session neu erkämpft werden müsste. Der zentrale Anlaufpunkt ist:
+
+📄 **[`docs/claude-code-context.md`](docs/claude-code-context.md)**
+
+Enthält: SSH-/DB-Konnektivität, Schema-Quirks (z.B. `dna` vs `dna_pattern`,
+`currency varchar(10)`, `parse_error_details`), wichtige UUIDs (Tenant,
+Salach-LV, test2-Preisliste), SQL-Templates, Python-Snippets und
+Standard-Workflows.
+
+Operations-Scripts unter [`lv-preisrechner/scripts/ops/`](lv-preisrechner/scripts/ops/):
+
+- `db-backup.sh` — strukturierter pg_dump nach `~/backups/<label>_<timestamp>/`
+- `recalc-lv.sh <lv-id>` — `kalkuliere_lv` + Summary-Output
+- `check-pricelist-status.sh <pricelist-id>` — Status, Counter, Batch-Failures
+- `reparse-pricelist.sh <pricelist-id> [--confirm]` — Re-Parse mit Reset
+
+Alle Scripts haben `-h`/`--help`. Destruktive (Re-Parse) verhalten sich ohne
+`--confirm` als Dry-Run. Smoke-Tests: `./scripts/ops/test_smoke.sh`.
+
+**Pflege:** Wenn eine Session ein Schema ändert oder einen neuen Gotcha
+findet, in derselben Session `docs/claude-code-context.md` aktualisieren —
+nicht in eine separate Notiz.
+
+---
+
 ## Kontakt
 
 Ben (Feichtenbeiner) — LaneCore AI
