@@ -265,11 +265,26 @@ def _fill_page(page: fitz.Page, pos_by_oz: dict) -> int:
                 (i for i in oz_indices if i < idx), default=-1
             )
             boundary = prev_oz_idx + 1
-            # Finde aufeinanderfolgende Paare (i, i+1) im Window.
+            # Finde aufeinanderfolgende Paare (i, i+1) im Window VOR der OZ.
             pair: tuple[int, int] | None = None
             for i in range(boundary, idx - 1):
                 if i in salach_single_indices and (i + 1) in salach_single_indices:
                     pair = (i, i + 1)  # spaeter ueberschreiben → letztes Paar gewinnt
+
+            # Salach-Sub-Quirk: einige Positionen haben das Dot-Pair NACH
+            # der OZ (Beschreibung-zuerst-OZ-zuletzt-Layout, aber Pair
+            # rutscht in die Folge-Position). Forward-search bis zur
+            # naechsten OZ als Fallback.
+            if pair is None:
+                next_oz_idx = min(
+                    (i for i in oz_indices if i > idx),
+                    default=len(lines_with_coords),
+                )
+                for i in range(idx + 1, next_oz_idx - 1):
+                    if i in salach_single_indices and (i + 1) in salach_single_indices:
+                        pair = (i, i + 1)
+                        break  # erstes Forward-Pair gewinnt
+
             if pair is None:
                 # Beide Stile haben kein Match — Position ohne Eintrag.
                 continue
