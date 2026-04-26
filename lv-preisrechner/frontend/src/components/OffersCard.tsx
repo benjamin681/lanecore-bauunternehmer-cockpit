@@ -6,6 +6,7 @@
  * Listet alle Offers eines LVs, erlaubt Anlage neuer Offers,
  * Status-Wechsel und PDF-Download.
  */
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   Check,
@@ -13,6 +14,7 @@ import {
   FilePlus2,
   HandshakeIcon,
   Loader2,
+  Ruler,
   Send,
   X,
 } from "lucide-react";
@@ -25,6 +27,7 @@ import {
   OFFER_PDF_FORMAT_LABELS,
   OfferPdfFormat,
   OfferStatus,
+  aufmassApi,
   offersApi,
 } from "@/lib/tenantApi";
 import { fmtDate, fmtEur } from "@/lib/format";
@@ -34,6 +37,7 @@ type Props = {
 };
 
 export function OffersCard({ lvId }: Props) {
+  const router = useRouter();
   const [offers, setOffers] = useState<Offer[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -111,6 +115,19 @@ export function OffersCard({ lvId }: Props) {
     }
   }
 
+  async function startAufmass(offer: Offer) {
+    if (offer.status !== "accepted") return;
+    setBusy(true);
+    try {
+      const aufmass = await aufmassApi.createFromOffer(offer.id, {});
+      toast.success(`Aufmaß ${aufmass.aufmass_number} angelegt`);
+      router.push(`/dashboard/aufmasse/${aufmass.id}`);
+    } catch (e: any) {
+      toast.error(e?.detail || "Aufmaß konnte nicht angelegt werden");
+      setBusy(false);
+    }
+  }
+
   async function downloadPdf(offer: Offer) {
     try {
       const res = await fetch(offersApi.pdfUrl(offer.id), {
@@ -182,6 +199,7 @@ export function OffersCard({ lvId }: Props) {
                 offer={o}
                 onAction={openStatusAction}
                 onDownload={() => downloadPdf(o)}
+                onStartAufmass={startAufmass}
                 busy={busy}
               />
             ))}
@@ -338,11 +356,13 @@ function OfferRow({
   offer,
   onAction,
   onDownload,
+  onStartAufmass,
   busy,
 }: {
   offer: Offer;
   onAction: (offer: Offer, status: OfferStatus) => void;
   onDownload: () => void;
+  onStartAufmass: (offer: Offer) => void;
   busy: boolean;
 }) {
   const expired = useMemo(
@@ -408,9 +428,16 @@ function OfferRow({
       </div>
 
       {offer.status === "accepted" && (
-        <div className="mt-3 rounded-md bg-success-500/10 border border-success-500/20 px-3 py-2 text-sm text-success-700">
-          ✓ Angenommen — Final-Kalkulation mit Aufmaß als nächster Schritt
-          (Iteration 4).
+        <div className="mt-3 rounded-md bg-success-500/10 border border-success-500/20 px-3 py-2 text-sm text-success-700 flex items-center justify-between gap-3 flex-wrap">
+          <span>✓ Angenommen — Aufmaß und Final-Kalkulation starten.</span>
+          <button
+            type="button"
+            onClick={() => onStartAufmass(offer)}
+            disabled={busy}
+            className="inline-flex items-center gap-1 px-3 py-1 rounded bg-success-500 text-white text-sm font-medium hover:bg-success-600 disabled:opacity-60"
+          >
+            <Ruler className="w-4 h-4" /> Aufmaß starten
+          </button>
         </div>
       )}
 

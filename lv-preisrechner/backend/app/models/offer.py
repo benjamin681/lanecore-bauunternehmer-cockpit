@@ -58,6 +58,8 @@ class OfferPdfFormat(str, Enum):
 
     EIGENES_LAYOUT = "eigenes_layout"
     ORIGINAL_LV_FILLED = "original_lv_filled"
+    # B+4.12: Final-Offer auf Basis eines finalized Aufmaßes.
+    AUFMASS_BASIERT = "aufmass_basiert"
 
 
 class Offer(Base):
@@ -117,6 +119,12 @@ class Offer(Base):
     )
 
     internal_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # B+4.12: Verknuepfung zum Aufmaß bei Final-Offers (pdf_format=aufmass_basiert).
+    aufmass_id: Mapped[str | None] = mapped_column(
+        ForeignKey("lvp_aufmasse.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_now, nullable=False

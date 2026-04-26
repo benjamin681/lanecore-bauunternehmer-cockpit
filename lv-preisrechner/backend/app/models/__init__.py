@@ -1,5 +1,6 @@
 """SQLAlchemy Models."""
 
+from app.models.aufmass import Aufmass, AufmassPosition, AufmassStatus
 from app.models.customer import Customer, Project, ProjectStatus
 from app.models.job import Job
 from app.models.lv import LV
@@ -45,4 +46,8 @@ __all__ = [
     "OfferStatus",
     "OfferStatusChange",
     "OfferPdfFormat",
+    # B+4.12 Aufmaß
+    "Aufmass",
+    "AufmassPosition",
+    "AufmassStatus",
 ]

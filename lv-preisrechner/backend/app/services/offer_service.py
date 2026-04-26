@@ -228,18 +228,29 @@ def change_offer_status(
     return offer
 
 
-def get_offer_pdf(offer: Offer, lv: LV, tenant: Tenant) -> bytes:
+def get_offer_pdf(offer: Offer, lv: LV, tenant: Tenant, db: Session | None = None) -> bytes:
     """Generiert das PDF der Offer in dem zur Erstellung gewaehlten Format.
 
-    Delegiert an die existing PDF-Services. Es wird KEIN Snapshot
-    rekonstruiert — das aktuelle LV ist Quelle. Wenn das LV nach
-    Versand veraendert wird, sollte fuer eine Korrektur eine neue
-    Offer angelegt werden.
+    Bei AUFMASS_BASIERT muss `db` uebergeben werden, damit das
+    verlinkte Aufmaß geladen werden kann.
     """
     if offer.pdf_format == OfferPdfFormat.ORIGINAL_LV_FILLED.value:
         from app.services.lv_original_filled import generate_original_filled_pdf
 
         return generate_original_filled_pdf(lv)
+
+    if offer.pdf_format == OfferPdfFormat.AUFMASS_BASIERT.value:
+        if db is None or offer.aufmass_id is None:
+            raise OfferServiceError(
+                "AUFMASS_BASIERT-Offer benoetigt aufmass_id + DB-Session."
+            )
+        from app.models.aufmass import Aufmass
+        from app.services.aufmass_pdf import generate_aufmass_offer_pdf
+
+        aufmass = db.get(Aufmass, offer.aufmass_id)
+        if aufmass is None:
+            raise OfferServiceError("Verknuepftes Aufmaß nicht gefunden.")
+        return generate_aufmass_offer_pdf(aufmass, lv, tenant)
 
     # Default / EIGENES_LAYOUT
     from app.services.lv_pdf_export import generate_angebot_pdf

@@ -243,7 +243,7 @@ def download_offer_pdf(
         raise HTTPException(status_code=500, detail="Tenant nicht gefunden")
 
     try:
-        pdf_bytes = get_offer_pdf(offer, lv, tenant)
+        pdf_bytes = get_offer_pdf(offer, lv, tenant, db=db)
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 

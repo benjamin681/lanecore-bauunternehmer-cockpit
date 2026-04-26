@@ -15,6 +15,7 @@ import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api import aufmass as aufmass_api
 from app.api import auth as auth_api
 from app.api import jobs as jobs_api
 from app.api import lvs as lvs_api
@@ -115,3 +116,6 @@ app.include_router(tenant_api.project_router, prefix="/api/v1")
 # B+4.11: Offer-Lifecycle.
 app.include_router(offers_api.lv_offers_router, prefix="/api/v1")
 app.include_router(offers_api.offers_router, prefix="/api/v1")
+# B+4.12: Aufmaß und Final-Kalkulation.
+app.include_router(aufmass_api.offer_aufmass_router, prefix="/api/v1")
+app.include_router(aufmass_api.aufmasse_router, prefix="/api/v1")

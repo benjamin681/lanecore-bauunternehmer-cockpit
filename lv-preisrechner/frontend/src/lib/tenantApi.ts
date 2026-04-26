@@ -248,6 +248,94 @@ export const offersApi = {
     api<Record<string, OfferLvSummary>>(`/offers/lv-summary`),
 };
 
+// --------------------------------------------------------------------------- //
+// Aufmaß (B+4.12)
+// --------------------------------------------------------------------------- //
+export type AufmassStatus = "in_progress" | "finalized" | "cancelled";
+
+export const AUFMASS_STATUS_LABELS: Record<AufmassStatus, string> = {
+  in_progress: "In Erfassung",
+  finalized: "Abgeschlossen",
+  cancelled: "Storniert",
+};
+
+export type AufmassPosition = {
+  id: string;
+  aufmass_id: string;
+  lv_position_id: string;
+  oz: string;
+  kurztext: string;
+  einheit: string;
+  lv_menge: number;
+  ep: number;
+  gemessene_menge: number;
+  notes: string | null;
+  gp_lv_snapshot: number;
+  gp_aufmass: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Aufmass = {
+  id: string;
+  tenant_id: string;
+  lv_id: string;
+  source_offer_id: string;
+  aufmass_number: string;
+  status: AufmassStatus | string;
+  finalized_at: string | null;
+  finalized_by: string | null;
+  internal_notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AufmassDetail = Aufmass & {
+  positions: AufmassPosition[];
+};
+
+export type AufmassGroupSummary = {
+  group: string;
+  lv_netto: number;
+  aufmass_netto: number;
+  diff_netto: number;
+  position_count: number;
+};
+
+export type AufmassSummary = {
+  lv_total_netto: number;
+  aufmass_total_netto: number;
+  diff_netto: number;
+  diff_brutto: number;
+  diff_pct: number | null;
+  position_count: number;
+  by_group: AufmassGroupSummary[];
+};
+
+export type AufmassPositionUpdate = {
+  gemessene_menge?: number;
+  notes?: string | null;
+};
+
+export const aufmassApi = {
+  createFromOffer: (offerId: string, body: { internal_notes?: string | null } = {}) =>
+    api<AufmassDetail>(`/offers/${offerId}/aufmass`, { method: "POST", body }),
+  listForLv: (lvId: string) => api<Aufmass[]>(`/lvs/${lvId}/aufmasse`),
+  get: (id: string) => api<AufmassDetail>(`/aufmasse/${id}`),
+  patchPosition: (id: string, posId: string, body: AufmassPositionUpdate) =>
+    api<AufmassPosition>(`/aufmasse/${id}/positions/${posId}`, {
+      method: "PATCH",
+      body,
+    }),
+  finalize: (id: string) =>
+    api<AufmassDetail>(`/aufmasse/${id}/finalize`, { method: "POST" }),
+  summary: (id: string) => api<AufmassSummary>(`/aufmasse/${id}/summary`),
+  createFinalOffer: (id: string) =>
+    api<Offer>(`/aufmasse/${id}/create-final-offer`, { method: "POST" }),
+  pdfUrl: (id: string, inline = false) =>
+    `/api/v1/aufmasse/${id}/pdf${inline ? "?inline=true" : ""}`,
+};
+
 export const projectsApi = {
   list: (params: { customer_id?: string; status?: string } = {}) => {
     const qs: string[] = [];
