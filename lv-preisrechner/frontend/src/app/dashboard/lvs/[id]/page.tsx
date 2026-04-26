@@ -23,6 +23,7 @@ import { NearMissDrawer } from "@/components/NearMissDrawer";
 import { CatalogGapsPanel } from "@/components/CatalogGapsPanel";
 import { OffersCard } from "@/components/OffersCard";
 import { AufmasseCard } from "@/components/AufmasseCard";
+import { RechnungenCard } from "@/components/RechnungenCard";
 
 type Edit = { field: "menge" | "einheit" | "kurztext" | "erkanntes_system" | "ep"; value: string } | null;
 
@@ -330,6 +331,9 @@ export default function LvDetailPage() {
 
       {/* B+4.12 — Aufmaß-Karte (sichtbar sobald mind. 1 Aufmaß existiert) */}
       <AufmasseCard lvId={id} />
+
+      {/* B+4.13 — Rechnungen-Karte (sichtbar sobald accepted Offer oder Rechnung) */}
+      <RechnungenCard lvId={id} />
 
       {/* B+4.3.1c: Tab-Switcher zwischen Ergebnis-Tabelle und Gaps-Panel */}
       <div

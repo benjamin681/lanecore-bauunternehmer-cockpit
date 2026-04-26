@@ -336,6 +336,154 @@ export const aufmassApi = {
     `/api/v1/aufmasse/${id}/pdf${inline ? "?inline=true" : ""}`,
 };
 
+// --------------------------------------------------------------------------- //
+// Invoice + Dunning + Finance (B+4.13)
+// --------------------------------------------------------------------------- //
+export type InvoiceStatus =
+  | "draft"
+  | "sent"
+  | "paid"
+  | "partially_paid"
+  | "overdue"
+  | "cancelled";
+
+export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
+  draft: "Entwurf",
+  sent: "Versendet",
+  paid: "Bezahlt",
+  partially_paid: "Teilweise bezahlt",
+  overdue: "Überfällig",
+  cancelled: "Storniert",
+};
+
+export type InvoiceType = "schlussrechnung" | "abschlagsrechnung";
+
+export type InvoiceStatusChange = {
+  id: string;
+  old_status: string | null;
+  new_status: string;
+  changed_at: string;
+  changed_by: string | null;
+  reason: string | null;
+};
+
+export type Dunning = {
+  id: string;
+  tenant_id: string;
+  invoice_id: string;
+  dunning_level: number;
+  dunning_date: string;
+  due_date: string;
+  mahngebuehr_betrag: number;
+  mahnzinsen_betrag: number;
+  status: string;
+  internal_notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Invoice = {
+  id: string;
+  tenant_id: string;
+  lv_id: string;
+  source_offer_id: string;
+  source_aufmass_id: string | null;
+  invoice_number: string;
+  invoice_type: string;
+  status: InvoiceStatus | string;
+  invoice_date: string;
+  sent_date: string | null;
+  due_date: string | null;
+  paid_date: string | null;
+  paid_amount: number;
+  betrag_netto: number;
+  betrag_ust: number;
+  betrag_brutto: number;
+  position_count: number;
+  internal_notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InvoiceDetail = Invoice & {
+  status_history: InvoiceStatusChange[];
+  dunnings: Dunning[];
+};
+
+export type InvoiceCreate = {
+  invoice_type?: InvoiceType;
+  internal_notes?: string | null;
+};
+
+export type PaymentCreate = {
+  amount: number;
+  payment_date?: string | null;
+  note?: string | null;
+};
+
+export type InvoiceStatusUpdate = {
+  status: InvoiceStatus;
+  reason?: string | null;
+  on_date?: string | null;
+};
+
+export type FinanceOverview = {
+  offene_rechnungen_count: number;
+  offene_summe_brutto: number;
+  ueberfaellige_count: number;
+  ueberfaellige_summe_brutto: number;
+  gezahlte_summe_jahr_aktuell: number;
+  year: number;
+};
+
+export type OverdueInvoiceRow = {
+  id: string;
+  invoice_number: string;
+  betrag_brutto: number;
+  paid_amount: number;
+  open_amount: number;
+  due_date: string | null;
+  days_overdue: number | null;
+  highest_dunning_level: number;
+  next_dunning_due: string | null;
+  lv_id: string;
+};
+
+export type EmailDraftOut = {
+  mailto: string;
+  subject: string;
+  body: string;
+  to: string | null;
+};
+
+export const invoicesApi = {
+  createFromOffer: (offerId: string, body: InvoiceCreate = {}) =>
+    api<InvoiceDetail>(`/offers/${offerId}/invoice`, { method: "POST", body }),
+  listForLv: (lvId: string) => api<Invoice[]>(`/lvs/${lvId}/invoices`),
+  get: (id: string) => api<InvoiceDetail>(`/invoices/${id}`),
+  updateStatus: (id: string, body: InvoiceStatusUpdate) =>
+    api<InvoiceDetail>(`/invoices/${id}/status`, { method: "PATCH", body }),
+  recordPayment: (id: string, body: PaymentCreate) =>
+    api<InvoiceDetail>(`/invoices/${id}/payments`, { method: "POST", body }),
+  pdfUrl: (id: string, inline = false) =>
+    `/api/v1/invoices/${id}/pdf${inline ? "?inline=true" : ""}`,
+  createDunning: (id: string, body: { internal_notes?: string | null } = {}) =>
+    api<Dunning>(`/invoices/${id}/dunnings`, { method: "POST", body }),
+  dunningPdfUrl: (invoiceId: string, dunningId: string, inline = false) =>
+    `/api/v1/invoices/${invoiceId}/dunnings/${dunningId}/pdf${
+      inline ? "?inline=true" : ""
+    }`,
+  emailDraft: (id: string) =>
+    api<EmailDraftOut>(`/invoices/${id}/email`, { method: "POST" }),
+};
+
+export const financeApi = {
+  overview: () => api<FinanceOverview>(`/finance/overview`),
+  overdueInvoices: () => api<OverdueInvoiceRow[]>(`/finance/overdue-invoices`),
+  checkOverdue: () =>
+    api<{ updated: number }>(`/finance/check-overdue`, { method: "POST" }),
+};
+
 export const projectsApi = {
   list: (params: { customer_id?: string; status?: string } = {}) => {
     const qs: string[] = [];

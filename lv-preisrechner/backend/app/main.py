@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import aufmass as aufmass_api
 from app.api import auth as auth_api
+from app.api import invoices as invoices_api
 from app.api import jobs as jobs_api
 from app.api import lvs as lvs_api
 from app.api import offers as offers_api
@@ -119,3 +120,7 @@ app.include_router(offers_api.offers_router, prefix="/api/v1")
 # B+4.12: Aufmaß und Final-Kalkulation.
 app.include_router(aufmass_api.offer_aufmass_router, prefix="/api/v1")
 app.include_router(aufmass_api.aufmasse_router, prefix="/api/v1")
+# B+4.13: Schlussrechnung + Mahnwesen + Finanz-Overview.
+app.include_router(invoices_api.offer_invoice_router, prefix="/api/v1")
+app.include_router(invoices_api.invoices_router, prefix="/api/v1")
+app.include_router(invoices_api.finance_router, prefix="/api/v1")

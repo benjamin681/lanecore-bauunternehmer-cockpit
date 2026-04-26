@@ -11,6 +11,7 @@ import {
   LogOut,
   Menu,
   Package,
+  Receipt,
   Settings,
   Users,
   X,
@@ -31,6 +32,7 @@ const NAV = [
   { href: "/dashboard/lvs", label: "Leistungsverzeichnisse", icon: FolderOpen },
   { href: "/dashboard/projects", label: "Projekte", icon: Building2 },
   { href: "/dashboard/customers", label: "Kunden", icon: Users },
+  { href: "/dashboard/finanzen", label: "Finanzen", icon: Receipt },
   { href: "/dashboard/einstellungen", label: "Einstellungen", icon: Settings },
 ];
 

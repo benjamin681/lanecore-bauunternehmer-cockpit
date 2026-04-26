@@ -2,6 +2,14 @@
 
 from app.models.aufmass import Aufmass, AufmassPosition, AufmassStatus
 from app.models.customer import Customer, Project, ProjectStatus
+from app.models.invoice import (
+    Dunning,
+    DunningStatus,
+    Invoice,
+    InvoiceStatus,
+    InvoiceStatusChange,
+    InvoiceType,
+)
 from app.models.job import Job
 from app.models.lv import LV
 from app.models.offer import (
@@ -50,4 +58,11 @@ __all__ = [
     "Aufmass",
     "AufmassPosition",
     "AufmassStatus",
+    # B+4.13 Invoice + Dunning
+    "Invoice",
+    "InvoiceStatus",
+    "InvoiceStatusChange",
+    "InvoiceType",
+    "Dunning",
+    "DunningStatus",
 ]
