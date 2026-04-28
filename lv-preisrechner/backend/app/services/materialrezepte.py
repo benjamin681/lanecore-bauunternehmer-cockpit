@@ -56,21 +56,30 @@ REZEPTE: dict[str, Rezept] = {
     # Knauf-Formulierung "zweilagig beplankt" praezisiert (die "zwei Lagen"
     # beziehen sich auf beide Seiten, nicht auf Doppellagen pro Seite - das
     # waere W113).
-    # KALIBRIERT 2026-04-28: Aktueller EP von ~62 EUR/m² (Salach-Innenwand
-    # 100mm) wurde von Harun's Vater (Trockenbau Feichtenbeiner, Ulm) als
-    # sehr guter Richtwert bestaetigt. Rezept also korrekt eingestellt —
-    # bewusst keine Aenderungen an Mengen oder Zeitansatz. Falls in einer
-    # spaeteren Iteration Knauf-Mat-Nrn fuer W112 vorliegen, koennen sie
-    # analog zu W628B als mat_nr=... ergaenzt werden.
+    # KALIBRIERT 2026-04-28 (Iter 5b): Knauf Trockenbau-Handbuch 2024,
+    # Seite 145. F30, Brandklasse A2, Schalldaemmung 47 dB.
+    # Profile-Mengen + Mat-Nrn aus Handbuch; Lohn 25 min/m² = 0.417 h.
+    # Praxis-Bestaetigung von Harun's Vater (Trockenbau Feichtenbeiner Ulm):
+    # EP ~62 EUR/m² ist der Richtwert — neue 25-min-Annahme + Mat-Nr-
+    # Lookup auf 0.7/2.0 lfm bringen das Ergebnis darauf zurueck.
+    #
+    # GKB/Daemmung/Schrauben/Spachtel-Mengen vorerst aus bisheriger
+    # Praxis (UNCHANGED — Knauf-Handbuch-Daten "# ... etc" liegen noch
+    # nicht vollstaendig vor). Bei naechster Calibration-Session mit den
+    # restlichen Mat-Nrn ergaenzen.
     "W112": Rezept(
         system="W112",
-        beschreibung="W112.de — Einfachstaenderwerk, zweilagig beplankt (1 Lage GKB je Seite, CW75) [Praxis-kalibriert 2026-04-28]",
+        beschreibung="W112.de — Knauf Metallstaenderwand, F30, A2, 47 dB (Knauf Trockenbau-Handbuch 2024 S.145, kalibriert 2026-04-28)",
         zieleinheit="m²",
-        zeit_h_pro_einheit=0.55,
+        zeit_h_pro_einheit=0.4167,  # 25 min/m² laut Knauf-Handbuch
         materialien=[
-            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 2.10, "m²"),
-            MaterialBedarf("|Profile|CW|75|", 1.80, "lfm"),
-            MaterialBedarf("|Profile|UW|75|", 0.80, "lfm", optional=True),
+            # Beplankung — GKB 12.5mm beidseitig (1 Lage je Seite)
+            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 2.10, "m²", mat_nr="00002892"),
+            # Unterkonstruktion — Mat-Nrn + Mengen aus Knauf-Handbuch S.145
+            MaterialBedarf("|Profile|CW|75|", 2.00, "lfm", mat_nr="00003261"),
+            MaterialBedarf("|Profile|UW|75|", 0.70, "lfm", mat_nr="00003376"),
+            # Daemmung + Befestigung + Spachtel — Mengen UNCHANGED (Knauf-
+            # Handbuch-Quelle fuer diese Posten noch ausstehend).
             MaterialBedarf("|Daemmung||40mm|", 1.00, "m²", optional=True),
             MaterialBedarf("|Schrauben||3.5x25|", 0.05, "Stk", optional=True),  # ~25 Stk/m²; Faktor 0.05 = 25/500
             MaterialBedarf("|Spachtel||Universal|", 0.40, "kg", optional=True),
