@@ -80,13 +80,29 @@ REZEPTE: dict[str, Rezept] = {
         materialien=[
             # Beplankung — GKB 12.5mm beidseitig (1 Lage je Seite)
             MaterialBedarf("|Gipskarton|GKB|12.5mm|", 2.10, "m²", mat_nr="00002892"),
-            # Unterkonstruktion — Mat-Nrn + Mengen aus Knauf-Handbuch S.145
+            # Unterkonstruktion (Mengen + Mat-Nrn aus Diskussion 2026-04-28
+            # mit Benjamin, Quelle nicht verifiziert — siehe Modul-Header).
             MaterialBedarf("|Profile|CW|75|", 2.00, "lfm", mat_nr="00003261"),
             MaterialBedarf("|Profile|UW|75|", 0.70, "lfm", mat_nr="00003376"),
-            # Daemmung + Befestigung + Spachtel — Mengen UNCHANGED (Knauf-
-            # Handbuch-Quelle fuer diese Posten noch ausstehend).
+            # Daemmung — Mengen aus bisheriger Praxis (unverifiziert)
             MaterialBedarf("|Daemmung||40mm|", 1.00, "m²", optional=True),
-            MaterialBedarf("|Schrauben||3.5x25|", 0.05, "Stk", optional=True),  # ~25 Stk/m²; Faktor 0.05 = 25/500
+            # Schrauben — KORRIGIERT 2026-04-28 nach Recherche (Iter 5b):
+            # Quelle: Knauf W11.de Detailblatt 01/2024, Seite 67 "Befestigung
+            # der Beplankung" — Befestigungsabstaende fuer 2-lagige Beplankung
+            # (1. Lage 750/250 mm vertikal/horizontal, 2. Lage 250/200 mm).
+            # Daraus abgeleitet pro Plattenseite ca. 5 Stk/m² (1. Lage) + 20
+            # Stk/m² (2. Lage). Mal 2 Wand-Seiten gerundet auf jeweils ca.
+            # 25 Stk/m² (deckt End-Befestigung + Verschnitt mit ab).
+            # Vorheriger Wert 0.05 Stk/m² war ein Encoding-Fehler (Faktor /500),
+            # was zu praktisch 0 EUR Schraubenkosten fuehrte.
+            MaterialBedarf(
+                "|Schrauben||3.5x25|", 25.0, "Stk",
+                mat_nr="00003504", optional=True,
+            ),
+            MaterialBedarf(
+                "|Schrauben||3.5x35|", 25.0, "Stk",
+                mat_nr="00003505", optional=True,
+            ),
             MaterialBedarf("|Spachtel||Universal|", 0.40, "kg", optional=True),
         ],
     ),
