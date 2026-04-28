@@ -179,7 +179,7 @@ Direkter `UPDATE lvp_tenants SET stundensatz_eur = 60 WHERE id = 'f7769a68-…'`
 
 **Praxis-bestätigte Rezepte (Harun's Vater, Trockenbau Feichtenbeiner Ulm):**
 
-- **W112** (Knauf Metallständerwand, F30, A2, 47 dB): per Knauf-Trockenbau-Handbuch 2024 S.145. 0.4167 h/m² (25 min) + 2.10 m² GKB 12.5mm (Mat-Nr 00002892) + 2.00 lfm CW75 (00003261) + 0.70 lfm UW75 (00003376) + Dämmung/Schrauben/Spachtel (Mengen aus Praxis, Handbuch-Daten für diese Posten ausstehend). EP ~62 EUR/m² als Richtwert validiert.
+- **W112** (Knauf Metallständerwand): Werte VORLÄUFIG, Quelle nicht verifiziert (Stand 2026-04-28 — die ursprünglich genannte Quelle „Knauf Trockenbau-Handbuch 2024, S.145" war ein Format-Beispiel aus einer Claude.ai-Diskussion, KEINE echte Knauf-Publikation). Aktuelle Annahmen: 0.4167 h/m² (25 min) + 2.10 m² GKB 12.5mm (Mat-Nr 00002892) + 2.00 lfm CW75 (00003261) + 0.70 lfm UW75 (00003376) + Dämmung/Schrauben/Spachtel aus bisheriger Praxis. EP ~62 EUR/m² stimmt mit Harun's-Vater-Richtwert überein, die einzelnen Mengen-Annahmen sind aber noch nicht durch eine echte Knauf-Quelle belegt. Bestätigung ausstehend (Knauf-Detailblatt oder Harun's Vater).
 - **W628B** (Schachtwand mit CW-Einfachständer): per Knauf-Katalog Seite 240. Stand:
   - 0.7 lfm UW75 (Mat-Nr 00003376), 2.0 lfm CW75 (00003261)
   - 0.7 Stk Drehstiftdübel K6×35 (00003537), 1.2 lfm Dichtungsband 70mm (00003469)

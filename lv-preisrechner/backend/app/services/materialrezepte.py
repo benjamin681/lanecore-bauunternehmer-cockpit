@@ -56,20 +56,25 @@ REZEPTE: dict[str, Rezept] = {
     # Knauf-Formulierung "zweilagig beplankt" praezisiert (die "zwei Lagen"
     # beziehen sich auf beide Seiten, nicht auf Doppellagen pro Seite - das
     # waere W113).
-    # KALIBRIERT 2026-04-28 (Iter 5b): Knauf Trockenbau-Handbuch 2024,
-    # Seite 145. F30, Brandklasse A2, Schalldaemmung 47 dB.
-    # Profile-Mengen + Mat-Nrn aus Handbuch; Lohn 25 min/m² = 0.417 h.
-    # Praxis-Bestaetigung von Harun's Vater (Trockenbau Feichtenbeiner Ulm):
-    # EP ~62 EUR/m² ist der Richtwert — neue 25-min-Annahme + Mat-Nr-
-    # Lookup auf 0.7/2.0 lfm bringen das Ergebnis darauf zurueck.
+    # KORREKTUR 2026-04-28: Die ursprueng­lich angegebene Quelle "Knauf
+    # Trockenbau-Handbuch 2024, Seite 145" war ein Format-Beispiel aus
+    # einer Claude.ai-Diskussion mit Benjamin und KEINE verifizierte
+    # Quelle. Die hier eingetragenen Werte (UW 0.7 lfm, CW 2.0 lfm,
+    # Lohn 25 min/m²) sind als VORLAEUFIG zu betrachten und benoetigen
+    # noch Bestaetigung — entweder durch eine echte Knauf-Publikation
+    # (knauf.com Detailblatt, Trockenbau-Handbuch-PDF, Konfigurator-
+    # Output) oder durch Harun's Vater (Trockenbau Feichtenbeiner Ulm).
     #
-    # GKB/Daemmung/Schrauben/Spachtel-Mengen vorerst aus bisheriger
-    # Praxis (UNCHANGED — Knauf-Handbuch-Daten "# ... etc" liegen noch
-    # nicht vollstaendig vor). Bei naechster Calibration-Session mit den
-    # restlichen Mat-Nrn ergaenzen.
+    # Praxis-Anker: EP ~62 EUR/m² wurde von Harun's Vater bestaetigt.
+    # Die aktuelle Konfiguration trifft diesen Richtwert (Salach 61.80
+    # EUR/m²). Daraus folgt aber NICHT, dass die einzelnen Mengen-
+    # Annahmen den Knauf-Originalwerten entsprechen.
+    #
+    # GKB/Daemmung/Schrauben/Spachtel-Mengen aus bisheriger Praxis,
+    # ebenfalls unverifiziert.
     "W112": Rezept(
         system="W112",
-        beschreibung="W112.de — Knauf Metallstaenderwand, F30, A2, 47 dB (Knauf Trockenbau-Handbuch 2024 S.145, kalibriert 2026-04-28)",
+        beschreibung="W112.de — Knauf Metallstaenderwand (Werte vorlaeufig, Quelle nicht verifiziert, Stand 2026-04-28)",
         zieleinheit="m²",
         zeit_h_pro_einheit=0.4167,  # 25 min/m² laut Knauf-Handbuch
         materialien=[
