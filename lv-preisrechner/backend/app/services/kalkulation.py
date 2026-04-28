@@ -86,15 +86,43 @@ def _resolve_material_via_lookup(
     dna_article_key = (
         f"DNA:{mb.dna_pattern}" if getattr(mb, "dna_pattern", None) else None
     )
+    # B+4.13 Iteration 5b: Wenn das Rezept eine Hersteller-Mat-Nr traegt
+    # (z.B. Knauf-Mat-Nr aus dem Katalog), priorisieren wir diese als
+    # article_number. Das laesst Stage 2 (supplier_price) per exakter
+    # Mat-Nr-Identitaet matchen (Confidence 1.0) und springt am Fuzzy-
+    # Score vorbei. Stage 1 (Override) findet so eingetragene Overrides
+    # weiterhin, falls jemand sie auf die echte Mat-Nr anlegt.
+    explicit_mat_nr = (getattr(mb, "mat_nr", "") or "").strip() or None
+    article_lookup_key = explicit_mat_nr or dna_article_key
     lookup = lookup_price(
         db=db,
         tenant_id=tenant_id,
         material_name=product,
         unit=mb.basis_einheit,
         manufacturer=parts.get("hersteller") or None,
-        article_number=dna_article_key,
+        article_number=article_lookup_key,
         category=parts.get("kategorie") or None,
     )
+
+    # Wenn explizite Mat-Nr nicht traf: zweiter Versuch mit dna-Synthetic-
+    # Key — damit Tenant-Overrides aus dem Gap-Resolve-Workflow weiterhin
+    # erreichbar sind.
+    if (
+        explicit_mat_nr
+        and lookup.price_source == "not_found"
+        and dna_article_key
+    ):
+        retry = lookup_price(
+            db=db,
+            tenant_id=tenant_id,
+            material_name=product,
+            unit=mb.basis_einheit,
+            manufacturer=parts.get("hersteller") or None,
+            article_number=dna_article_key,
+            category=parts.get("kategorie") or None,
+        )
+        if retry.price_source != "not_found":
+            lookup = retry
 
     # Retry mit Aequivalenz-Aliases, falls der erste Versuch scheitert.
     if lookup.price_source == "not_found":
@@ -109,7 +137,7 @@ def _resolve_material_via_lookup(
                 material_name=_build_product(alias_size),
                 unit=mb.basis_einheit,
                 manufacturer=parts.get("hersteller") or None,
-                article_number=dna_article_key,
+                article_number=article_lookup_key,
                 category=parts.get("kategorie") or None,
             )
             if retry.price_source != "not_found":

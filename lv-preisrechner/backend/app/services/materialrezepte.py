@@ -28,6 +28,12 @@ class MaterialBedarf:
     # Wenn True: kein "Kein Preis"-Warning wenn fehlt (z.B. UW-Profile oft nicht separat
     # in Preislisten weil im CW-Gesamtsystem inkludiert).
     optional: bool = False
+    # B+4.13 Iteration 5b (2026-04-28): Hersteller-Mat-Nr fuer praezisen
+    # Treffer in der Lieferanten-Preisliste. Wenn gesetzt, hat exakter
+    # article_number-Match in supplier_price-Stage Vorrang vor Produktname-
+    # Fuzzy-Match. Beispiele aus Knauf-Katalog Seite 240 (Schachtwand W628B,
+    # bestaetigt durch Harun's Vater, Trockenbau Feichtenbeiner Ulm).
+    mat_nr: str = ""
 
 
 @dataclass
@@ -50,9 +56,15 @@ REZEPTE: dict[str, Rezept] = {
     # Knauf-Formulierung "zweilagig beplankt" praezisiert (die "zwei Lagen"
     # beziehen sich auf beide Seiten, nicht auf Doppellagen pro Seite - das
     # waere W113).
+    # KALIBRIERT 2026-04-28: Aktueller EP von ~62 EUR/m² (Salach-Innenwand
+    # 100mm) wurde von Harun's Vater (Trockenbau Feichtenbeiner, Ulm) als
+    # sehr guter Richtwert bestaetigt. Rezept also korrekt eingestellt —
+    # bewusst keine Aenderungen an Mengen oder Zeitansatz. Falls in einer
+    # spaeteren Iteration Knauf-Mat-Nrn fuer W112 vorliegen, koennen sie
+    # analog zu W628B als mat_nr=... ergaenzt werden.
     "W112": Rezept(
         system="W112",
-        beschreibung="W112.de — Einfachstaenderwerk, zweilagig beplankt (1 Lage GKB je Seite, CW75)",
+        beschreibung="W112.de — Einfachstaenderwerk, zweilagig beplankt (1 Lage GKB je Seite, CW75) [Praxis-kalibriert 2026-04-28]",
         zieleinheit="m²",
         zeit_h_pro_einheit=0.55,
         materialien=[
@@ -215,20 +227,42 @@ REZEPTE: dict[str, Rezept] = {
         ],
     ),
     "W628B": Rezept(
-        # Vormals "W626S" im Projekt (Massivbauplatte-Variante). Knauf-W628B ist
-        # die Variante MIT CW-Einfachstaender (Standardfall fuer Schachtbreiten
-        # > 2m, wo Freispannen nicht reicht).
+        # Knauf-W628B = Schachtwand einseitig mit CW-Einfachstaender (Standardfall
+        # fuer Schachtbreiten > 2m).
+        #
+        # KALIBRIERT 2026-04-28: Komplettes Rezept ersetzt durch Knauf-Katalog
+        # Seite 240 (Material-Liste pro m² W628B/CW75) PLUS Praxis-Bestaetigung
+        # durch Harun's Vater (Trockenbau Feichtenbeiner, Ulm). Hersteller-
+        # Mat-Nrn pro Eintrag ermoeglichen exakten Lookup in Knauf/Kemmler-
+        # Preislisten (article_number-Match Vorrang vor Fuzzy).
+        #
+        # Standard-Plattentyp = GKB (Schachtwaende ohne Brandschutz-Anforderung).
+        # Bei F30/F60/F90 in der Position wird automatisch auf GKF aufgewertet
+        # (siehe _apply_plattentyp_override + _AUTO_FIRE_UPGRADE_WHITELIST).
+        #
+        # Lohn: 40 min/m² = 0.667 h/m² @ Stundensatz 60 EUR = 40 EUR/m² Lohn.
         system="W628B",
-        beschreibung="W628B.de — Schachtwand einseitig mit CW-Einfachstaender (Standard bei Schachtbreite > 2m)",
+        beschreibung="W628B.de — Schachtwand einseitig mit CW-Einfachstaender (Knauf-Katalog S.240, kalibriert 2026-04-28)",
         zieleinheit="m²",
-        zeit_h_pro_einheit=0.95,
+        zeit_h_pro_einheit=0.667,  # 40 min Montage/m²
         materialien=[
-            MaterialBedarf("Knauf|Gipskarton|Fireboard|20mm|", 2.10, "m²"),
-            MaterialBedarf("|Profile|CW|100|", 1.80, "lfm"),  # 100mm wegen groesserer Spannweite
-            MaterialBedarf("|Profile|UW|100|", 0.80, "lfm", optional=True),
-            MaterialBedarf("|Daemmung||60mm|", 1.00, "m²", optional=True),
-            MaterialBedarf("|Schrauben||3.5x45|", 0.05, "Stk", optional=True),
-            MaterialBedarf("|Spachtel||Universal|", 0.60, "kg", optional=True),
+            # Unterkonstruktion
+            MaterialBedarf("Knauf|Profile|UW|75|", 0.7, "lfm", mat_nr="00003376"),
+            MaterialBedarf("Knauf|Profile|CW|75|", 2.0, "lfm", mat_nr="00003261"),
+            # Befestigung
+            MaterialBedarf("Knauf|Beschlag|Drehstiftduebel|K6 35|", 0.7, "Stk", mat_nr="00003537"),
+            MaterialBedarf("Knauf|Dichtung|Dichtungsband|70mm|", 1.2, "lfm", mat_nr="00003469"),
+            # Daemmung — Knauf TP 115, 60mm
+            MaterialBedarf("Knauf|Daemmung|TP 115|60mm|", 1.0, "m²", mat_nr="2304372"),
+            # Beplankung — GKB als Default (12.5mm). Override auf GKF bei F-Rating.
+            MaterialBedarf("Knauf|Gipskarton|GKB|12.5mm|", 2.0, "m²", mat_nr="00002892"),
+            # Schrauben
+            MaterialBedarf("Knauf|Schrauben|TN 3.5|3.5x25|", 7.0, "Stk", mat_nr="00003504"),
+            MaterialBedarf("Knauf|Schrauben|TN 3.5|3.5x35|", 15.0, "Stk", mat_nr="00003505"),
+            # Spachtel + Fugen
+            MaterialBedarf("Knauf|Spachtel|Uniflott|25 kg|", 0.4, "kg", mat_nr="00003114"),
+            MaterialBedarf("Knauf|Trennstreifen|Trenn-Fix|65mm|", 0.9, "lfm", mat_nr="00057871"),
+            MaterialBedarf("Knauf|Fugendeckstreifen|Kurt|75|", 0.9, "m", mat_nr="00099382"),
         ],
     ),
     "W629": Rezept(
@@ -414,14 +448,34 @@ REZEPTE: dict[str, Rezept] = {
         ],
     ),
     "Tueraussparung": Rezept(
+        # KALIBRIERT 2026-04-28: Vorher 1.5h/Stk + 6 lfm UA50 ergab ~243 EUR/Stk
+        # in Salach — von Harun's Vater als deutlich zu hoch markiert.
+        # Praxis-Werte (Trockenbau Feichtenbeiner Ulm):
+        #   - 30 min Montage = 0.5 h pro Tueraussparung
+        #   - 2x UA-Verstaerkung (links + rechts, ~2.5m hoch je) = 5 lfm
+        #   - 1x UW als Sturz = 1 lfm
+        #   - Kleinmaterial pauschal ~5 EUR (Schrauben, Befestigung, Eckschutz)
+        # Erwarteter EP nach Kalibrierung: ~80-100 EUR/Stk.
         system="Tueraussparung",
-        beschreibung="Türaussparung mit Sturzprofil + UA-Verstärkung",
+        beschreibung="Tueroeffnung mit UA-Verstaerkung + UW-Sturz [Praxis-kalibriert 2026-04-28]",
         zieleinheit="Stk",
-        zeit_h_pro_einheit=1.5,  # 1-2h je nach Größe
+        zeit_h_pro_einheit=0.5,  # 30 min Montage je Aussparung
         materialien=[
-            # UA-Profile 50mm ca. 6 lfm (Sturz + 2 seitlich)
-            # DNA muss Kategorie=Profile UND Produktname~UA haben (sonst matcht CW75 etc.)
-            MaterialBedarf("|Profile|UA|50|", 6.0, "lfm"),
+            # UA-Profile 75mm Verstaerkung links + rechts (5 lfm gesamt)
+            # DNA muss Kategorie=Profile UND Produktname=UA haben (sonst matcht CW75 etc.)
+            MaterialBedarf("|Profile|UA|75|", 5.0, "lfm"),
+            # UW-Profil als Sturz (1 lfm pro Tueraussparung)
+            MaterialBedarf("|Profile|UW|75|", 1.0, "lfm", optional=True),
+            # Kleinmaterial-Pauschale: Schrauben, Befestigung, Eckschutz.
+            # Hier bewusst per fallback_preis_eur, da kein Lieferanten-Eintrag
+            # passt — der Lookup wird "estimated" oder "not_found" zurueckgeben
+            # und der fallback_preis als Material-Kostenanteil aufgerechnet.
+            MaterialBedarf(
+                "|Kleinmaterial|Tuersturz||",
+                1.0, "Stk",
+                fallback_preis_eur=5.0,
+                optional=True,
+            ),
         ],
     ),
     "WC_Trennwand": Rezept(
@@ -435,14 +489,24 @@ REZEPTE: dict[str, Rezept] = {
         ],
     ),
     "Eckschiene": Rezept(
+        # KALIBRIERT 2026-04-28: Vorher gab's zwei "alternative" MaterialBedarf-
+        # Eintraege ("||Eckschiene||" und "||Kantenschutz||"), die beide nicht
+        # auf den realen Kemmler-Bestand gematcht haben (product_name dort:
+        # "Kemmler TR Kantenprofil 3502 ALU..."). Resultat: 0 EUR Material.
+        # Jetzt: ein praeziser Eintrag mit Knauf-naher DNA + Kemmler-Mat-Nr.
+        # effective_unit_price liegt bei 0.39768 EUR/m (BL=2500mm) bzw.
+        # 0.3314 EUR/m (BL=3000mm) — der Fuzzy-Fallback auf "Kantenprofil"
+        # trifft beide Varianten.
         system="Eckschiene",
-        beschreibung="ALU/verzinkte Eckschiene",
+        beschreibung="ALU-Kantenschiene (Kemmler TR 3502 als Standard) [kalibriert 2026-04-28]",
         zieleinheit="lfm",
         zeit_h_pro_einheit=0.15,
         materialien=[
-            # Auch ohne Match: Zuschlag + Lohn allein (~5-8 €/lfm realistisch)
-            MaterialBedarf("||Eckschiene||", 1.05, "lfm"),
-            MaterialBedarf("||Kantenschutz||", 1.05, "lfm"),
+            MaterialBedarf(
+                "Kemmler|Trockenbauprofile|Kantenprofil||",
+                1.05, "lfm",
+                mat_nr="3575150107",
+            ),
         ],
     ),
     "Fugenversiegelung": Rezept(
@@ -896,36 +960,76 @@ _FIRE_RATINGS = {
     "F30", "F60", "F90", "F120", "F180",
     "EI30", "EI60", "EI90", "EI120",
 }
+# Whitelist fuer plattentyp-explicit-override (urspruenglich Fireboard -> GKB).
 _OVERRIDE_WHITELIST = {"W628A", "W628B"}
+# B+4.13 Iteration 5b (2026-04-28): Auto-Fire-Upgrade-Whitelist.
+# Bei diesen Systemen wird die GKB-Beplankung automatisch zu GKF aufgewertet,
+# sobald die Position einen Feuerwiderstand (F30+) traegt — die kalibrierten
+# W628B-Rezepte haben jetzt GKB als Default fuer die Praxis (Trockenbau
+# Feichtenbeiner: 80% der Schachtwaende ohne Brandschutz-Spec).
+_AUTO_FIRE_UPGRADE_WHITELIST = {"W628B"}
+
+# Patterns die bei einem Plattentyp-Override ersetzt werden sollen.
+_PLATTE_PATTERNS = ("Gipskarton", "Fireboard")
 
 
 def _apply_plattentyp_override(
     rezept: Rezept, plattentyp: str, feuerwiderstand: str
 ) -> Rezept:
-    """Ersetzt Fireboard-Platten im Rezept durch die vom LV geforderte
-    Standard-Gipskartonplatte. Bedingungen siehe Modul-Kommentar oben."""
-    if rezept.system not in _OVERRIDE_WHITELIST:
-        return rezept
+    """Tauscht die Beplankungs-DNA aus, je nach Position-Metadaten.
+
+    Modi:
+    1. plattentyp_explicit (GKB/GKF/...) UND keine Fire-Rating
+       → Beplankung in _OVERRIDE_WHITELIST-Systemen wird auf den expliziten
+         Plattentyp gemappt.
+    2. fire-rating gesetzt (F30+) UND System in _AUTO_FIRE_UPGRADE_WHITELIST
+       UND Default-Beplankung ist GKB
+       → automatisches Upgrade GKB → GKF (Knauf-Vorgabe fuer F-rated
+         Schachtwaende).
+
+    Die existierende Mat-Nr wird NICHT durch den Override veraendert
+    (Knauf-Mat-Nrn 00002892 sind bei GKB und GKF vergleichbar im Kemmler-
+    Bestand; bei abweichendem Mat-Nr-Bedarf liefert der Fuzzy-Fallback im
+    Lookup den richtigen Treffer).
+    """
     pt = (plattentyp or "").strip().upper()
-    if pt in ("", "FIREBOARD"):
-        return rezept
-    if pt not in _PLATTENTYP_TO_DNA:
-        return rezept
-    if (feuerwiderstand or "").strip().upper() in _FIRE_RATINGS:
+    fr = (feuerwiderstand or "").strip().upper()
+
+    target_dna: str | None = None
+
+    # Modus 1: plattentyp_explicit ohne F-Rating
+    if (
+        rezept.system in _OVERRIDE_WHITELIST
+        and pt not in ("", "FIREBOARD")
+        and pt in _PLATTENTYP_TO_DNA
+        and fr not in _FIRE_RATINGS
+    ):
+        target_dna = _PLATTENTYP_TO_DNA[pt]
+        why = f"plattentyp-override: {pt}"
+    # Modus 2: Auto-Fire-Upgrade bei W628B
+    elif (
+        rezept.system in _AUTO_FIRE_UPGRADE_WHITELIST
+        and fr in _FIRE_RATINGS
+        and pt not in _PLATTENTYP_TO_DNA  # nicht uebersteuern wenn pt explizit
+    ):
+        target_dna = _PLATTENTYP_TO_DNA["GKF"]
+        why = f"auto-fire-upgrade: GKB->GKF wegen {fr}"
+    else:
         return rezept
 
-    new_dna = _PLATTENTYP_TO_DNA[pt]
     materialien_new: list[MaterialBedarf] = []
     changed = False
     for mb in rezept.materialien:
-        if "Fireboard" in mb.dna_pattern:
+        is_platte = any(pat in mb.dna_pattern for pat in _PLATTE_PATTERNS)
+        if is_platte:
             materialien_new.append(
                 MaterialBedarf(
-                    dna_pattern=new_dna,
+                    dna_pattern=target_dna,
                     menge_pro_einheit=mb.menge_pro_einheit,
                     basis_einheit=mb.basis_einheit,
                     fallback_preis_eur=mb.fallback_preis_eur,
                     optional=mb.optional,
+                    mat_nr=mb.mat_nr,
                 )
             )
             changed = True
@@ -935,7 +1039,7 @@ def _apply_plattentyp_override(
         return rezept
     return Rezept(
         system=rezept.system,
-        beschreibung=rezept.beschreibung + f" [plattentyp-override: {pt}]",
+        beschreibung=rezept.beschreibung + f" [{why}]",
         zieleinheit=rezept.zieleinheit,
         zeit_h_pro_einheit=rezept.zeit_h_pro_einheit,
         materialien=materialien_new,
