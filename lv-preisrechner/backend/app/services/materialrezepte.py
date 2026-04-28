@@ -247,22 +247,26 @@ REZEPTE: dict[str, Rezept] = {
         zeit_h_pro_einheit=0.667,  # 40 min Montage/m²
         materialien=[
             # Unterkonstruktion
-            MaterialBedarf("Knauf|Profile|UW|75|", 0.7, "lfm", mat_nr="00003376"),
-            MaterialBedarf("Knauf|Profile|CW|75|", 2.0, "lfm", mat_nr="00003261"),
+            # Manufacturer bewusst leer: Kemmler-Bestand fuehrt CW/UW-Profile
+            # ohne Hersteller-Tag — DNA "Knauf|Profile|UW|75|" wuerde durch
+            # die manufacturer-Filterung in price_lookup ALLE generischen
+            # Kemmler-Eintraege ausschliessen.
+            MaterialBedarf("|Profile|UW|75|", 0.7, "lfm", mat_nr="00003376"),
+            MaterialBedarf("|Profile|CW|75|", 2.0, "lfm", mat_nr="00003261"),
             # Befestigung
-            MaterialBedarf("Knauf|Beschlag|Drehstiftduebel|K6 35|", 0.7, "Stk", mat_nr="00003537"),
-            MaterialBedarf("Knauf|Dichtung|Dichtungsband|70mm|", 1.2, "lfm", mat_nr="00003469"),
-            # Daemmung — Knauf TP 115, 60mm
-            MaterialBedarf("Knauf|Daemmung|TP 115|60mm|", 1.0, "m²", mat_nr="2304372"),
+            MaterialBedarf("|Beschlag|Drehstiftduebel|K6 35|", 0.7, "Stk", mat_nr="00003537", optional=True),
+            MaterialBedarf("|Dichtung|Dichtungsband|70mm|", 1.2, "lfm", mat_nr="00003469", optional=True),
+            # Daemmung — Knauf TP 115, 60mm (Knauf-spezifisches Produkt)
+            MaterialBedarf("|Daemmung|TP 115|60mm|", 1.0, "m²", mat_nr="2304372"),
             # Beplankung — GKB als Default (12.5mm). Override auf GKF bei F-Rating.
-            MaterialBedarf("Knauf|Gipskarton|GKB|12.5mm|", 2.0, "m²", mat_nr="00002892"),
+            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 2.0, "m²", mat_nr="00002892"),
             # Schrauben
-            MaterialBedarf("Knauf|Schrauben|TN 3.5|3.5x25|", 7.0, "Stk", mat_nr="00003504"),
-            MaterialBedarf("Knauf|Schrauben|TN 3.5|3.5x35|", 15.0, "Stk", mat_nr="00003505"),
-            # Spachtel + Fugen
-            MaterialBedarf("Knauf|Spachtel|Uniflott|25 kg|", 0.4, "kg", mat_nr="00003114"),
-            MaterialBedarf("Knauf|Trennstreifen|Trenn-Fix|65mm|", 0.9, "lfm", mat_nr="00057871"),
-            MaterialBedarf("Knauf|Fugendeckstreifen|Kurt|75|", 0.9, "m", mat_nr="00099382"),
+            MaterialBedarf("|Schrauben|TN 3.5|3.5x25|", 7.0, "Stk", mat_nr="00003504", optional=True),
+            MaterialBedarf("|Schrauben|TN 3.5|3.5x35|", 15.0, "Stk", mat_nr="00003505", optional=True),
+            # Spachtel + Fugen — Uniflott und Kurt sind Knauf-typische Bezeichnungen
+            MaterialBedarf("|Spachtel|Uniflott||", 0.4, "kg", mat_nr="00003114", optional=True),
+            MaterialBedarf("|Trennstreifen|Trenn-Fix|65mm|", 0.9, "lfm", mat_nr="00057871", optional=True),
+            MaterialBedarf("|Fugendeckstreifen|Kurt|75|", 0.9, "m", mat_nr="00099382", optional=True),
         ],
     ),
     "W629": Rezept(
@@ -452,30 +456,20 @@ REZEPTE: dict[str, Rezept] = {
         # in Salach — von Harun's Vater als deutlich zu hoch markiert.
         # Praxis-Werte (Trockenbau Feichtenbeiner Ulm):
         #   - 30 min Montage = 0.5 h pro Tueraussparung
-        #   - 2x UA-Verstaerkung (links + rechts, ~2.5m hoch je) = 5 lfm
+        #   - 2x UA-Verstaerkung (links + rechts, kurz pro Seite ~1m) = 2 lfm UA
         #   - 1x UW als Sturz = 1 lfm
-        #   - Kleinmaterial pauschal ~5 EUR (Schrauben, Befestigung, Eckschutz)
-        # Erwarteter EP nach Kalibrierung: ~80-100 EUR/Stk.
+        #   - Kleinmaterial-Anteil ist im Wandsystem-m²-Preis bereits drin
+        #     (Harun rechnet pauschal so).
+        # Erwarteter EP nach Kalibrierung: ~75-95 EUR/Stk.
         system="Tueraussparung",
         beschreibung="Tueroeffnung mit UA-Verstaerkung + UW-Sturz [Praxis-kalibriert 2026-04-28]",
         zieleinheit="Stk",
         zeit_h_pro_einheit=0.5,  # 30 min Montage je Aussparung
         materialien=[
-            # UA-Profile 75mm Verstaerkung links + rechts (5 lfm gesamt)
-            # DNA muss Kategorie=Profile UND Produktname=UA haben (sonst matcht CW75 etc.)
-            MaterialBedarf("|Profile|UA|75|", 5.0, "lfm"),
-            # UW-Profil als Sturz (1 lfm pro Tueraussparung)
+            # UA75-Verstaerkung an beiden Seiten (kurze Stuecke pro Seite)
+            MaterialBedarf("|Profile|UA|75|", 2.0, "lfm"),
+            # UW75-Sturz (1 lfm pro Tueraussparung)
             MaterialBedarf("|Profile|UW|75|", 1.0, "lfm", optional=True),
-            # Kleinmaterial-Pauschale: Schrauben, Befestigung, Eckschutz.
-            # Hier bewusst per fallback_preis_eur, da kein Lieferanten-Eintrag
-            # passt — der Lookup wird "estimated" oder "not_found" zurueckgeben
-            # und der fallback_preis als Material-Kostenanteil aufgerechnet.
-            MaterialBedarf(
-                "|Kleinmaterial|Tuersturz||",
-                1.0, "Stk",
-                fallback_preis_eur=5.0,
-                optional=True,
-            ),
         ],
     ),
     "WC_Trennwand": Rezept(

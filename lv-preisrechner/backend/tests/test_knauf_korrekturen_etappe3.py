@@ -80,20 +80,28 @@ def test_default_schachtwand_zeigt_auf_w628a():
 # ---------------------------------------------------------------------------
 
 def test_w628a_und_w628b_haben_unterschiedliche_profile():
-    """W628A = freispannend (kein Mittel-Profil), W628B = CW-Einfachstaender."""
-    # Fachliche Unterschiede sollten sich in Profil-Patterns zeigen
-    w628a_cw = next(
-        (m.dna_pattern for m in REZEPTE["W628A"].materialien if "CW" in m.dna_pattern),
+    """W628A = freispannend, W628B = CW-Einfachstaender.
+
+    Update 2026-04-28 (Knauf-Kalibrierung): W628B nutzt seit der Praxis-
+    Kalibrierung von Harun's Vater (Knauf-Katalog Seite 240) ebenfalls
+    CW75 statt CW100 — der fachliche Unterschied zu W628A liegt jetzt
+    in der Profil-Menge pro m² (W628A 1.8 lfm vs W628B 2.0 lfm) und in
+    den zusaetzlichen Materialien (Drehstiftduebel, Dichtungsband,
+    Trenn-Fix etc. nur bei W628B).
+    """
+    w628a_cw_qty = next(
+        (m.menge_pro_einheit for m in REZEPTE["W628A"].materialien
+         if "CW" in m.dna_pattern),
         None,
     )
-    w628b_cw = next(
-        (m.dna_pattern for m in REZEPTE["W628B"].materialien if "CW" in m.dna_pattern),
+    w628b_cw_qty = next(
+        (m.menge_pro_einheit for m in REZEPTE["W628B"].materialien
+         if "CW" in m.dna_pattern),
         None,
     )
-    # W628A hat CW75, W628B hat CW100 (wegen groesserer Spannweite)
-    assert w628a_cw != w628b_cw, (
-        f"W628A ({w628a_cw}) und W628B ({w628b_cw}) muessen unterschiedliche "
-        "Profile haben (fachliche Differenz)"
+    assert w628a_cw_qty != w628b_cw_qty, (
+        f"W628A ({w628a_cw_qty} lfm CW) und W628B ({w628b_cw_qty} lfm CW) "
+        "muessen sich in der Profil-Menge unterscheiden (fachliche Differenz)"
     )
 
 

@@ -13,8 +13,8 @@ Kleinmaterial-Pauschale (1 Stk, fallback 5 EUR). Die Test-Seed deckt
 beide Profile ab; die Kleinmaterial-Pauschale traegt ueber den
 fallback_preis konstant 5 EUR zur Material-Summe bei.
 
-  material_ep = (5 lfm + 1 lfm) * price + 5 EUR Kleinmaterial-Fallback
-              = 6 * price + 5
+  material_ep_supplier = (UA75 2 lfm + UW75 1 lfm) * price = 3 * price
+  material_ep_legacy   = nur UA75: 2 lfm * price (legacy-Matcher trifft nur UA75)
 """
 
 from __future__ import annotations
@@ -198,9 +198,9 @@ def test_kalkulation_mit_flag_off_nutzt_legacy_pfad(client):
 
     result = kalkuliere_lv(db, lv.id, t.id)
     pos = result.positions[0]
-    # Legacy-DNA-Matcher trifft auf UA75 (5 lfm * 12.00 = 60.00).
-    # UW75 + Kleinmaterial-Pauschale liefern im Legacy-Pfad keinen Beitrag.
-    assert pos.material_ep == 60.00
+    # Legacy-DNA-Matcher trifft nur UA75 (2 lfm * 12.00 = 24.00).
+    # UW75 trifft im Legacy-Pfad nicht.
+    assert pos.material_ep == 24.00
     assert "legacy" in (pos.price_source_summary or "")
 
 
@@ -225,10 +225,9 @@ def test_kalkulation_mit_flag_on_nutzt_neuen_pfad(client):
 
     result = kalkuliere_lv(db, lv.id, t.id)
     pos = result.positions[0]
-    # SupplierPrice-Lookup trifft sowohl UA75 (5 lfm) als auch UW75 (1 lfm).
-    # Kleinmaterial-Pauschale liefert im Lookup keinen Beitrag (not_found
-    # ohne fallback-Anwendung). Summe: 6 lfm * 10.00 = 60.00.
-    assert pos.material_ep == 60.00
+    # SupplierPrice-Lookup trifft sowohl UA75 (2 lfm) als auch UW75 (1 lfm).
+    # Summe: 3 lfm * 10.00 = 30.00.
+    assert pos.material_ep == 30.00
     assert "supplier_price" in (pos.price_source_summary or "")
     # manufacturer kommt aus dem Entry (NICHT supplier_name!)
     assert "Knauf" in (pos.angebotenes_fabrikat or "") or pos.angebotenes_fabrikat == ""
@@ -289,8 +288,8 @@ def test_rabatt_percent_wird_propagiert(client):
 
     result = kalkuliere_lv(db, lv.id, t.id)
     pos = result.positions[0]
-    # Material-EP nach Rabatt: (UA75 + UW75) 6 lfm * 10.00 * 0.85 = 51.00.
-    assert pos.material_ep == 51.00
+    # Material-EP nach Rabatt: (UA75 + UW75) 3 lfm * 10.00 * 0.85 = 25.50.
+    assert pos.material_ep == 25.50
     # Rabatt muss pro Material im JSON stecken (am UA75-Eintrag)
     mats = pos.materialien or []
     rabatt_mats = [m for m in mats if m.get("applied_discount_percent") == 15.0]
@@ -379,9 +378,8 @@ def test_kalkulation_legacy_ergebnis_unveraendert_nach_b42(client):
 
     result = kalkuliere_lv(db, lv.id, t.id)
     pos = result.positions[0]
-    # Deterministisch (Iter 5b): Legacy-Matcher trifft UA75 = 5 lfm * 12 = 60.00
-    # (UW75 + Kleinmaterial-Fallback liefern legacy keinen Beitrag).
-    assert pos.material_ep == 60.00
+    # Deterministisch (Iter 5b): Legacy-Matcher trifft UA75 = 2 lfm * 12 = 24.00.
+    assert pos.material_ep == 24.00
     assert pos.ep > 0
     assert pos.gp == round(pos.ep * 2.0, 2)
     assert "legacy" in (pos.price_source_summary or "")
