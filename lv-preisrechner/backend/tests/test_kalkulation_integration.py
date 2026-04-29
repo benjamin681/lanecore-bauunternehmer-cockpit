@@ -7,14 +7,14 @@ Deckt ab:
 - Variante A-plus: Flag=ON ohne Preisdaten wirft ValueError
 - Preis-Quelle und Audit-Trail werden in Position/PositionOut propagiert
 
-Test-Strategie (kalibriert 2026-04-28): Rezept "Tueraussparung" hat seit
-Iteration 5b drei Materialien: UA75 (5 lfm) + UW75 (1 lfm, optional) +
-Kleinmaterial-Pauschale (1 Stk, fallback 5 EUR). Die Test-Seed deckt
-beide Profile ab; die Kleinmaterial-Pauschale traegt ueber den
-fallback_preis konstant 5 EUR zur Material-Summe bei.
+Test-Strategie (umgestellt 2026-04-29): Tests verwenden jetzt das Rezept
+"WC_Trennwand", das einen einzigen Material-Eintrag enthaelt (`|Bauelemente|
+WC-Trennwand||` 1.0 Stk). Damit lassen sich die Lookup-Pfade pro Position
+deterministisch testen. Vorher genutzte "Tueraussparung" wurde am 28./29.04.
+auf eine Pauschal-Logik (0 Material-Eintraege) kalibriert und ist als
+Test-Anker daher nicht mehr geeignet.
 
-  material_ep_supplier = (UA75 2 lfm + UW75 1 lfm) * price = 3 * price
-  material_ep_legacy   = nur UA75: 2 lfm * price (legacy-Matcher trifft nur UA75)
+  material_ep = 1 Stk * price (WC-Trennwand-Einheitspreis aus dem Lookup)
 """
 
 from __future__ import annotations
@@ -63,7 +63,9 @@ def _seed_tenant(db, *, name="TestBetrieb", use_new_pricing=False):
     return t, u
 
 
-def _seed_legacy_pricelist_with_ua(db, tenant_id):
+def _seed_legacy_pricelist_with_wc(db, tenant_id):
+    """Seed Legacy-PriceList mit einem WC-Trennwand-Eintrag fuer den
+    Single-Material-Test-Pfad."""
     pl = PriceList(
         tenant_id=tenant_id,
         haendler="LegacyShop",
@@ -72,36 +74,19 @@ def _seed_legacy_pricelist_with_ua(db, tenant_id):
     )
     db.add(pl)
     db.flush()
-    # B+4.13 Iter 5b: Tueraussparung-Rezept hat UA75 + UW75 als Profile
     db.add(
         PriceEntry(
             price_list_id=pl.id,
-            dna="Knauf|Profile|UA|75|",
-            hersteller="Knauf",
-            kategorie="Profile",
-            produktname="UA",
-            abmessungen="75",
+            dna="|Bauelemente|WC-Trennwand||",
+            hersteller="",
+            kategorie="Bauelemente",
+            produktname="WC-Trennwand",
+            abmessungen="",
             variante="",
             preis=12.00,
-            einheit="lfm",
+            einheit="Stk",
             preis_pro_basis=12.00,
-            basis_einheit="lfm",
-            konfidenz=1.0,
-        )
-    )
-    db.add(
-        PriceEntry(
-            price_list_id=pl.id,
-            dna="Knauf|Profile|UW|75|",
-            hersteller="Knauf",
-            kategorie="Profile",
-            produktname="UW",
-            abmessungen="75",
-            variante="",
-            preis=12.00,
-            einheit="lfm",
-            preis_pro_basis=12.00,
-            basis_einheit="lfm",
+            basis_einheit="Stk",
             konfidenz=1.0,
         )
     )
@@ -109,13 +94,16 @@ def _seed_legacy_pricelist_with_ua(db, tenant_id):
     return pl
 
 
-def _seed_supplier_list_with_ua(
+# Backwards-compat-Alias falls aeltere Test-Nutzungen noch vorkommen.
+_seed_legacy_pricelist_with_ua = _seed_legacy_pricelist_with_wc
+
+
+def _seed_supplier_list_with_wc(
     db, tenant_id, user_id, *, supplier_name="Kemmler", price=10.00
 ):
-    """Seed Supplier-Preisliste mit UA75 + UW75 fuer Tueraussparung-Rezept.
+    """Seed Supplier-Preisliste mit einem WC-Trennwand-Eintrag.
 
-    Rueckgabe (pl, primary_entry) — primary_entry ist die UA75-Zeile, die
-    ein Test ggf. als ``needs_review=True`` markiert.
+    Rueckgabe (pl, entry).
     """
     pl = SupplierPriceList(
         tenant_id=tenant_id,
@@ -130,43 +118,32 @@ def _seed_supplier_list_with_ua(
     )
     db.add(pl)
     db.flush()
-    # B+4.13 Iter 5b: Tueraussparung-Rezept hat UA75 + UW75 + Kleinmaterial.
-    # Beide Profile als "UA 75" / "UW 75" — Fuzzy-Schwelle 0.85 gegen
-    # DNA "UA 75" / "UW 75" trifft sicher.
-    primary = SupplierPriceEntry(
+    entry = SupplierPriceEntry(
         pricelist_id=pl.id,
         tenant_id=tenant_id,
-        article_number="UA-75",
+        article_number="WC-TR",
         manufacturer="Knauf",
-        product_name="UA 75",
-        category="Profile",
+        product_name="WC-Trennwand",
+        category="Bauelemente",
         price_net=price,
         currency="EUR",
-        unit="lfm",
-        effective_unit="lfm",
+        unit="Stk",
+        effective_unit="Stk",
         price_per_effective_unit=price,
     )
-    db.add(primary)
-    db.add(
-        SupplierPriceEntry(
-            pricelist_id=pl.id,
-            tenant_id=tenant_id,
-            article_number="UW-75",
-            manufacturer="Knauf",
-            product_name="UW 75",
-            category="Profile",
-            price_net=price,
-            currency="EUR",
-            unit="lfm",
-            effective_unit="lfm",
-            price_per_effective_unit=price,
-        )
-    )
+    db.add(entry)
     db.commit()
-    return pl, primary
+    return pl, entry
+
+
+# Alias fuer Aufruferseite, die noch den alten Namen hat.
+_seed_supplier_list_with_ua = _seed_supplier_list_with_wc
 
 
 def _seed_lv_with_tueraussparung(db, tenant_id, *, menge=1.0):
+    """Seed LV mit einer Position System=WC_Trennwand fuer den Single-Material-
+    Lookup-Test. Funktionsname historisch — die Implementierung nutzt seit
+    2026-04-29 WC_Trennwand statt Tueraussparung."""
     lv = LV(
         tenant_id=tenant_id,
         original_dateiname="integration.pdf",
@@ -177,10 +154,10 @@ def _seed_lv_with_tueraussparung(db, tenant_id, *, menge=1.0):
     p = Position(
         lv_id=lv.id,
         oz="1.1",
-        kurztext="Tueraussparung",
+        kurztext="WC-Trennwand",
         menge=menge,
         einheit="Stk",
-        erkanntes_system="Tueraussparung",
+        erkanntes_system="WC_Trennwand",
     )
     db.add(p)
     db.commit()
@@ -200,7 +177,7 @@ def test_kalkulation_mit_flag_off_nutzt_legacy_pfad(client):
     pos = result.positions[0]
     # Legacy-DNA-Matcher trifft nur UA75 (2 lfm * 12.00 = 24.00).
     # UW75 trifft im Legacy-Pfad nicht.
-    assert pos.material_ep == 24.00
+    assert pos.material_ep == 12.00  # 1 Stk * 12.00 (legacy)
     assert "legacy" in (pos.price_source_summary or "")
 
 
@@ -227,7 +204,7 @@ def test_kalkulation_mit_flag_on_nutzt_neuen_pfad(client):
     pos = result.positions[0]
     # SupplierPrice-Lookup trifft sowohl UA75 (2 lfm) als auch UW75 (1 lfm).
     # Summe: 3 lfm * 10.00 = 30.00.
-    assert pos.material_ep == 30.00
+    assert pos.material_ep == 10.00  # 1 Stk * 10.00 (supplier)
     assert "supplier_price" in (pos.price_source_summary or "")
     # manufacturer kommt aus dem Entry (NICHT supplier_name!)
     assert "Knauf" in (pos.angebotenes_fabrikat or "") or pos.angebotenes_fabrikat == ""
@@ -289,7 +266,7 @@ def test_rabatt_percent_wird_propagiert(client):
     result = kalkuliere_lv(db, lv.id, t.id)
     pos = result.positions[0]
     # Material-EP nach Rabatt: (UA75 + UW75) 3 lfm * 10.00 * 0.85 = 25.50.
-    assert pos.material_ep == 25.50
+    assert pos.material_ep == 8.50  # 1 Stk * 10.00 * 0.85 (15%-Rabatt)
     # Rabatt muss pro Material im JSON stecken (am UA75-Eintrag)
     mats = pos.materialien or []
     rabatt_mats = [m for m in mats if m.get("applied_discount_percent") == 15.0]
@@ -379,7 +356,7 @@ def test_kalkulation_legacy_ergebnis_unveraendert_nach_b42(client):
     result = kalkuliere_lv(db, lv.id, t.id)
     pos = result.positions[0]
     # Deterministisch (Iter 5b): Legacy-Matcher trifft UA75 = 2 lfm * 12 = 24.00.
-    assert pos.material_ep == 24.00
+    assert pos.material_ep == 12.00  # 1 Stk * 12.00 (legacy)
     assert pos.ep > 0
     assert pos.gp == round(pos.ep * 2.0, 2)
     assert "legacy" in (pos.price_source_summary or "")

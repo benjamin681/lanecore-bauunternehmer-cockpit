@@ -482,24 +482,29 @@ REZEPTE: dict[str, Rezept] = {
         ],
     ),
     "Tueraussparung": Rezept(
-        # KALIBRIERT 2026-04-28: Vorher 1.5h/Stk + 6 lfm UA50 ergab ~243 EUR/Stk
-        # in Salach — von Harun's Vater als deutlich zu hoch markiert.
-        # Praxis-Werte (Trockenbau Feichtenbeiner Ulm):
-        #   - 30 min Montage = 0.5 h pro Tueraussparung
-        #   - 2x UA-Verstaerkung (links + rechts, kurz pro Seite ~1m) = 2 lfm UA
-        #   - 1x UW als Sturz = 1 lfm
-        #   - Kleinmaterial-Anteil ist im Wandsystem-m²-Preis bereits drin
-        #     (Harun rechnet pauschal so).
-        # Erwarteter EP nach Kalibrierung: ~75-95 EUR/Stk.
+        # KALIBRIERT 2026-04-29 (Iter 5b): Vorher 2 lfm UA75 + 1 lfm UW75 +
+        # 0.5h Lohn ergab ~137 EUR/Stk in Salach — UA75-Fuzzy-Match landete
+        # auf einem teuren Profil-Eintrag (~38 EUR/lfm).
+        #
+        # Praxis-Aussage Harun's Vater am 28.04.2026:
+        # "30 Minuten Lohn = 35 EUR pauschal pro Tueroeffnung. Die UA-
+        # Verstaerkungen (2x links/rechts) + UW-Sturz (1x oben) sind in
+        # der Wand-m²-Preis-Kalkulation bereits mit verteilt — sollten
+        # nicht doppelt im Tueroeffnung-Rezept erscheinen."
+        #
+        # Daher: Recipe enthaelt NUR den 30-min-Lohn-Anteil, KEINE
+        # Materialien. Ergibt EP = 0.5h * 60 EUR/h * 1.27 (BGK+AGK+WG)
+        # = 38,10 EUR/Stk. Harun's Pauschal-Wert 35 EUR liegt 3 EUR
+        # niedriger; die Differenz entspricht den 27% Zuschlaegen, die
+        # in seiner Praxis-Pauschale nicht explizit eingerechnet sind.
+        # Das Pauschal-Ergebnis liegt damit nahe an seinem Zielwert.
         system="Tueraussparung",
-        beschreibung="Tueroeffnung mit UA-Verstaerkung + UW-Sturz [Praxis-kalibriert 2026-04-28]",
+        beschreibung="Tueroeffnung Pauschal — 30 min Lohn (Harun Praxis 2026-04-28). UA/UW im Wand-m²-Preis verteilt.",
         zieleinheit="Stk",
         zeit_h_pro_einheit=0.5,  # 30 min Montage je Aussparung
         materialien=[
-            # UA75-Verstaerkung an beiden Seiten (kurze Stuecke pro Seite)
-            MaterialBedarf("|Profile|UA|75|", 2.0, "lfm"),
-            # UW75-Sturz (1 lfm pro Tueraussparung)
-            MaterialBedarf("|Profile|UW|75|", 1.0, "lfm", optional=True),
+            # Bewusst leer: die Material-Anteile (UA-Verstaerkung, UW-Sturz)
+            # sind nach Harun's Praxis im Wandsystem-m²-Preis enthalten.
         ],
     ),
     "WC_Trennwand": Rezept(

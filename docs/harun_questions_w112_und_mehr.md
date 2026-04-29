@@ -1,147 +1,32 @@
-# Fragen an Harun's Vater zur Rezept-Kalibrierung
+# Offene Fragen an Harun's Vater
 
-Stand: 2026-04-28
-Pilot-LV: Salach Ensemble-Höfe 1.BA (38 Positionen, aktuell 158.881,89 € netto)
+Stand: 2026-04-29
 
-Hintergrund: Wir haben in den letzten Tagen die Materialrezepte im
-LV-Preisrechner kalibriert. Einige Werte sind plausibel, andere weichen
-von Industrie-Faustformeln oder von eurem Praxis-Richtwert ab. Bevor
-wir an Iteration 5 (Schlussrechnung) weiterarbeiten, brauchen wir eure
-Bestätigung oder Korrektur zu folgenden Punkten.
+## Was am 28.04.2026 bereits geklärt wurde
 
-Bitte einfach unter jeder Frage eine kurze Antwort. Reicht in Stichworten.
+Die meisten ursprünglichen Fragen hat Harun bzw. sein Vater am Vormittag
+des 28.04.2026 bereits beantwortet. Diese Themen sind aus der Liste
+gestrichen und im Code/in den Rezepten umgesetzt:
 
----
-
-## Frage 1 — W112 Lohn pro m²
-
-**Kontext:** W112 ist eure Standard-Trennwand (1-lagig beplankt beidseitig
-auf CW75-Ständer). In Salach habt ihr ca. 1.120 m² davon.
-
-**Aktueller Wert in unserer Berechnung:** 25 Minuten Lohn pro m²
-(0,42 h × 60 €/h Stundensatz = 25 € Lohn-Anteil).
-Damit kommen wir auf einen EP von **63,83 €/m²** — was du als „guten
-Richtwert" um 62 € bestätigt hast.
-
-**Was uns stört:** Industrie-Faustformeln (rechnerplus.de) sehen
-0,7–1,2 h/m² (also 42–72 Minuten) für eine komplette zweilagige
-Trennwand: Unterkonstruktion + Beplankung + Dämmung + Spachteln.
-Mit 0,7 h kämen wir auf ~85 €/m², mit 1,2 h auf ~110 €/m².
-
-**Frage:** Stimmen die 25 Minuten? Oder kalkuliert ihr in Wirklichkeit
-mit mehr Zeit und gleicht das über andere Faktoren aus (z. B. niedrigere
-Material-Aufschläge, kleinerer BGK/AGK-Zuschlag, Stundensatz)? Wenn die
-Zeit höher ist — wieviel Minuten sind realistisch für komplette W112
-zweilagig beidseitig inkl. Dämmung + Spachtel?
-
-**Antwort:** _____________________
+- ✅ **W628B Schachtwand** — vollständige Materialliste mit Mengen pro m²
+  bekommen (alle 9 Positionen aus Knauf-Katalog).
+- ✅ **Stundensatz** — 60 EUR/h pauschal.
+- ✅ **Türöffnung** — 30 min Lohn = 35 EUR pauschal (1× UW75 Sturz +
+  2× UA-Verstärkung sind im Wandsystem-m²-Preis schon mit drin).
+- ✅ **Eckschutzschienen** — Echtname „Trockenbaukantenprofil",
+  Kemmler-Kantenprofil 3502, 100 m-Bündel zu 1,25 EUR.
+- ✅ **Kemmler-Preise** — sind bereits rabattiert (kein zusätzlicher
+  Tenant-Rabatt nötig).
+- ✅ **W112 Endwert** — 62 EUR/m² als Richtwert bestätigt.
 
 ---
 
-## Frage 2 — W112 Schraubenmenge
+## Was noch offen ist
 
-**Aktueller Wert (gerade korrigiert):**
-- 25 Stk Schnellbauschrauben TN 3,5 × 25 mm pro m² (für 1. Plattenlage)
-- 25 Stk Schnellbauschrauben TN 3,5 × 35 mm pro m² (für 2. Plattenlage)
-- = **50 Stk Schrauben gesamt pro m²** Wandfläche
+Nur noch zwei Punkte, beide nicht zeitkritisch — können beim nächsten
+Kontakt geklärt werden.
 
-**Quelle:** Knauf W11.de Detailblatt 01/2024 Seite 67, Befestigungs-
-abstände-Tabelle für 2-lagige Beplankung (1. Lage 750 × 250 mm,
-2. Lage 250 × 200 mm).
-
-**Frage:** Stimmt das ungefähr mit eurem Verbrauch überein, oder
-verschraubt ihr enger/weiter? Falls ihr eine andere Praxis-Erfahrung
-habt: wieviel Schrauben rechnet ihr pro m² für W112?
-
-**Antwort:** _____________________
-
----
-
-## Frage 3 — W112 Spachtelmasse
-
-**Aktueller Wert:** 0,4 kg Universal-Spachtel pro m² Wandfläche
-
-**Industrie-Standard:** 0,7–1,0 kg/m² für 2-lagige Beplankung beidseitig
-(zwei Spachtelgänge auf jeder Seite — Q1 oder Q2).
-
-**Frage:** Was rechnet ihr für Uniflott bzw. Spachtelmasse pro m² W112?
-Schließt das schon das Verspachteln aller Fugen + Flächen-Spachtelung
-mit ein, oder nur die Fugen?
-
-**Antwort:** _____________________
-
----
-
-## Frage 4 — Knauf-Mat-Nrn UW 75 und CW 75
-
-**Aktuelle Werte (unverifiziert):**
-- UW-Profil 75 → Mat-Nr **00003376**
-- CW-Profil 75 → Mat-Nr **00003261**
-- GKB-Platte 12,5 mm → Mat-Nr **00002892**
-
-Diese Nummern sind aus einer früheren Diskussion und nicht durch eine
-echte Knauf-Publikation belegt. Im Knauf-Detailblatt W11.de stehen
-keine Mat-Nrn.
-
-**Frage:** Welche Knauf-Mat-Nrn habt ihr auf euren Lieferscheinen oder
-in eurer Kemmler-Bestellung tatsächlich für UW75, CW75 und GKB 12,5 mm?
-Falls ihr nicht direkt Knauf, sondern andere Hersteller verwendet
-(Rigips, Protektor, Saint-Gobain) — bitte auch das mitteilen.
-
-**Antwort:** _____________________
-
----
-
-## Frage 5 — Schachtwand W628B Differenz
-
-**Aktueller EP in unserer Berechnung:** 80 €/m² (mit GKB-Default,
-ohne Brandschutz). Bei F30 + GKF: ~84 €/m².
-
-**Erwartet von dir:** 50–65 €/m² für nicht-brandgeschützte Schachtwände.
-
-**Diskrepanz:** ~15 €/m² zu hoch. In Salach sind das bei 346 m²
-Schachtwand insgesamt ~5.000 € Differenz.
-
-**Mögliche Ursachen:**
-1. Manche Materialien aus Knauf-Katalog Seite 240 sind nicht im
-   Kemmler-Bestand (Drehstiftdübel, Dichtungsband 70 mm, Trenn-Fix,
-   Fugendeckstreifen Kurt) — der Lookup setzt sie auf 0 € oder
-   Schätzpreis.
-2. Unser Rezept ist zu reichhaltig (zu viele Posten oder zu hohe
-   Mengen).
-3. Lohn 40 min/m² ist zu hoch für eure Praxis.
-
-**Frage:** Welche der drei Ursachen ist am wahrscheinlichsten? Welches
-Posten könnte aus eurer Sicht weg oder reduziert werden? Stimmt der
-40 Minuten Montage-Anteil pro m² Schachtwand mit eurer Praxis?
-
-**Antwort:** _____________________
-
----
-
-## Frage 6 — Türöffnung Differenz
-
-**Aktueller EP:** 137 €/Stk
-
-**Erwartet von dir:** 80–100 €/Stk
-
-**Diskrepanz:** ~40–60 €/Stk zu hoch. In Salach sind das bei 82 Tür-
-öffnungen ca. 3.000–5.000 € Differenz.
-
-**Ursache:** Unser Rezept enthält 2 lfm UA75 + 1 lfm UW75 +
-0,5 h Lohn. Der Lookup matcht UA75 auf einen relativ teuren
-Profil-Eintrag (~38 €/lfm), was unrealistisch erscheint.
-
-**Frage:** Welche genauen Knauf-Mat-Nrn nutzt ihr für UA-Profile
-(UA50, UA75, UA100)? Welche Mengen rechnet ihr typischerweise pro
-Türöffnung — also wieviel lfm UA pro Türöffnung im Schnitt? Plus
-wieviel Lohn-Minuten pro Türöffnung?
-
-**Antwort:** _____________________
-
----
-
-## Frage 7 — Welche Systeme baut ihr in 80% eurer Aufträge?
+### Frage 1 — System-Priorisierung 80%-Regel
 
 **Kontext:** Wir haben aktuell ein gutes Dutzend Trockenbau-Systeme
 hinterlegt (W112, W113, W115, W628A, W628B, W629, W635, D112, D113,
@@ -149,10 +34,10 @@ D116, D131, OWA-Mineralfaser, Aquapanel, W131, W133). Bei manchen
 ist die Datenbasis dünn — andere kalibrieren wir vielleicht
 unnötig, wenn ihr sie kaum baut.
 
-**Frage:** Welche 4–6 Systeme machen den **Hauptanteil eurer Arbeit**
+**Frage:** Welche **4–6 Systeme** machen den Hauptanteil eurer Arbeit
 (80%-Regel)? Eine kurze Reihenfolge nach Häufigkeit reicht.
 
-Beispiel-Antwort: „1. W112 (60%), 2. W628B (15%), 3. D112 (10%),
+**Beispiel-Antwort:** „1. W112 (60%), 2. W628B (15%), 3. D112 (10%),
 4. Türöffnungen + Eckschienen als Zulagen, 5. selten W115/W131/Aquapanel".
 
 Damit können wir die Kalibrierungs-Reihenfolge priorisieren statt
@@ -162,18 +47,67 @@ blind alle Knauf-Systeme abzuarbeiten.
 
 ---
 
-## Bonus — Was gerade nicht kritisch ist, aber praktisch wäre
+### Frage 2 — W112 Material-Mengen-Tabelle (analog zur W628B-Tabelle)
 
-Wenn ihr Zugang zum **Knauf-Konfigurator** oder **Systemfinder**
-([tools.knauf.de](https://tools.knauf.de/tools/)) habt, könnt ihr dort
-eine W112-Standard-Konfiguration eingeben (z. B. Wandlänge 4 m,
-Wandhöhe 2,75 m) und das ausgespuckte Stücklisten-PDF an Benjamin
-schicken. Damit hätten wir die echten Knauf-Mat-Nrn in einem Rutsch.
+**Kontext:** Für W628B haben wir vom Knauf-Katalog eine klare Mengen-
+Tabelle pro m² bekommen (UW 0,7 lfm, CW 2,0 lfm, GKB 2,0 m², etc.).
+Diese Tabelle ist für die Genauigkeit unschätzbar wertvoll.
+
+Für W112 haben wir aktuell folgende **vorläufige** Werte:
+- 2,10 m² GKB 12,5 mm (Mat-Nr 00002892)
+- 2,00 lfm CW 75 (Mat-Nr 00003261)
+- 0,70 lfm UW 75 (Mat-Nr 00003376)
+- 1,00 m² Mineralwolle 40 mm
+- 25 Stk TN 3,5×25 (1. Lage)
+- 25 Stk TN 3,5×35 (2. Lage)
+- 0,40 kg Universal-Spachtel
+- 25 min Lohn pro m²
+
+Davon sind **nur die Schraubenmengen** durch eine echte Quelle belegt
+(Knauf W11.de Detailblatt 01/2024 S.67 abgeleitet). Die anderen Werte
+stammen aus früheren Praxis-Annahmen und passen nur deshalb zu
+deinem 62-EUR-Richtwert, weil sich Material-Annahmen und Lohn-Annahmen
+gegenseitig austarieren.
+
+**Frage:** Hast du für W112 eine ähnliche Mengen-Tabelle aus dem
+Knauf-Katalog (oder aus eurer Kalkulations-Software) wie für die
+W628B-Schachtwand? Falls ja, schick' sie bitte rüber — auch fotografiert
+oder abgeschrieben reicht.
+
+**Bonus:** Falls ihr Zugang zum Knauf-Konfigurator habt
+([tools.knauf.de](https://tools.knauf.de/tools/)), genügt eine
+W112-Standard-Eingabe (z. B. Wandlänge 4 m, Höhe 2,75 m) — die ausgespuckte
+Stückliste hilft uns sofort weiter.
+
+**Antwort:** _____________________
 
 ---
 
-**Zusammenfassung — was Harun beantworten soll:**
-- 7 Fragen, jede mit 2–3 Sätzen oder Stichworten beantwortbar
-- Frage 7 (System-Priorisierung) ist die wertvollste — danach richten
-  wir alle weiteren Kalibrierungen aus.
-- Bonus (Konfigurator-Stückliste) wäre Gold wert, ist aber kein Muss.
+### Frage 3 — W628B Schachtwand Montagezeit pro m² (kritisch für EP)
+
+**Kontext:** Die W628B-Materialliste vom Knauf-Katalog haben wir komplett
+übernommen. Aktueller EP: **80,27 EUR/m²**, deine Erwartung 50–65 EUR/m².
+
+**Diagnose:** Die Differenz von +22 EUR/m² lässt sich fast vollständig
+durch den Lohn-Anteil erklären. Wir rechnen aktuell mit **40 Minuten
+Montage pro m²** — bei 25 Minuten würde der EP bei 61 EUR/m² landen
+(in deiner Erwartung). Material-Mengen und Mat-Nrn sind durch dich
+bereits bestätigt; einige Posten matchen den Kemmler-Bestand nicht,
+das treibt den EP aber nach unten, nicht nach oben.
+
+**Frage:** Wie viele Minuten Montage rechnest du pro m² W628B
+Schachtwand? Inklusive UW/CW-Setzen, Beplanken, Spachteln.
+
+**Antwort:** _____________________
+
+**Detail-Diagnose:** siehe `docs/w628b_diskrepanz_diagnose_2026_04_29.md`
+
+---
+
+## Hinweis
+
+Drei Fragen, alle nicht zeitkritisch. Die Salach-Kalkulation ist aktuell
+mit den Antworten von gestern auf einem guten Stand — wir können auch
+ohne neue Antworten weiterarbeiten (z. B. Iteration 5 Schlussrechnung).
+Die W628B-Diskrepanz ist klar lokalisiert (Lohn-Anteil), löst sich
+aber erst mit deiner Bestätigung der realen Montagezeit auf.
