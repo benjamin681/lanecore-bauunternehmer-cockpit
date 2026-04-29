@@ -1,0 +1,47 @@
+# Knauf Vorsatzschalen — W620-Familie (W623, W625, W626, W627)
+# Quelle: Knauf W61.at Detailblatt 07/2017 (Österreich-Version, technisch identisch
+# zu DE-Variante laut Knauf-System-Übersicht)
+# Lokal: backend/data/knauf_quellen/W61_at_2017-20260429.pdf
+# Abgerufen: 2026-04-29
+# Hinweis: Aktuelle DE-Detailblatt-Version war zum Recherche-Zeitpunkt nicht
+# als kostenloses PDF auffindbar. AT-Version 07/2017 ist die best-verfügbare
+# Quelle.
+
+variants:
+  - system_id: W623
+    bezeichnung: Vorsatzschale mit CD 60/27, direkt befestigt
+    variante: Direktabhängung Tragprofile
+    seiten: [siehe W61.at Detailblatt]
+  - system_id: W625
+    bezeichnung: Vorsatzschale mit CW-Profil, einlagig beplankt
+    quelle_status: verified  # aus W61.at S.1
+    unterkonstruktion:
+      cw_profil:
+        typ: CW 50 / 75 / 100
+        achsabstand_mm: 625
+        derived_menge_lfm_pro_m2: 1.6
+      uw_profil:
+        derived_menge_lfm_pro_m2: 0.73
+    beplankung:
+      einlagig_einseitig: true
+      menge_m2_pro_m2: 1.05  # nur eine Seite (Vorsatzschale)
+  - system_id: W626
+    bezeichnung: Vorsatzschale mit CW-Profil, mehrlagig beplankt
+    quelle_status: verified
+    beplankung:
+      zweilagig_einseitig: true
+      menge_m2_pro_m2: 2.10
+  - system_id: W627
+    bezeichnung: Vorsatzschale mit CW-Doppelprofil, mehrlagig beplankt
+    quelle_status: verified
+
+quelle:
+  dokument: Knauf W61.at Detailblatt 07/2017
+  pdf: backend/data/knauf_quellen/W61_at_2017-20260429.pdf
+  abgerufen: 2026-04-29
+  warning: Österreich-Version. DE-Version 2024 nicht offentlich auffindbar.
+
+mat_nrn:
+  status: nicht_im_detailblatt
+
+praxis_status: nicht_kalibriert

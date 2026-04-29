@@ -1,0 +1,52 @@
+# W628A.de Knauf Schachtwand freispannend
+# Quelle: Knauf W62.de Detailblatt 03/2020 Seiten 8-9, 16-17, 35
+# Lokal: backend/data/knauf_quellen/W62_de_2024-20260429.pdf
+# Abgerufen: 2026-04-29
+
+system_id: W628A
+bezeichnung: Knauf Schachtwand W628A
+variante: Freispannend ueber Schachtbreite (ohne Unterkonstruktion), zweilagig beplankt
+quelle:
+  dokument: Knauf W62.de Detailblatt 03/2020
+  pdf: backend/data/knauf_quellen/W62_de_2024-20260429.pdf
+  abgerufen: 2026-04-29
+  seiten: [8, 9, 16, 17, 35]
+
+unterkonstruktion:
+  notes: |
+    Keine vertikalen CW-Profile (freispannend). Nur Randbefestigung
+    mit UW-Profilen oder Winkelprofil 50/35 oben + unten.
+  uw_profil_rand:
+    typ: UW 50 / UW 75 / UW 100
+    quelle_status: verified  # aus W62.de S.8
+    derived_menge_lfm_pro_m2: 0.73  # bei Standard-Wandhöhe 2.75m
+
+beplankung:
+  einseitig_zweilagig: true
+  menge_m2_pro_m2: 2.10
+  optionen:
+    - Massivbauplatte 2x 25 mm
+    - Fireboard 2x 20 mm
+
+befestigung:
+  quelle_status: verified  # aus W62.de S.35
+  massivbauplatte_2x25:
+    schraube: TN 3,5 x 35 + TN 4,5 x 70
+    max_abstand_mm:
+      erste_lage: 300
+      zweite_lage: 200
+    notes: Engerer Abstand wegen Spannweite + grossem Plattengewicht.
+
+daemmung:
+  optionen:
+    - Mineralwolle (optional)
+  quelle_status: verified
+
+mat_nrn:
+  status: nicht_im_detailblatt
+
+praxis_status: nicht_kalibriert
+notes: |
+  W628A ist seltener als W628B im Trockenbau-Alltag. Aktuelles Recipe
+  in materialrezepte.py basiert auf Industrie-Annahmen, nicht auf
+  detaillierter Kalibrierung mit Harun's Vater.

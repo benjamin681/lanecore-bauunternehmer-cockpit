@@ -1,0 +1,82 @@
+# W628B.de Knauf Schachtwand mit Einfachprofil-Ständerwerk
+# Quelle: Knauf W62.de Detailblatt 03/2020
+# Lokal: backend/data/knauf_quellen/W62_de_2024-20260429.pdf
+# Abgerufen: 2026-04-29
+
+system_id: W628B
+bezeichnung: Knauf Schachtwand W628B
+variante: Einfachständerwerk mit CW-Einfachprofilen, einseitig zweilagig beplankt
+quelle:
+  dokument: Knauf W62.de Detailblatt 03/2020
+  pdf: backend/data/knauf_quellen/W62_de_2024-20260429.pdf
+  abgerufen: 2026-04-29
+  seiten:
+    - 10  # Systemvarianten
+    - 11  # Wandhoehen
+    - 35  # Befestigung der Beplankung
+
+unterkonstruktion:
+  cw_profil:
+    typ: CW 75
+    achsabstand_mm: 625
+    quelle_status: verified  # aus W62.de S.11
+    derived_menge_lfm_pro_m2: 1.6
+    notes: |
+      Schachtwand ist EINSEITIG beplankt — gleiche Profil-Menge pro m²
+      wie W112, aber nur eine Seite mit Beplankung.
+  uw_profil:
+    typ: UW 75
+    quelle_status: verified
+    derived_menge_lfm_pro_m2: 0.73
+
+beplankung:
+  einseitig_zweilagig: true
+  menge_m2_pro_m2: 2.10
+  quelle_status: verified
+  optionen:
+    - Knauf Feuerschutzplatte / Piano 2x 12,5 mm
+    - Diamant 2x 12,5 mm
+    - Silentboard 2x 12,5 mm
+    - Knauf Massivbauplatte 2x 20 mm
+    - Fireboard 2x 20 mm
+
+befestigung:
+  quelle_status: verified  # aus W62.de S.35
+  einseitig_zweilagig_feuerschutzplatte_2x12_5:
+    erste_lage:
+      schraube: TN 3,5 x 25
+      max_abstand_mm: 750
+      derived_menge_stk_pro_m2_einseitig: 5.3
+    zweite_lage:
+      schraube: TN 3,5 x 35
+      max_abstand_mm: 250
+      derived_menge_stk_pro_m2_einseitig: 20
+
+daemmung:
+  optionen:
+    - Mineralwolle G
+  menge_m2_pro_m2: 1.0
+  quelle_status: verified
+
+mat_nrn:
+  status: nicht_im_detailblatt
+  praxis_aussage_harun:
+    quelle: Harun's Vater (Trockenbau Feichtenbeiner Ulm) 28.04.2026
+    status: unverifiziert  # nicht aus Knauf-Publikation extrahiert
+    materialliste:
+      - {name: UW 75/40/06, mat_nr: "00003376", menge_lfm_pro_m2: 0.7}
+      - {name: CW 75/50/06, mat_nr: "00003261", menge_lfm_pro_m2: 2.0}
+      - {name: Drehstiftduebel K6 35, mat_nr: "00003537", menge_stk_pro_m2: 0.7}
+      - {name: Dichtungsband 70 mm, mat_nr: "00003469", menge_lfm_pro_m2: 1.2}
+      - {name: TP 115 60 mm Daemmplatte, mat_nr: "2304372", menge_m2_pro_m2: 1.0}
+      - {name: Knauf Bauplatte GKB 12.5 mm, mat_nr: "00002892", menge_m2_pro_m2: 2.0}
+      - {name: TN 3.5 x 25, mat_nr: "00003504", menge_stk_pro_m2: 7}
+      - {name: TN 3.5 x 35, mat_nr: "00003505", menge_stk_pro_m2: 15}
+      - {name: Uniflott 25 kg, mat_nr: "00003114", menge_kg_pro_m2: 0.4}
+      - {name: Trenn-Fix 65 mm, mat_nr: "00057871", menge_lfm_pro_m2: 0.9}
+      - {name: Fugendeckstreifen Kurt 75, mat_nr: "00099382", menge_m_pro_m2: 0.9}
+
+praxis_anker:
+  ep_erwartet_eur_pro_m2: "50-65"  # Harun's Vater
+  ep_aktuell_system: 80.27
+  diskrepanz_status: offen  # Lohn-Anteil-Klaerung ausstehend

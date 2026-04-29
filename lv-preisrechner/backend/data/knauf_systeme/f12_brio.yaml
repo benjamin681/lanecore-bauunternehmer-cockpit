@@ -1,0 +1,35 @@
+# F12.de Knauf Brio Fertigteilestrich
+# Quelle: Knauf Fertigteilestrich Brio Verarbeitungsanleitung Boden-Systeme 08/2016
+# Lokal: backend/data/knauf_quellen/F12_brio_verarbeitungsanleitung_2016-20260429.pdf
+# Abgerufen: 2026-04-29
+
+system_id: F12
+bezeichnung: Knauf Brio Fertigteilestrich
+variante: Trockenestrich-System
+quelle:
+  dokument: Knauf Fertigteilestrich Brio Verarbeitungsanleitung 08/2016
+  pdf: backend/data/knauf_quellen/F12_brio_verarbeitungsanleitung_2016-20260429.pdf
+  abgerufen: 2026-04-29
+  notes: |
+    Verarbeitungsanleitung 16 Seiten. Brio ist ein verlegefertiges
+    Trockenestrich-Element (vergleichbar Fermacell-Verlegeplatten).
+
+beplankung:
+  brio_element_m2_pro_m2: 1.05  # 5% Verschnitt
+  notes: Brio-Elemente werden vollflächig verlegt.
+
+verschraubung:
+  notes: |
+    Brio-Elemente werden geklebt (Brio-Kleber) ODER an den Stoßkanten
+    verschraubt. Knauf Brio Verarbeitungsanleitung gibt keine konkreten
+    Mengen pro m² — nur Verfahrensschritte.
+
+mat_nrn:
+  status: nicht_im_detailblatt
+
+praxis_status: nicht_kalibriert
+notes: |
+  F12 ist Trockenestrich, kein Trockenbau-Wandsystem im engeren Sinn.
+  Vermutlich nicht relevant für die Salach-Kalibrierung. Falls Harun's
+  Vater Brio einsetzt, würde eine Praxis-Kalibrierung über separate
+  Iteration laufen.

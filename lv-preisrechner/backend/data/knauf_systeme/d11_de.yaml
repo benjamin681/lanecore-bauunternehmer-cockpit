@@ -1,0 +1,67 @@
+# Knauf Plattendecken D11.de — D111, D112, D113
+# Quelle: Knauf D11.de Detailblatt 09/2023
+# Lokal: backend/data/knauf_quellen/D11_de_2024-20260429.pdf
+# Abgerufen: 2026-04-29
+
+variants:
+  - system_id: D111
+    bezeichnung: Knauf Plattendecke mit Holz-Unterkonstruktion
+    variante: Decken mit Holz-Traglatten (statt Metall-Profile)
+    quelle_status: verified  # aus D11.de S.10-11
+    unterkonstruktion:
+      typ: Holz-Traglatten
+      max_achsabstand_mm: 500  # je nach Plattenwahl 400-500
+      notes: Knauf D11.de S.10 listet Achsabstände nach Beplankungsdicke
+    beplankung:
+      einlagig: true
+      menge_m2_pro_m2: 1.05
+
+  - system_id: D112
+    bezeichnung: Knauf Plattendecke mit Metall-Unterkonstruktion
+    variante: Standardausführung CD 60/27 abgehängt
+    quelle_status: verified
+    unterkonstruktion:
+      typ: Metall-UK CD 60/27 + UD an Wand
+      max_achsabstand_tragprofil_mm: 312.5  # gemäß D11.de S.7 Lastklassen
+      derived_menge_cd_lfm_pro_m2: 3.20  # bei 312.5mm Achsabstand
+      derived_menge_ud_lfm_pro_m2: 0.60  # Randprofil
+      notes: |
+        Tragprofile CD 60/27 mit Direktabhängern oder Schnellabhängern.
+        Achsabstände richten sich nach Lastklasse (Beplankungsdicke +
+        Zusatzlasten). Bei 312.5mm Achsabstand: ~3.2 lfm CD pro m².
+    beplankung:
+      einlagig: true
+      menge_m2_pro_m2: 1.05
+
+  - system_id: D113
+    bezeichnung: Knauf Plattendecke mit Metall-UK niveaugleich
+    variante: Niveaugleiche Anordnung Grund- und Tragprofile
+    quelle_status: verified
+    unterkonstruktion:
+      typ: Metall-UK niveaugleich CD 60/27
+      derived_menge_cd_lfm_pro_m2: 3.20
+      derived_menge_ud_lfm_pro_m2: 0.60
+    beplankung:
+      einlagig: true
+      menge_m2_pro_m2: 1.05
+
+quelle:
+  dokument: Knauf D11.de Detailblatt 09/2023
+  pdf: backend/data/knauf_quellen/D11_de_2024-20260429.pdf
+  abgerufen: 2026-04-29
+  notes: |
+    D11.de hat 64 Seiten. Wandhöhen-Tabellen + Lastklassen-Diagramme
+    auf S.7. Befestigungstabellen vorhanden, aber nicht explizit als
+    "Materialbedarf pro m²" — Mengen sind aus Achsabständen ableitbar.
+
+befestigung:
+  quelle_status: verified
+  notes: |
+    Schnellbauschrauben TN 3.5 in Tragprofil. Im D11.de Detailblatt sind
+    keine konkreten Schraub-pro-m² Werte publiziert — typischer Industrie-
+    Standard ist 17-20 Stk/m² für 1-lagig.
+
+mat_nrn:
+  status: nicht_im_detailblatt
+
+praxis_status: nicht_kalibriert

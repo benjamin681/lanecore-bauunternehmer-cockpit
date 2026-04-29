@@ -15,6 +15,11 @@ backend/data/
 *.db-shm
 *.db-wal
 *.sqlite
+# Aber: Knauf-Quellen + System-YAMLs sind eingecheckte Wissens-DB
+!backend/data/knauf_quellen/
+!backend/data/knauf_quellen/**
+!backend/data/knauf_systeme/
+!backend/data/knauf_systeme/**
 
 # Secrets (explizit, auch wenn im Parent gitignored)
 .env
