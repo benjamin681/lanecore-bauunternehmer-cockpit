@@ -73,37 +73,52 @@ REZEPTE: dict[str, Rezept] = {
     # GKB/Daemmung/Schrauben/Spachtel-Mengen aus bisheriger Praxis,
     # ebenfalls unverifiziert.
     "W112": Rezept(
+        # KORRIGIERT 2026-04-30 (Iter 9): W112-Recipe war versehentlich auf
+        # EINLAGIG je Seite (= W112-1xxx) kalibriert (2.10 m² Beplankung).
+        # Saubere Pruefung der Salach-LV-Original-PDF zeigt:
+        #   Pos 59.10.0010-30 langtext: "Beidseitig 2-lagig aus Gipskarton-
+        #   Trockenbauplatten d=2x12,5mm"
+        # → Salach W112 ist ZWEILAGIG je Seite. Korrektur:
+        # - Beplankung: 2.10 → 4.20 m² (= 2 Lagen × 2 Seiten × 1.05 Verschnitt)
+        # - Schrauben TN 3,5x25 (1.Lage): 25 → 14 Stk (Plannersuite W112-2B125-1490)
+        # - Schrauben TN 3,5x35 (2.Lage): 25 → 30 Stk (Plannersuite W112-2B125-1490)
+        # - Lohn: 0.4167 h/m² (25 min Praxis) → 0.667 h/m² (40 min, identisch zu
+        #   W628B-Schachtwand-zweilagig). Die 25 min Praxis-Aussage Harun's Vater
+        #   war im Kontext der einlagigen Recipe-Annahme, daher muss Lohn fuer
+        #   echtes Zweilagig erhoeht werden. Plannersuite W112-2 sagt 58 min/m².
+        #   40 min ist Kompromiss zwischen Praxis (25) und Plannersuite (58).
+        #   Zu klaeren mit Harun's Vater bei naechstem Gespraech.
+        # Plannersuite-Referenz: W112-2B125-1490.de (zweilagig F30 GKB)
+        # Details: backend/data/knauf_systeme/w112_de.yaml#plannersuite_kalibrierung
         system="W112",
-        beschreibung="W112.de — Knauf Metallstaenderwand (Werte vorlaeufig, Quelle nicht verifiziert, Stand 2026-04-28)",
+        beschreibung="W112.de — Knauf Metallstaenderwand zweilagig je Seite (korrigiert 2026-04-30 aus Salach-Original-PDF)",
         zieleinheit="m²",
-        zeit_h_pro_einheit=0.4167,  # 25 min/m² laut Knauf-Handbuch
+        zeit_h_pro_einheit=0.667,  # 40 min/m² (Kompromiss Praxis 25 ↔ Plannersuite 58)
         materialien=[
-            # Beplankung — GKB 12.5mm beidseitig (1 Lage je Seite)
-            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 2.10, "m²", mat_nr="00002892"),
-            # Unterkonstruktion (Mengen + Mat-Nrn aus Diskussion 2026-04-28
-            # mit Benjamin, Quelle nicht verifiziert — siehe Modul-Header).
+            # Beplankung — GKB 12.5mm beidseitig 2-lagig (= 4 Lagen total)
+            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 4.20, "m²", mat_nr="00002892"),
+            # Unterkonstruktion — VALIDIERT 2026-04-29 via Plannersuite
+            # (W111-D125-0960.de + W112-2B125-1490.de: 2.00 lfm CW, 0.70 lfm UW
+            # pro m² Wandflaeche jeweils bestaetigt).
             MaterialBedarf("|Profile|CW|75|", 2.00, "lfm", mat_nr="00003261"),
             MaterialBedarf("|Profile|UW|75|", 0.70, "lfm", mat_nr="00003376"),
+            # Trennwandkitt — NEU 2026-04-30 aus Plannersuite-Validierung
+            # (Plannersuite-Standard fuer alle CW-Staender-Wandsysteme: 0.2 Stk/m²).
+            MaterialBedarf("|Dichtung|Trennwandkitt|550ml|", 0.2, "Stk", mat_nr="00003461", optional=True),
             # Daemmung — Mengen aus bisheriger Praxis (unverifiziert)
             MaterialBedarf("|Daemmung||40mm|", 1.00, "m²", optional=True),
-            # Schrauben — KORRIGIERT 2026-04-28 nach Recherche (Iter 5b):
-            # Quelle: Knauf W11.de Detailblatt 01/2024, Seite 67 "Befestigung
-            # der Beplankung" — Befestigungsabstaende fuer 2-lagige Beplankung
-            # (1. Lage 750/250 mm vertikal/horizontal, 2. Lage 250/200 mm).
-            # Daraus abgeleitet pro Plattenseite ca. 5 Stk/m² (1. Lage) + 20
-            # Stk/m² (2. Lage). Mal 2 Wand-Seiten gerundet auf jeweils ca.
-            # 25 Stk/m² (deckt End-Befestigung + Verschnitt mit ab).
-            # Vorheriger Wert 0.05 Stk/m² war ein Encoding-Fehler (Faktor /500),
-            # was zu praktisch 0 EUR Schraubenkosten fuehrte.
+            # Schrauben — KORRIGIERT 2026-04-30 (Iter 9): Plannersuite-Werte
+            # W112-2B125-1490.de fuer ZWEILAGIG: 14 Stk TN 3,5x25 (1. Lage je
+            # Seite, beidseitig) + 30 Stk TN 3,5x35 (2. Lage je Seite, beidseitig).
             MaterialBedarf(
-                "|Schrauben||3.5x25|", 25.0, "Stk",
+                "|Schrauben||3.5x25|", 14.0, "Stk",
                 mat_nr="00003504", optional=True,
             ),
             MaterialBedarf(
-                "|Schrauben||3.5x35|", 25.0, "Stk",
+                "|Schrauben||3.5x35|", 30.0, "Stk",
                 mat_nr="00003505", optional=True,
             ),
-            MaterialBedarf("|Spachtel||Universal|", 0.40, "kg", optional=True),
+            MaterialBedarf("|Spachtel||Universal|", 0.80, "kg", optional=True),  # zweilagig: mehr Fugen
         ],
     ),
     "W113": Rezept(
@@ -114,11 +129,15 @@ REZEPTE: dict[str, Rezept] = {
         # Vorher: W113 wurde via W11-Prefix auf W112 gemappt, was die dritte
         # Lage unterschlug.
         system="W113",
-        beschreibung="W113.de — Einfachstaenderwerk, dreilagig beplankt (erhoehter Schallschutz / mechanische Anforderung)",
+        beschreibung="W113.de — Einfachstaenderwerk, dreilagig je Seite beplankt (erhoehter Schallschutz / mechanische Anforderung)",
         zieleinheit="m²",
-        zeit_h_pro_einheit=0.85,  # zwischen W112 (0.55) und W115 (0.75) mit mehr Material
+        zeit_h_pro_einheit=0.85,  # zwischen W112 (0.667) und W115 (0.85) mit mehr Material
         materialien=[
-            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 3.15, "m²"),  # 3 Lagen gesamt (1.5 je Seite, oder 2+1)
+            # KORRIGIERT 2026-04-30 (Iter 9 Konsistenz): W113 = 3 Lagen je Seite
+            # × 2 Seiten × 1.05 Verschnitt = 6.30 m²/m². Vorher faelschlich
+            # 3.15 m² (= "1.5 Lagen je Seite"-Annahme, unkonsistent mit Knauf-
+            # Nomenklatur W11n = n Lagen je Seite).
+            MaterialBedarf("|Gipskarton|GKB|12.5mm|", 6.30, "m²"),
             MaterialBedarf("|Profile|CW|75|", 1.80, "lfm"),
             MaterialBedarf("|Profile|UW|75|", 0.80, "lfm", optional=True),
             MaterialBedarf("|Daemmung||60mm|", 1.00, "m²", optional=True),
@@ -260,43 +279,53 @@ REZEPTE: dict[str, Rezept] = {
         # Knauf-W628B = Schachtwand einseitig mit CW-Einfachstaender (Standardfall
         # fuer Schachtbreiten > 2m).
         #
-        # KALIBRIERT 2026-04-28: Komplettes Rezept ersetzt durch Knauf-Katalog
-        # Seite 240 (Material-Liste pro m² W628B/CW75) PLUS Praxis-Bestaetigung
-        # durch Harun's Vater (Trockenbau Feichtenbeiner, Ulm). Hersteller-
-        # Mat-Nrn pro Eintrag ermoeglichen exakten Lookup in Knauf/Kemmler-
-        # Preislisten (article_number-Match Vorrang vor Fuzzy).
+        # KALIBRIERUNG-HISTORIE:
+        # - 2026-04-28 Iter 5b: Knauf-Katalog S.240 + Praxis Harun's Vater.
+        # - 2026-04-30 Iter 7: Plannersuite-Validierung W628B-F30-01.de
+        #   (https://plannersuite.knauf.com/de-DE/systemfinder/systemdetail/
+        #    W628B-F30-01.de_97435970334179716).
+        #   Plannersuite bestaetigt: TN 3,5x25=7 + TN 3,5x35=15 + Uniflott 0.4 +
+        #   Trenn-Fix 0.9 (alle Mengen identisch zur Praxis-Aussage).
+        #   Plannersuite-Erkenntnis: Fugendeckstreifen Kurt 1.1 m/m² (war 0.9)
+        #   und Trennwandkitt 0.2 Stk/m² (fehlte komplett) ergaenzt.
+        #   Profil-Groesse: Praxis nutzt CW 75 (groessere Schachtbreiten),
+        #   Plannersuite-Standard ist CW 50 (kleinste Variante W628B-F30-01).
         #
         # Standard-Plattentyp = GKB (Schachtwaende ohne Brandschutz-Anforderung).
         # Bei F30/F60/F90 in der Position wird automatisch auf GKF aufgewertet
         # (siehe _apply_plattentyp_override + _AUTO_FIRE_UPGRADE_WHITELIST).
         #
-        # Lohn: 40 min/m² = 0.667 h/m² @ Stundensatz 60 EUR = 40 EUR/m² Lohn.
+        # Lohn-Entscheidung Variante B (Praxis): 40 min/m² = 0.667 h/m² @ 60 EUR/h
+        # = 40 EUR/m² Lohn. Vergleich Plannersuite-Default: 33 min/m² @ 50 EUR/h
+        # = 27.50 EUR/m² (-31% Lohn-Anteil). Begruendung Praxis: Harun's Vater
+        # (Trockenbaumeister 30 Jahre, Salach-Pilot) — Plannersuite ist
+        # Hersteller-Pauschal-Annahme.
         system="W628B",
-        beschreibung="W628B.de — Schachtwand einseitig mit CW-Einfachstaender (Knauf-Katalog S.240, kalibriert 2026-04-28)",
+        beschreibung="W628B.de — Schachtwand mit CW-Einfachstaender (Plannersuite-validiert 2026-04-30, Lohn-Variante B Praxis)",
         zieleinheit="m²",
-        zeit_h_pro_einheit=0.667,  # 40 min Montage/m²
+        zeit_h_pro_einheit=0.667,  # 40 min Montage/m² (Praxis)
         materialien=[
-            # Unterkonstruktion
-            # Manufacturer bewusst leer: Kemmler-Bestand fuehrt CW/UW-Profile
-            # ohne Hersteller-Tag — DNA "Knauf|Profile|UW|75|" wuerde durch
-            # die manufacturer-Filterung in price_lookup ALLE generischen
-            # Kemmler-Eintraege ausschliessen.
+            # Unterkonstruktion — Praxis: 75mm-Profil. Plannersuite-Standard W628B-F30-01: 50mm.
             MaterialBedarf("|Profile|UW|75|", 0.7, "lfm", mat_nr="00003376"),
             MaterialBedarf("|Profile|CW|75|", 2.0, "lfm", mat_nr="00003261"),
-            # Befestigung
+            # Trennwandkitt — NEU 2026-04-30 aus Plannersuite (war im Praxis-Rezept nicht enthalten)
+            MaterialBedarf("|Dichtung|Trennwandkitt|550ml|", 0.2, "Stk", mat_nr="00003461", optional=True),
+            # Befestigung Praxis (Drehstiftduebel + Dichtungsband) — Plannersuite nutzt stattdessen Deckennagel
             MaterialBedarf("|Beschlag|Drehstiftduebel|K6 35|", 0.7, "Stk", mat_nr="00003537", optional=True),
             MaterialBedarf("|Dichtung|Dichtungsband|70mm|", 1.2, "lfm", mat_nr="00003469", optional=True),
-            # Daemmung — Knauf TP 115, 60mm (Knauf-spezifisches Produkt)
+            # Daemmung — Praxis-Aufschlag (Plannersuite-Standard W628B-F30-01 hat KEINE Daemmung)
             MaterialBedarf("|Daemmung|TP 115|60mm|", 1.0, "m²", mat_nr="2304372"),
             # Beplankung — GKB als Default (12.5mm). Override auf GKF bei F-Rating.
             MaterialBedarf("|Gipskarton|GKB|12.5mm|", 2.0, "m²", mat_nr="00002892"),
-            # Schrauben
+            # Schrauben — Mengen identisch zwischen Praxis und Plannersuite. Standard-mat_nr beibehalten;
+            # Plannersuite-Feingewinde-Variante 00669563/64 als alternative.
             MaterialBedarf("|Schrauben|TN 3.5|3.5x25|", 7.0, "Stk", mat_nr="00003504", optional=True),
             MaterialBedarf("|Schrauben|TN 3.5|3.5x35|", 15.0, "Stk", mat_nr="00003505", optional=True),
-            # Spachtel + Fugen — Uniflott und Kurt sind Knauf-typische Bezeichnungen
+            # Spachtel + Fugen
             MaterialBedarf("|Spachtel|Uniflott||", 0.4, "kg", mat_nr="00003114", optional=True),
             MaterialBedarf("|Trennstreifen|Trenn-Fix|65mm|", 0.9, "lfm", mat_nr="00057871", optional=True),
-            MaterialBedarf("|Fugendeckstreifen|Kurt|75|", 0.9, "m", mat_nr="00099382", optional=True),
+            # Fugendeckstreifen Kurt — KORRIGIERT 2026-04-30: 0.9 → 1.1 m/m² (Plannersuite-Wert)
+            MaterialBedarf("|Fugendeckstreifen|Kurt|75|", 1.1, "m", mat_nr="00099382", optional=True),
         ],
     ),
     "W629": Rezept(

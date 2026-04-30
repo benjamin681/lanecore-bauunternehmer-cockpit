@@ -89,7 +89,44 @@ mat_nrn:
     Mat-Nrn müssten aus Knauf-Konfigurator (tools.knauf.de) oder
     Lieferanten-Preisliste (Kemmler) bezogen werden.
 
+# Plannersuite-Kalibrierung (B+4.13 Iter 7 — 2026-04-30)
+# Quelle: https://plannersuite.knauf.com/de-DE/systemfinder/systemdetail/
+#         W112-2B125-1490.de_97023264827442286
+# Konfig: F30 zweilagig je Seite Bauplatte GKB 12,5 CW 50 @ 625mm Achsabstand,
+# Stundensatz 50 EUR/h.
+# WICHTIGE NOMENKLATUR-ERKENNTNIS: Plannersuite W112-2xxx = ZWEI Lagen je Seite
+# (4 m² Beplankung pro m² Wand). Unser materialrezepte.py W112 hat aktuell 2.10
+# m² Beplankung, was W112-1xxx (einlagig je Seite) entspricht. D.h. unser W112
+# Rezept ist eigentlich ein W112-1xxx (einlagig); fuer echtes zweilagig braucht
+# es Mengen-Verdoppelung.
+plannersuite_kalibrierung:
+  system_id_plannersuite: W112-2B125-1490.de
+  konfiguration: F30 ZWEILAGIG je Seite (= 4 m²/m² Wand) Bauplatte GKB 12,5 CW 50
+  kosten_pro_m2:
+    material_eur: 39.93
+    gesamt_eur: 88.26
+    lohn_eur: 48.33
+    lohn_h_pro_m2: 0.9667
+    lohn_minuten_pro_m2: 58
+  positionen_verified:
+    - {mat_nr: "00099223", beschreibung: "Deckennagel (Randbef. Decke/Boden)", einzelpreis_eur: 0.46, menge_pro_m2: 1.6, einheit: Stueck}
+    - {mat_nr: "00099223", beschreibung: "Deckennagel (Randbef. Wand)", menge_pro_m2: 1.3, einheit: Stueck}
+    - {mat_nr: "00003372", beschreibung: "UW-Profil 50/40/06 4000 mm", einzelpreis_eur: 2.47, menge_pro_m2: 0.7, einheit: m}
+    - {mat_nr: "00003251", beschreibung: "CW-Profil 50/50/06 2600 mm", einzelpreis_eur: 2.82, menge_pro_m2: 2.0, einheit: m}
+    - {mat_nr: "00003461", beschreibung: "Trennwandkitt 550 ml", einzelpreis_eur: 6.50, menge_pro_m2: 0.2, einheit: Stueck}
+    - {mat_nr: "00099223", beschreibung: "Deckennagel (UK-Befestigung)", menge_pro_m2: 0.9, einheit: Stueck}
+    - {mat_nr: "00002884", beschreibung: "Bauplatte GKB 12,5 (HRAK/SFK) 1250x2000", einzelpreis_eur: 6.65, menge_pro_m2: 4.0, einheit: m2}
+    - {mat_nr: "00669563", beschreibung: "Schnellbauschraube Feingewinde TN 3,5x25", einzelpreis_eur: 0.01, menge_pro_m2: 14.0, einheit: Stueck}
+    - {mat_nr: "00669564", beschreibung: "Schnellbauschraube Feingewinde TN 3,5x35", einzelpreis_eur: 0.01, menge_pro_m2: 30.0, einheit: Stueck}
+    - {mat_nr: "00003114", beschreibung: "Uniflott 25 kg", einzelpreis_eur: 2.08, menge_pro_m2: 0.8, einheit: kg}
+    - {mat_nr: "00099382", beschreibung: "Fugendeckstreifen Kurt 75 m", einzelpreis_eur: 0.33, menge_pro_m2: 0.7, einheit: m}
+    - {mat_nr: "00057871", beschreibung: "Trenn-Fix 65 mm 50 m", einzelpreis_eur: 0.34, menge_pro_m2: 1.7, einheit: m}
+  erkenntnisse:
+    - "W112-2xxx = zweilagig je Seite. Beplankung 4 m²/m² Wand."
+    - "CW 50 + UW 50 als Standard (nicht CW 75) bei Plannersuite-W112-2B."
+    - "Lohn 58 min/m² @ 50 EUR/h — fuer ECHTE Zweilagigkeit. Praxis-Aussage 25 min/m² gilt fuer einlagige Variante."
+
 praxis_anker:
-  ep_richtwert_eur_pro_m2: 62  # Bestätigung Harun's Vater 28.04.2026
+  ep_richtwert_eur_pro_m2: 62  # Bestätigung Harun's Vater 28.04.2026 (gilt fuer EINLAGIGE W112 = W112-1xxx)
   quelle: Trockenbau Feichtenbeiner Ulm (Harun's Vater)
   status: praxis_bestaetigt

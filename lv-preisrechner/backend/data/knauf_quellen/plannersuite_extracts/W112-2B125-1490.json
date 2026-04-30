@@ -1,0 +1,40 @@
+{
+  "system_id_plannersuite": "W112-2B125-1490.de",
+  "system_id_knauf": "W112.de",
+  "name": "Metallstaenderwand F30 Bauplatte GKB (zweilagig je Seite)",
+  "extracted": "2026-04-30",
+  "source_url": "https://plannersuite.knauf.com/de-DE/systemfinder/systemdetail/W112-2B125-1490.de_97023264827442286",
+  "config_per_m2": true,
+  "konfiguration": {
+    "feuerwiderstand": "F30",
+    "anzahl_lagen_je_seite": 2,
+    "beplankung": "Bauplatte GKB",
+    "beplankungsdicke_mm": 12.5,
+    "profil": "CW 50",
+    "profilachsabstand_mm": 625
+  },
+  "kosten_pro_m2": {
+    "material_eur": 39.93,
+    "gesamt_eur": 88.26,
+    "lohn_eur": 48.33,
+    "lohn_stundensatz_eur_h": 50.0,
+    "lohn_h_pro_m2": 0.9667,
+    "lohn_minuten_pro_m2": 58
+  },
+  "items": [
+    {"sektion": "Randbefestigung - Decke/Boden", "mat_nr": "00099223", "beschreibung": "Deckennagel", "einzelpreis_eur": 0.46, "menge_pro_m2": 1.6, "einheit": "Stueck", "positionskosten_eur": 0.74},
+    {"sektion": "Randbefestigung - Wand", "mat_nr": "00099223", "beschreibung": "Deckennagel", "einzelpreis_eur": 0.46, "menge_pro_m2": 1.3, "einheit": "Stueck", "positionskosten_eur": 0.60},
+    {"sektion": "Unterkonstruktion", "mat_nr": "00003372", "beschreibung": "UW-Profil 50/40/06 4000 mm", "einzelpreis_eur": 2.47, "menge_pro_m2": 0.7, "einheit": "m", "positionskosten_eur": 1.73},
+    {"sektion": "Unterkonstruktion", "mat_nr": "00003251", "beschreibung": "CW-Profil 50/50/06 2600 mm", "einzelpreis_eur": 2.82, "menge_pro_m2": 2.0, "einheit": "m", "positionskosten_eur": 5.64},
+    {"sektion": "Unterkonstruktion", "mat_nr": "00003461", "beschreibung": "Trennwandkitt 550 ml", "einzelpreis_eur": 6.50, "menge_pro_m2": 0.2, "einheit": "Stueck", "positionskosten_eur": 1.30},
+    {"sektion": "Unterkonstruktion", "mat_nr": "00099223", "beschreibung": "Deckennagel (UK-Befestigung)", "einzelpreis_eur": 0.46, "menge_pro_m2": 0.9, "einheit": "Stueck", "positionskosten_eur": 0.41},
+    {"sektion": "Beplankung", "mat_nr": "00002884", "beschreibung": "Bauplatte GKB 12,5 (HRAK/SFK) 1250x2000 mm", "einzelpreis_eur": 6.65, "menge_pro_m2": 4.0, "einheit": "m2", "positionskosten_eur": 26.60},
+    {"sektion": "Beplankung", "mat_nr": "00669563", "beschreibung": "Schnellbauschraube Feingewinde TN 3,5x25", "einzelpreis_eur": 0.01, "menge_pro_m2": 14.0, "einheit": "Stueck", "positionskosten_eur": 0.14},
+    {"sektion": "Beplankung", "mat_nr": "00669564", "beschreibung": "Schnellbauschraube Feingewinde TN 3,5x35", "einzelpreis_eur": 0.01, "menge_pro_m2": 30.0, "einheit": "Stueck", "positionskosten_eur": 0.30},
+    {"sektion": "Verspachtelung", "mat_nr": "00003114", "beschreibung": "Uniflott 25 kg", "einzelpreis_eur": 2.08, "menge_pro_m2": 0.8, "einheit": "kg", "positionskosten_eur": 1.66},
+    {"sektion": "Verspachtelung", "mat_nr": "00099382", "beschreibung": "Fugendeckstreifen Kurt 75 m", "einzelpreis_eur": 0.33, "menge_pro_m2": 0.7, "einheit": "m", "positionskosten_eur": 0.23},
+    {"sektion": "Verspachtelung", "mat_nr": "00057871", "beschreibung": "Trenn-Fix 65 mm 50 m", "einzelpreis_eur": 0.34, "menge_pro_m2": 1.7, "einheit": "m", "positionskosten_eur": 0.58}
+  ],
+  "n_items": 12,
+  "notes": "Vollstaendige 12-Positionen-Extraktion. Material 39.93 = Summe aller pk. Lohn 48.33 abgeleitet aus Gesamt 88.26 - Material. Hinweis: Plannersuite-W112-2-Variante = 2 Lagen je Seite (= 4 m² GKB pro m² Wand). Unsere materialrezepte.py W112 hat aktuell 2.10 m² (= 1 Lage je Seite) — es liegt also eine Nomenklatur-Diskrepanz vor: unser W112 entspricht Plannersuite-W112-1xxx (einlagig je Seite), Plannersuite-W112-2xxx entspricht eher unserem W115."
+}

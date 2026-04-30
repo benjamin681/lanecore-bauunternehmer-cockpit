@@ -1,0 +1,40 @@
+{
+  "system_id_plannersuite": "W625-1.de",
+  "system_id_knauf": "W625.de",
+  "name": "Freistehende Vorsatzschale Bauplatte GKB einlagig",
+  "extracted": "2026-04-30",
+  "source_url": "https://plannersuite.knauf.com/de-DE/systemfinder/systemdetail/W625-1.de_98911543800601317",
+  "config_per_m2": true,
+  "konfiguration": {
+    "vorsatzschale_typ": "Freistehende Vorsatzschale",
+    "anzahl_lagen_je_seite": 1,
+    "beplankung": "Bauplatte GKB",
+    "beplankungsdicke_mm": 12.5,
+    "profil": "CW 50",
+    "daemmung": "Trennwand-Daemmplatte TP 115 40mm"
+  },
+  "kosten_pro_m2": {
+    "material_eur": 20.17,
+    "gesamt_eur": 52.67,
+    "lohn_eur": 32.50,
+    "lohn_stundensatz_eur_h": 50.0,
+    "lohn_h_pro_m2": 0.65,
+    "lohn_minuten_pro_m2": 39
+  },
+  "items": [
+    {"sektion": "Randbefestigung - Decke/Boden", "mat_nr": "00099223", "beschreibung": "Deckennagel", "einzelpreis_eur": 0.46, "menge_pro_m2": 0.9, "einheit": "Stueck", "positionskosten_eur": 0.41},
+    {"sektion": "Randbefestigung - Wand", "mat_nr": "00099223", "beschreibung": "Deckennagel", "einzelpreis_eur": 0.46, "menge_pro_m2": 0.7, "einheit": "Stueck", "positionskosten_eur": 0.32},
+    {"sektion": "Unterkonstruktion", "mat_nr": "00003372", "beschreibung": "UW-Profil 50/40/06 4000 mm", "einzelpreis_eur": 2.47, "menge_pro_m2": 0.7, "einheit": "m", "positionskosten_eur": 1.73},
+    {"sektion": "Unterkonstruktion", "mat_nr": "00003251", "beschreibung": "CW-Profil 50/50/06 2600 mm", "einzelpreis_eur": 2.82, "menge_pro_m2": 2.0, "einheit": "m", "positionskosten_eur": 5.64},
+    {"sektion": "Unterkonstruktion", "mat_nr": "00003461", "beschreibung": "Trennwandkitt 550 ml", "einzelpreis_eur": 6.50, "menge_pro_m2": 0.2, "einheit": "Stueck", "positionskosten_eur": 1.30},
+    {"sektion": "Unterkonstruktion", "mat_nr": "00099223", "beschreibung": "Deckennagel (UK-Befestigung)", "einzelpreis_eur": 0.46, "menge_pro_m2": 0.9, "einheit": "Stueck", "positionskosten_eur": 0.41},
+    {"sektion": "Daemmung", "mat_nr": "00594698", "beschreibung": "Trennwand-Daemmplatte TP 115 - 40 mm", "einzelpreis_eur": 2.60, "menge_pro_m2": 1.0, "einheit": "m2", "positionskosten_eur": 2.60},
+    {"sektion": "Beplankung", "mat_nr": "00002884", "beschreibung": "Bauplatte GKB 12,5 (HRAK/SFK) 1250x2000 mm", "einzelpreis_eur": 6.65, "menge_pro_m2": 1.0, "einheit": "m2", "positionskosten_eur": 6.65},
+    {"sektion": "Beplankung", "mat_nr": "00669563", "beschreibung": "Schnellbauschraube Feingewinde TN 3,5x25", "einzelpreis_eur": 0.01, "menge_pro_m2": 15.0, "einheit": "Stueck", "positionskosten_eur": 0.15},
+    {"sektion": "Verspachtelung", "mat_nr": "00003114", "beschreibung": "Uniflott 25 kg", "einzelpreis_eur": 2.08, "menge_pro_m2": 0.25, "einheit": "kg", "positionskosten_eur": 0.52},
+    {"sektion": "Verspachtelung", "mat_nr": "00099382", "beschreibung": "Fugendeckstreifen Kurt 75 m", "einzelpreis_eur": 0.33, "menge_pro_m2": 0.4, "einheit": "m", "positionskosten_eur": 0.13},
+    {"sektion": "Verspachtelung", "mat_nr": "00057871", "beschreibung": "Trenn-Fix 65 mm 50 m", "einzelpreis_eur": 0.34, "menge_pro_m2": 0.9, "einheit": "m", "positionskosten_eur": 0.31}
+  ],
+  "n_items": 12,
+  "notes": "Plannersuite-Default W625 Standard-Vorsatzschale einlagig GKB. Im Gegensatz zu W628B (Schachtwand) hat W625 standardmaessig Daemmung TP 115 40mm enthalten. Lohn 39 min/m². 1 m² Beplankung pro m² Wandflaeche (einseitige Vorsatzschale)."
+}

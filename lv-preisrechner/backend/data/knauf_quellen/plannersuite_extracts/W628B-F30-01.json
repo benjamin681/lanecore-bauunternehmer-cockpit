@@ -1,0 +1,39 @@
+{
+  "system_id_plannersuite": "W628B-F30-01.de",
+  "system_id_knauf": "W628B.de",
+  "name": "F30 Schachtwand Feuerschutzplatte Piano GKF zweilagig (CW 50, ohne Daemmung)",
+  "extracted": "2026-04-30",
+  "source_url": "https://plannersuite.knauf.com/de-DE/systemfinder/systemdetail/W628B-F30-01.de_97435970334179716",
+  "config_per_m2": true,
+  "konfiguration": {
+    "feuerwiderstand": "F30",
+    "anzahl_lagen_je_seite": 2,
+    "beplankung": "Knauf Piano GKF 12,5",
+    "profil": "CW 50",
+    "daemmung": "ohne (im Plannersuite-Standard nicht enthalten)"
+  },
+  "kosten_pro_m2": {
+    "material_eur": 27.89,
+    "gesamt_eur": 55.39,
+    "lohn_eur": 27.50,
+    "lohn_stundensatz_eur_h": 50.0,
+    "lohn_h_pro_m2": 0.55,
+    "lohn_minuten_pro_m2": 33
+  },
+  "items": [
+    {"sektion": "Randbefestigung - Decke/Boden", "mat_nr": "00099223", "beschreibung": "Deckennagel", "einzelpreis_eur": 0.46, "menge_pro_m2": 3.2, "einheit": "Stueck", "positionskosten_eur": 1.47},
+    {"sektion": "Randbefestigung - Wand", "mat_nr": "00099223", "beschreibung": "Deckennagel", "einzelpreis_eur": 0.46, "menge_pro_m2": 2.6, "einheit": "Stueck", "positionskosten_eur": 1.20},
+    {"sektion": "Unterkonstruktion", "mat_nr": "00003372", "beschreibung": "UW-Profil 50/40/06 4000 mm", "einzelpreis_eur": 2.47, "menge_pro_m2": 0.7, "einheit": "m", "positionskosten_eur": 1.73},
+    {"sektion": "Unterkonstruktion", "mat_nr": "00003251", "beschreibung": "CW-Profil 50/50/06 2600 mm", "einzelpreis_eur": 2.82, "menge_pro_m2": 2.0, "einheit": "m", "positionskosten_eur": 5.64},
+    {"sektion": "Unterkonstruktion", "mat_nr": "00003461", "beschreibung": "Trennwandkitt 550 ml", "einzelpreis_eur": 6.50, "menge_pro_m2": 0.2, "einheit": "Stueck", "positionskosten_eur": 1.30},
+    {"sektion": "Unterkonstruktion", "mat_nr": "00099223", "beschreibung": "Deckennagel (UK-Befestigung)", "einzelpreis_eur": 0.46, "menge_pro_m2": 0.9, "einheit": "Stueck", "positionskosten_eur": 0.41},
+    {"sektion": "Beplankung", "mat_nr": "00002891", "beschreibung": "Feuerschutzplatte Knauf Piano GKF 12,5 (HRAK/SFK) 1250x2000 mm", "einzelpreis_eur": 7.21, "menge_pro_m2": 2.0, "einheit": "m2", "positionskosten_eur": 14.42},
+    {"sektion": "Beplankung", "mat_nr": "00669563", "beschreibung": "Schnellbauschraube TN 3,5x25", "einzelpreis_eur": 0.01, "menge_pro_m2": 7.0, "einheit": "Stueck", "positionskosten_eur": 0.07},
+    {"sektion": "Beplankung", "mat_nr": "00669564", "beschreibung": "Schnellbauschraube TN 3,5x35", "einzelpreis_eur": 0.01, "menge_pro_m2": 15.0, "einheit": "Stueck", "positionskosten_eur": 0.15},
+    {"sektion": "Verspachtelung", "mat_nr": "00003114", "beschreibung": "Uniflott 25 kg", "einzelpreis_eur": 2.08, "menge_pro_m2": 0.4, "einheit": "kg", "positionskosten_eur": 0.83},
+    {"sektion": "Verspachtelung", "mat_nr": "00099382", "beschreibung": "Fugendeckstreifen Kurt 75 m", "einzelpreis_eur": 0.33, "menge_pro_m2": 1.1, "einheit": "m", "positionskosten_eur": 0.36},
+    {"sektion": "Verspachtelung", "mat_nr": "00057871", "beschreibung": "Trenn-Fix 65 mm 50 m", "einzelpreis_eur": 0.34, "menge_pro_m2": 0.9, "einheit": "m", "positionskosten_eur": 0.31}
+  ],
+  "n_items": 12,
+  "notes": "Wichtige Erkenntnis: Plannersuite-W628B nutzt CW 50 (Mat-Nr 00003251) — nicht CW 75 wie unser materialrezepte.py W628B annahm. CW 75 (00003261) ist die Variante fuer groessere Schachtbreiten. Auch: Plannersuite-Standard hat KEINE Daemmung; unser materialrezepte.py W628B fuegt Knauf TP 115 60mm hinzu (das ist Praxis-Aufschlag von Harun's Vater)."
+}

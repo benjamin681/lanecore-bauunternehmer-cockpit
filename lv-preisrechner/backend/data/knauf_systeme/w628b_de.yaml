@@ -76,7 +76,88 @@ mat_nrn:
       - {name: Trenn-Fix 65 mm, mat_nr: "00057871", menge_lfm_pro_m2: 0.9}
       - {name: Fugendeckstreifen Kurt 75, mat_nr: "00099382", menge_m_pro_m2: 0.9}
 
+# Plannersuite-Kalibrierung (B+4.13 Iter 7 — 2026-04-30)
+# Quelle: https://plannersuite.knauf.com/de-DE/systemfinder/systemdetail/
+#         W628B-F30-01.de_97435970334179716
+# Konfig: F30 Schachtwand zweilagig Piano GKF, CW 50, ohne Daemmung,
+# Stundensatz Plannersuite-Default 50 EUR/h.
+plannersuite_kalibrierung:
+  system_id_plannersuite: W628B-F30-01.de
+  konfiguration: F30 zweilagig Piano GKF CW 50 ohne Daemmung
+  kosten_pro_m2:
+    material_eur: 27.89
+    gesamt_eur: 55.39
+    lohn_eur: 27.50
+    lohn_h_pro_m2: 0.55
+    lohn_minuten_pro_m2: 33
+  positionen_verified:
+    - mat_nr: "00099223"
+      beschreibung: Deckennagel (Randbef. Decke/Boden)
+      einzelpreis_eur: 0.46
+      menge_pro_m2: 3.2
+      einheit: Stueck
+    - mat_nr: "00099223"
+      beschreibung: Deckennagel (Randbef. Wand)
+      menge_pro_m2: 2.6
+      einheit: Stueck
+    - mat_nr: "00003372"
+      beschreibung: UW-Profil 50/40/06 4000 mm
+      einzelpreis_eur: 2.47
+      menge_pro_m2: 0.7
+      einheit: m
+    - mat_nr: "00003251"
+      beschreibung: CW-Profil 50/50/06 2600 mm
+      einzelpreis_eur: 2.82
+      menge_pro_m2: 2.0
+      einheit: m
+    - mat_nr: "00003461"
+      beschreibung: Trennwandkitt 550 ml
+      einzelpreis_eur: 6.50
+      menge_pro_m2: 0.2
+      einheit: Stueck
+    - mat_nr: "00099223"
+      beschreibung: Deckennagel (UK-Befestigung)
+      menge_pro_m2: 0.9
+      einheit: Stueck
+    - mat_nr: "00002891"
+      beschreibung: Feuerschutzplatte Knauf Piano GKF 12,5 (HRAK/SFK)
+      einzelpreis_eur: 7.21
+      menge_pro_m2: 2.0
+      einheit: m2
+    - mat_nr: "00669563"
+      beschreibung: Schnellbauschraube Feingewinde TN 3,5x25
+      einzelpreis_eur: 0.01
+      menge_pro_m2: 7.0
+      einheit: Stueck
+    - mat_nr: "00669564"
+      beschreibung: Schnellbauschraube Feingewinde TN 3,5x35
+      einzelpreis_eur: 0.01
+      menge_pro_m2: 15.0
+      einheit: Stueck
+    - mat_nr: "00003114"
+      beschreibung: Uniflott 25 kg
+      einzelpreis_eur: 2.08
+      menge_pro_m2: 0.4
+      einheit: kg
+    - mat_nr: "00099382"
+      beschreibung: Fugendeckstreifen Kurt 75 m
+      einzelpreis_eur: 0.33
+      menge_pro_m2: 1.1
+      einheit: m
+    - mat_nr: "00057871"
+      beschreibung: Trenn-Fix 65 mm 50 m
+      einzelpreis_eur: 0.34
+      menge_pro_m2: 0.9
+      einheit: m
+  erkenntnisse:
+    - "W628B-F30-01 nutzt CW 50 (nicht CW 75 wie unser Standard) — kleinste Variante"
+    - "Plannersuite hat KEINE Daemmung im Standard-W628B — unsere TP 115 ist Praxis-Aufschlag"
+    - "Schrauben Feingewinde 00669563/64 (nicht 00003504/05 Standard) in Plannersuite"
+    - "Deckennagel sehr haeufig (3.2 + 2.6 + 0.9 = 6.7 Stk/m²) statt nur 0.7 Drehstiftduebel"
+    - "Trennwandkitt 00003461 fehlt in unserem aktuellen W628B-Rezept"
+    - "Lohn 33 min/m² Plannersuite vs 40 min/m² Praxis (Harun's Vater) — Plannersuite ist 18% niedriger"
+
 praxis_anker:
   ep_erwartet_eur_pro_m2: "50-65"  # Harun's Vater
   ep_aktuell_system: 80.27
-  diskrepanz_status: offen  # Lohn-Anteil-Klaerung ausstehend
+  diskrepanz_status: kalibriert_plannersuite  # 2026-04-30: Plannersuite-Vergleich liefert 55.39

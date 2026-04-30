@@ -1,0 +1,36 @@
+{
+  "system_id_plannersuite": "D112-B12-0010.de",
+  "system_id_knauf": "D112.de",
+  "name": "Unterdecke Tragprofil Bauplatte GKB einlagig",
+  "extracted": "2026-04-30",
+  "source_url": "https://plannersuite.knauf.com/de-DE/systemfinder/systemdetail/D112-B12-0010.de_92455394597367450",
+  "config_per_m2": true,
+  "konfiguration": {
+    "decken_typ": "Abgehaengte Decke einlagig",
+    "beplankung": "Bauplatte GKB",
+    "beplankungsdicke_mm": 12.5,
+    "tragprofil": "CD 60/27"
+  },
+  "kosten_pro_m2": {
+    "material_eur": 15.01,
+    "gesamt_eur": 59.18,
+    "lohn_eur": 44.17,
+    "lohn_stundensatz_eur_h": 50.0,
+    "lohn_h_pro_m2": 0.8834,
+    "lohn_minuten_pro_m2": 53
+  },
+  "items": [
+    {"sektion": "Unterkonstruktion - Decke", "mat_nr": "00099223", "beschreibung": "Deckennagel", "einzelpreis_eur": 0.46, "menge_pro_m2": 1.9, "einheit": "Stueck", "positionskosten_eur": 0.87},
+    {"sektion": "Unterkonstruktion - Decke", "mat_nr": "00003417", "beschreibung": "Draht mit Oese 250 mm", "einzelpreis_eur": 0.15, "menge_pro_m2": 1.9, "einheit": "Stueck", "positionskosten_eur": 0.28},
+    {"sektion": "Unterkonstruktion - Decke", "mat_nr": "00782553", "beschreibung": "Ankerfix-Schnellabhaenger CD", "einzelpreis_eur": 0.49, "menge_pro_m2": 1.9, "einheit": "Stueck", "positionskosten_eur": 0.93},
+    {"sektion": "Unterkonstruktion - Decke", "mat_nr": "00003294", "beschreibung": "CD-Profil 60/27/06 4000 mm", "einzelpreis_eur": 2.43, "menge_pro_m2": 2.1, "einheit": "m", "positionskosten_eur": 5.10},
+    {"sektion": "Unterkonstruktion - Decke", "mat_nr": "00448291", "beschreibung": "CD-Laengsverbinder", "einzelpreis_eur": 0.25, "menge_pro_m2": 0.4, "einheit": "Stueck", "positionskosten_eur": 0.10},
+    {"sektion": "Beplankung", "mat_nr": "00002884", "beschreibung": "Bauplatte GKB 12,5 (HRAK/SFK) 1250x2000 mm", "einzelpreis_eur": 6.65, "menge_pro_m2": 1.0, "einheit": "m2", "positionskosten_eur": 6.65},
+    {"sektion": "Beplankung", "mat_nr": "00669564", "beschreibung": "Schnellbauschraube Feingewinde TN 3,5x35", "einzelpreis_eur": 0.01, "menge_pro_m2": 17.0, "einheit": "Stueck", "positionskosten_eur": 0.17},
+    {"sektion": "Verspachtelung", "mat_nr": "00003114", "beschreibung": "Uniflott 25 kg", "einzelpreis_eur": 2.08, "menge_pro_m2": 0.3, "einheit": "kg", "positionskosten_eur": 0.62},
+    {"sektion": "Verspachtelung", "mat_nr": "00099382", "beschreibung": "Fugendeckstreifen Kurt 75 m", "einzelpreis_eur": 0.33, "menge_pro_m2": 0.45, "einheit": "m", "positionskosten_eur": 0.15},
+    {"sektion": "Verspachtelung", "mat_nr": "00057871", "beschreibung": "Trenn-Fix 65 mm 50 m", "einzelpreis_eur": 0.34, "menge_pro_m2": 0.4, "einheit": "m", "positionskosten_eur": 0.14}
+  ],
+  "n_items": 10,
+  "notes": "Plannersuite-Default D112 Standard-Decke einlagig GKB. Bestaetigt Mengenfaktor CD-Profil 2.1 lfm/m² (+5% Verschnitt vs 2.0 lfm theoretisch bei 500mm Achsabstand). Ankerfix-Schnellabhaenger 1.9 Stk/m² + Deckennagel 1.9 Stk/m² fuer Befestigung. Salach hat keine Decken-Positionen, daher fuer Salach nicht direkt relevant — aber wichtige Referenz fuer kuenftige Decken-LVs."
+}

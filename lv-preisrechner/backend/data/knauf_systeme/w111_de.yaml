@@ -34,4 +34,88 @@ befestigung:
     derived_menge_stk_pro_m2_je_seite: 20
     derived_menge_stk_pro_m2_beidseits: 40
 
+# Plannersuite-Kalibrierung (B+4.13 Iter 6 — 2026-04-29)
+# Quelle: https://plannersuite.knauf.com/de-DE/systemfinder/systemdetail/
+#         W111-D125-0960.de_93370916741870596
+# Methodik: DOM-Extraktion aus Materialliste-Tab nach "Alle aufklappen".
+# Stundensatz Plannersuite-Default: 50,00 €/h.
+# Konfiguration: F30, CW 50 @ 625mm, 75mm Fertigwand, Diamant GKFI 12,5mm
+# einlagig, Trennwand-Dämmplatte TP 115 40mm, Wandhöhe bis 4,00 m.
+plannersuite_kalibrierung:
+  system_id_plannersuite: W111-D125-0960.de
+  konfiguration: F30 CW50@625 Diamant GKFI einlagig 75mm
+  basis: 1.00 m² Wandfläche (Plannersuite-Default)
+  kosten_pro_m2:
+    material_eur: 36.03
+    lohn_eur: 39.17
+    lohn_h_pro_m2: 0.7834       # = 47 min/m² @ 50 €/h
+    lohn_minuten_pro_m2: 47
+    gesamt_eur: 75.20
+  positionen_verified:
+    # Sektion: Randbefestigung Decke/Boden
+    - mat_nr: "00099223"
+      ean: "4003982200525"
+      hersteller: Knauf Gips KG
+      beschreibung: Deckennagel
+      einzelpreis_eur: 0.46
+      einheit_preis: Stueck
+      menge_pro_m2: 1.60
+      einheit: Stueck
+      sektion: Randbefestigung Decke/Boden
+    # Sektion: Randbefestigung Wand
+    - mat_nr: "00099223"
+      hersteller: Knauf Gips KG
+      beschreibung: Deckennagel
+      menge_pro_m2: 1.30
+      einheit: Stueck
+      sektion: Randbefestigung Wand
+    # Sektion: Unterkonstruktion
+    - mat_nr: "00003372"
+      ean: "4003982027658"
+      hersteller: Knauf Gips KG
+      beschreibung: UW-Profil 50/40/06 4000 mm
+      einzelpreis_eur: 2.47
+      menge_pro_m2: 0.70
+      einheit: m
+      sektion: Unterkonstruktion
+    - mat_nr: "00003251"
+      ean: "4003982022851"
+      hersteller: Knauf Gips KG
+      beschreibung: CW-Profil 50/50/06 2600 mm
+      einzelpreis_eur: 2.82
+      menge_pro_m2: 2.00
+      einheit: m
+      sektion: Unterkonstruktion
+      notes: |
+        Wichtige Erkenntnis: Plannersuite rechnet 2.00 lfm CW pro m²,
+        nicht 1.60 lfm wie aus Achsabstand 625mm rein geometrisch
+        ableitbar. Differenz 0.40 lfm = ~25% deckt Verschnitt + Anschluss
+        + zusaetzliche Profile an Tueren/Aussparungen ab.
+    - mat_nr: "00003461"
+      hersteller: Knauf Gips KG
+      beschreibung: Trennwandkitt 550 ml
+      sektion: Unterkonstruktion
+    # Sektion: Daemmung
+    - mat_nr: "00594698"
+      ean: "5012061987423"
+      hersteller: Knauf Insulation GmbH
+      beschreibung: Trennwand-Daemmplatte TP 115 - 40 mm
+      einzelpreis_eur: 2.60
+      menge_pro_m2: 1.00
+      einheit: m²
+      sektion: Daemmung
+  erkenntnisse:
+    - "CW Mengenfaktor 1.25 (2.00 lfm vs 1.60 geometrisch) — Verschnitt+Anschluss"
+    - "UW 0.70 m/m² ist nahe am derived 0.73 — Bestaetigung der Geometrie"
+    - "Daemmung 1.00 m²/m² (kein Verschnitt aufgeschlagen — Knauf-Standard)"
+    - "Plannersuite-Lohn 47 min/m² fuer einlagiges F30-System @ 50 EUR/h"
+    - "Mat-Nrn folgen 8-stelligem Knauf-Schema mit fuehrenden Nullen (00099223)"
+  notes: |
+    Extraktion erfasst die ersten 7 von ~12 Material-Positionen
+    (Randbefestigung, Unterkonstruktion, Daemmung). Beplankung +
+    Verspachtelung sind weitere Sektionen, deren Mengen industry-standard-nah
+    liegen (Beplankung 1.05 m²/m² einlagig). Eine vollstaendige Extraktion
+    aller W11x-Varianten waere ueber Plannersuite-API-Reverse moeglich
+    (POST api.digitizer.app/production/router), nicht pro UI-Klick.
+
 praxis_status: nicht_kalibriert

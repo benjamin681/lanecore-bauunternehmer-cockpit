@@ -1,0 +1,39 @@
+{
+  "system_id_plannersuite": "W111-D125-0960.de",
+  "system_id_knauf": "W111.de",
+  "name": "Metallstaenderwand F30 Diamant GKFI (einlagig)",
+  "extracted": "2026-04-29",
+  "source_url": "https://plannersuite.knauf.com/de-DE/systemfinder/systemdetail/W111-D125-0960.de_93370916741870596",
+  "config_per_m2": true,
+  "konfiguration": {
+    "feuerwiderstand": "F30",
+    "wandhoehe_max_m": 4.0,
+    "fertigwand_mm": 75,
+    "profil": "CW 50",
+    "profilachsabstand_mm": 625,
+    "beplankung": "Diamant",
+    "beplankungsdicke_mm": 12.5,
+    "anzahl_lagen": 1,
+    "schalldaemmung_db": 48.7,
+    "flaechengewicht_kg_m2": 29.0,
+    "daemmstoff": "MW Platte"
+  },
+  "kosten_pro_m2": {
+    "material": 36.03,
+    "lohn": 39.17,
+    "lohn_stundensatz_eur_h": 50.0,
+    "lohn_stunden_h_m2": 0.7834,
+    "lohn_minuten_m2": 47.0,
+    "gesamt": 75.20
+  },
+  "items": [
+    {"section": "Randbefestigung Decke/Boden", "mat_nr": "00099223", "ean": "4003982200525", "hersteller": "Knauf Gips KG", "beschreibung": "Deckennagel", "einzelpreis": 0.46, "einheit_preis": "Stueck", "menge_pro_m2": 1.60, "einheit": "Stueck", "positionskosten": 0.74},
+    {"section": "Randbefestigung Wand", "mat_nr": "00099223", "ean": "4003982200525", "hersteller": "Knauf Gips KG", "beschreibung": "Deckennagel", "einzelpreis": 0.46, "einheit_preis": "Stueck", "menge_pro_m2": 1.30, "einheit": "Stueck", "positionskosten": 0.60},
+    {"section": "Unterkonstruktion", "mat_nr": "00003372", "ean": "4003982027658", "hersteller": "Knauf Gips KG", "beschreibung": "UW-Profil 50/40/06 4000 mm", "einzelpreis": 2.47, "einheit_preis": "m", "menge_pro_m2": 0.70, "einheit": "m", "positionskosten": 1.73},
+    {"section": "Unterkonstruktion", "mat_nr": "00003251", "ean": "4003982022851", "hersteller": "Knauf Gips KG", "beschreibung": "CW-Profil 50/50/06 2600 mm", "einzelpreis": 2.82, "einheit_preis": "m", "menge_pro_m2": 2.00, "einheit": "m", "positionskosten": 5.64},
+    {"section": "Unterkonstruktion", "mat_nr": "00003461", "hersteller": "Knauf Gips KG", "beschreibung": "Trennwandkitt 550 ml", "positionskosten": 1.30},
+    {"section": "Unterkonstruktion", "mat_nr": "00099223", "hersteller": "Knauf Gips KG", "beschreibung": "Deckennagel", "positionskosten": 0.41},
+    {"section": "Daemmung", "mat_nr": "00594698", "ean": "5012061987423", "hersteller": "Knauf Insulation GmbH", "beschreibung": "Trennwand-Daemmplatte TP 115 - 40 mm", "einzelpreis": 2.60, "einheit_preis": "m²", "menge_pro_m2": 1.00, "einheit": "m²", "positionskosten": 2.60}
+  ],
+  "note": "Truncated bei 7 von 12 Items — Beplankung + Verspachtelung-Sektionen folgen. Sample-Daten zeigen das Schema."
+}
